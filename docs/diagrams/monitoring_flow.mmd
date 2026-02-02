@@ -1,0 +1,36 @@
+graph LR
+    subgraph "Challenge Execution"
+        RN[Runner]
+        C1[Challenge 1]
+        C2[Challenge 2]
+        C3[Challenge 3]
+    end
+
+    subgraph "Event Collection"
+        EC[EventCollector]
+        DB[DashboardData]
+    end
+
+    subgraph "Delivery"
+        WS[WebSocket Server]
+        PR[Prometheus]
+    end
+
+    subgraph "Consumers"
+        BR[Browser Dashboard]
+        GR[Grafana]
+        CL[CLI Reporter]
+    end
+
+    RN -->|started| EC
+    C1 -->|completed| EC
+    C2 -->|failed| EC
+    C3 -->|metrics| EC
+
+    EC --> DB
+    EC --> WS
+    EC --> PR
+
+    WS -->|push events| BR
+    PR -->|scrape| GR
+    DB -->|poll| CL

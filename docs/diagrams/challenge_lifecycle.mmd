@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> Pending: Registered
+
+    Pending --> Configuring: Runner.Run()
+    Configuring --> Validating: Configure() ok
+    Configuring --> Error: Configure() failed
+
+    Validating --> Running: Validate() ok
+    Validating --> Skipped: Validate() failed
+
+    Running --> Evaluating: Execute() returned
+    Running --> TimedOut: Context deadline exceeded
+    Running --> Error: Execute() error
+
+    Evaluating --> Passed: All assertions pass
+    Evaluating --> Failed: Any assertion fails
+
+    Passed --> CleaningUp: Cleanup()
+    Failed --> CleaningUp: Cleanup()
+    TimedOut --> CleaningUp: Cleanup()
+    Error --> CleaningUp: Cleanup()
+    Skipped --> CleaningUp: Cleanup()
+
+    CleaningUp --> [*]: Done

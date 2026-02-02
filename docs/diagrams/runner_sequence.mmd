@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant App
+    participant Runner
+    participant Registry
+    participant Challenge
+    participant Assertions
+    participant Reporter
+
+    App->>Runner: RunAll(ctx, config)
+    Runner->>Registry: GetDependencyOrder()
+    Registry-->>Runner: []Challenge (sorted)
+
+    loop For each challenge
+        Runner->>Runner: setupResultsDir(config)
+        Runner->>Challenge: Configure(config)
+        Challenge-->>Runner: ok
+
+        Runner->>Challenge: Validate(ctx)
+        Challenge-->>Runner: ok
+
+        Note over Runner: Create timeout context
+        Runner->>Challenge: Execute(ctx)
+        Challenge-->>Runner: *Result
+
+        Runner->>Assertions: EvaluateAll(defs, values)
+        Assertions-->>Runner: []AssertionResult
+
+        alt All assertions pass
+            Runner->>Runner: status = Passed
+        else Any assertion fails
+            Runner->>Runner: status = Failed
+        end
+
+        Runner->>Challenge: Cleanup(ctx)
+        Runner->>Reporter: GenerateReport(result)
+    end
+
+    Runner-->>App: []*Result

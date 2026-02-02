@@ -1,0 +1,61 @@
+graph TB
+    subgraph "Execution Layer"
+        RN[runner.Runner]
+        PR[runner.ParallelRunner]
+        PL[runner.Pipeline]
+    end
+
+    subgraph "Core Layer"
+        RG[registry.Registry]
+        AE[assertion.Engine]
+        CH[challenge.Challenge]
+        BC[challenge.BaseChallenge]
+        SC[challenge.ShellChallenge]
+    end
+
+    subgraph "Reporting Layer"
+        RP[report.Reporter]
+        MR[MarkdownReporter]
+        JR[JSONReporter]
+        HR[HTMLReporter]
+    end
+
+    subgraph "Support Layer"
+        LG[logging.Logger]
+        EV[env.Loader]
+        BK[bank.Bank]
+        MN[monitor.EventCollector]
+        MT[metrics.Prometheus]
+        PG[plugin.PluginRegistry]
+    end
+
+    subgraph "Infrastructure"
+        IP[infra.InfraProvider]
+        CA[infra.ContainersAdapter]
+        CM[digital.vasic.containers]
+    end
+
+    RN --> RG
+    RN --> AE
+    RN --> RP
+    RN --> LG
+    RN --> MN
+
+    PR --> RN
+    PL --> RN
+
+    RG --> CH
+    RG --> BK
+
+    CH --> BC
+    CH --> SC
+
+    RP --> MR
+    RP --> JR
+    RP --> HR
+
+    PG --> RG
+    PG --> AE
+
+    IP --> CA
+    CA --> CM
