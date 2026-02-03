@@ -152,12 +152,15 @@ func (b *BaseChallenge) GetEnv(
 	return b.config.GetEnv(key, fallback)
 }
 
+// jsonMarshalIndent is a variable for dependency injection in tests.
+var jsonMarshalIndent = json.MarshalIndent
+
 // WriteJSONResult serializes a Result to a JSON file in the
 // results directory.
 func (b *BaseChallenge) WriteJSONResult(
 	r *Result,
 ) error {
-	data, err := json.MarshalIndent(r, "", "  ")
+	data, err := jsonMarshalIndent(r, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal result: %w", err)
 	}

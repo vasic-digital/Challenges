@@ -113,3 +113,43 @@ func TestBank_Sources(t *testing.T) {
 	sources := b.Sources()
 	assert.Equal(t, []string{"a.json", "b.json"}, sources)
 }
+
+func TestBank_LoadDir_WithSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	// Create a subdirectory that should be skipped
+	subDir := filepath.Join(dir, "subdir")
+	require.NoError(t, os.MkdirAll(subDir, 0755))
+
+	// Create a valid JSON file in the main directory
+	data, _ := json.Marshal(BankFile{
+		Version:    "1.0",
+		Challenges: []challenge.Definition{{ID: "ch-1", Name: "Test"}},
+	})
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "bank.json"), data, 0644))
+
+	b := New()
+	require.NoError(t, b.LoadDir(dir))
+	assert.Equal(t, 1, b.Count())
+}
+
+func TestBank_LoadDir_FileLoadError(t *testing.T) {
+	dir := t.TempDir()
+	// Create an invalid JSON file
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "invalid.json"),
+		[]byte("{invalid json}"),
+		0644,
+	))
+
+	b := New()
+	err := b.LoadDir(dir)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "parse bank file")
+}
+
+func TestBank_LoadDir_NotFound(t *testing.T) {
+	b := New()
+	err := b.LoadDir("/nonexistent/directory")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "read bank directory")
+}

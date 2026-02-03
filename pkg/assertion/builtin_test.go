@@ -303,6 +303,7 @@ func TestEvaluateExactCount(t *testing.T) {
 		{"slice match", []any{1, 2}, 2, true},
 		{"slice mismatch", []any{1, 2}, 3, false},
 		{"non-countable", "hi", 2, false},
+		{"non-number expected", 3, "three", false},
 	}
 
 	for _, tt := range tests {
@@ -524,6 +525,32 @@ func TestToFloat64(t *testing.T) {
 			assert.Equal(t, tt.ok, ok)
 			if ok {
 				assert.InDelta(t, tt.want, got, 0.001)
+			}
+		})
+	}
+}
+
+func TestToCount(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want int
+		ok   bool
+	}{
+		{"int", 5, 5, true},
+		{"float64", float64(5.7), 5, true},
+		{"int64", int64(5), 5, true},
+		{"slice", []any{1, 2, 3}, 3, true},
+		{"map", map[string]any{"a": 1, "b": 2}, 2, true},
+		{"string", "hello", 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := toCount(tt.val)
+			assert.Equal(t, tt.ok, ok)
+			if ok {
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}

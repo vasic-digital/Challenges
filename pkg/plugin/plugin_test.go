@@ -108,5 +108,37 @@ func TestRegistry_List(t *testing.T) {
 	assert.Contains(t, names, "b")
 }
 
+func TestRegistry_InitAll_SkipsAlreadyLoaded(t *testing.T) {
+	r := NewRegistry()
+	p := &mockPlugin{name: "preloaded", version: "1.0"}
+	require.NoError(t, r.Register(p))
+
+	// First init
+	require.NoError(t, r.InitAll(&PluginContext{}))
+	assert.True(t, p.inited)
+
+	// Reset inited flag to check if it's called again
+	p.inited = false
+
+	// Second init should skip already loaded
+	require.NoError(t, r.InitAll(&PluginContext{}))
+	assert.False(t, p.inited) // Should not be called again
+}
+
+func TestRegistry_Init_Error(t *testing.T) {
+	r := NewRegistry()
+	p := &mockPlugin{name: "bad", version: "1.0", initErr: fmt.Errorf("init failed")}
+	require.NoError(t, r.Register(p))
+
+	err := r.Init("bad", &PluginContext{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "init plugin")
+}
+
+func TestRegistry_IsLoaded_NotRegistered(t *testing.T) {
+	r := NewRegistry()
+	assert.False(t, r.IsLoaded("nonexistent"))
+}
+
 // Suppress unused import warning for require
 var _ = require.NoError

@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"digital.vasic.challenges/pkg/challenge"
 )
 
 func TestMarkdownReporter_GenerateReport_Content(
@@ -120,4 +122,58 @@ func TestMarkdownReporter_SaveMasterSummary(t *testing.T) {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "Master Summary")
+}
+
+func TestMarkdownReporter_SaveReport_WriteError(t *testing.T) {
+	// Use a non-writable directory
+	r := NewMarkdownReporter("/dev/null/impossible")
+	result := makeTestResult()
+
+	err := r.SaveReport(result, "report.md")
+	assert.Error(t, err)
+}
+
+func TestMarkdownReporter_SaveMasterSummary_WriteError(t *testing.T) {
+	// Use a non-writable directory
+	r := NewMarkdownReporter("/dev/null/impossible")
+	results := makeTestResults()
+
+	err := r.SaveMasterSummary(results, "summary.md")
+	assert.Error(t, err)
+}
+
+func TestMarkdownReporter_GenerateReport_NoAssertions(t *testing.T) {
+	r := NewMarkdownReporter(t.TempDir())
+	result := makeTestResult()
+	result.Assertions = nil
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "## Assertions")
+}
+
+func TestMarkdownReporter_GenerateReport_NoOutputs(t *testing.T) {
+	r := NewMarkdownReporter(t.TempDir())
+	result := makeTestResult()
+	result.Outputs = nil
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "## Output Files")
+}
+
+func TestMarkdownReporter_GenerateReport_MetricsWithEmptyUnit(t *testing.T) {
+	r := NewMarkdownReporter(t.TempDir())
+	result := makeTestResult()
+	result.Metrics["nounit"] = challenge.MetricValue{
+		Name:  "nounit",
+		Value: 100.0,
+		Unit:  "", // Empty unit
+	}
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+	content := string(data)
+	// Empty unit should be replaced with "-"
+	assert.Contains(t, content, "nounit")
 }

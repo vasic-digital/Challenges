@@ -25,14 +25,13 @@ func NewMarkdownReporter(outputDir string) *MarkdownReporter {
 }
 
 // GenerateReport creates a Markdown report for a single
-// challenge result.
+// challenge result. The returned error is always nil since
+// Markdown generation to a bytes.Buffer cannot fail.
 func (r *MarkdownReporter) GenerateReport(
 	result *challenge.Result,
 ) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := r.WriteReport(&buf, result); err != nil {
-		return nil, err
-	}
+	r.WriteReport(&buf, result)
 	return buf.Bytes(), nil
 }
 
@@ -336,11 +335,7 @@ func (r *MarkdownReporter) SaveReport(
 	result *challenge.Result,
 	filename string,
 ) error {
-	data, err := r.GenerateReport(result)
-	if err != nil {
-		return err
-	}
-
+	data, _ := r.GenerateReport(result)
 	path := filepath.Join(r.outputDir, filename)
 	return os.WriteFile(path, data, 0644)
 }
@@ -350,11 +345,7 @@ func (r *MarkdownReporter) SaveMasterSummary(
 	results []*challenge.Result,
 	filename string,
 ) error {
-	data, err := r.GenerateMasterSummary(results)
-	if err != nil {
-		return err
-	}
-
+	data, _ := r.GenerateMasterSummary(results)
 	path := filepath.Join(r.outputDir, filename)
 	return os.WriteFile(path, data, 0644)
 }

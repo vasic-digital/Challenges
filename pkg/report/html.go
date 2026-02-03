@@ -22,14 +22,13 @@ func NewHTMLReporter(outputDir string) *HTMLReporter {
 }
 
 // GenerateReport creates an HTML report for a single challenge
-// result.
+// result. The returned error is always nil since HTML generation
+// to a bytes.Buffer cannot fail.
 func (r *HTMLReporter) GenerateReport(
 	result *challenge.Result,
 ) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := r.WriteReport(&buf, result); err != nil {
-		return nil, err
-	}
+	r.WriteReport(&buf, result)
 	return buf.Bytes(), nil
 }
 

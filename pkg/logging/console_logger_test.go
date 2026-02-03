@@ -146,3 +146,35 @@ func TestConsoleLogger_Close(t *testing.T) {
 	logger := NewConsoleLogger(false)
 	assert.NoError(t, logger.Close())
 }
+
+func TestConsoleLogger_WithFields_InheritsExistingFields(t *testing.T) {
+	var buf bytes.Buffer
+	logger := &ConsoleLogger{
+		output:  &buf,
+		verbose: true,
+		fields: map[string]any{
+			"existing": "value",
+		},
+	}
+
+	child := logger.WithFields(LogField("new", "field"))
+	cl, ok := child.(*ConsoleLogger)
+	assert.True(t, ok)
+	assert.Equal(t, "value", cl.fields["existing"])
+	assert.Equal(t, "field", cl.fields["new"])
+	// Original logger fields should not be modified
+	_, hasNew := logger.fields["new"]
+	assert.False(t, hasNew)
+}
+
+func TestConsoleLogger_WithFields_EmptyFields(t *testing.T) {
+	var buf bytes.Buffer
+	logger := &ConsoleLogger{
+		output:  &buf,
+		verbose: false,
+		fields:  make(map[string]any),
+	}
+
+	child := logger.WithFields()
+	assert.NotNil(t, child)
+}

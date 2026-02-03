@@ -69,3 +69,55 @@ func TestContainersAdapter_Shutdown_Optional(t *testing.T) {
 	err := a.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
+
+func TestContainersAdapter_Release_Configured(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceName string
+		returnErr   error
+		wantErr     bool
+	}{
+		{
+			name:        "release succeeds",
+			serviceName: "redis",
+			returnErr:   nil,
+			wantErr:     false,
+		},
+		{
+			name:        "release fails",
+			serviceName: "postgres",
+			returnErr:   fmt.Errorf("failed to release postgres"),
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			called := false
+			a := NewContainersAdapter(
+				WithReleaseFunc(func(ctx context.Context, name string) error {
+					called = true
+					assert.Equal(t, tt.serviceName, name)
+					return tt.returnErr
+				}),
+			)
+
+			err := a.Release(context.Background(), tt.serviceName)
+			assert.True(t, called, "release function should be called")
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.serviceName)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestContainersAdapter_HealthCheck_NotConfigured(t *testing.T) {
+	a := NewContainersAdapter()
+	err := a.HealthCheck(context.Background(), "redis")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "health check function not configured")
+	assert.Contains(t, err.Error(), "redis")
+}

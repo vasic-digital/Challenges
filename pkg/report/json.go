@@ -8,6 +8,12 @@ import (
 	"digital.vasic.challenges/pkg/challenge"
 )
 
+// jsonReportMarshal is a variable for dependency injection in tests.
+var jsonReportMarshal = json.Marshal
+
+// jsonReportMarshalIndent is a variable for dependency injection in tests.
+var jsonReportMarshalIndent = json.MarshalIndent
+
 // JSONReporter generates JSON reports from challenge results.
 type JSONReporter struct {
 	outputDir string
@@ -32,9 +38,9 @@ func (r *JSONReporter) GenerateReport(
 	result *challenge.Result,
 ) ([]byte, error) {
 	if r.pretty {
-		return json.MarshalIndent(result, "", "  ")
+		return jsonReportMarshalIndent(result, "", "  ")
 	}
-	return json.Marshal(result)
+	return jsonReportMarshal(result)
 }
 
 // jsonMasterSummary is the JSON structure for a master summary.
@@ -68,9 +74,9 @@ func (r *JSONReporter) GenerateMasterSummary(
 	}
 
 	if r.pretty {
-		return json.MarshalIndent(summary, "", "  ")
+		return jsonReportMarshalIndent(summary, "", "  ")
 	}
-	return json.Marshal(summary)
+	return jsonReportMarshal(summary)
 }
 
 // WriteReport writes a JSON report to the specified writer.

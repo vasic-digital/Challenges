@@ -142,3 +142,59 @@ func TestLoadDefinitionsFromDir_BadFile(t *testing.T) {
 	err := LoadDefinitionsFromDir(r, dir)
 	require.Error(t, err)
 }
+
+func TestLoadDefinitionsFromDir_WithYAML(t *testing.T) {
+	dir := t.TempDir()
+
+	// Test .yaml extension
+	yamlContent := `{
+		"version":"1.0",
+		"challenges":[{"id":"yaml-test","name":"YAML Test"}]
+	}`
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "test.yaml"), []byte(yamlContent), 0644,
+	))
+
+	// Test .yml extension
+	ymlContent := `{
+		"version":"1.0",
+		"challenges":[{"id":"yml-test","name":"YML Test"}]
+	}`
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "test.yml"), []byte(ymlContent), 0644,
+	))
+
+	r := NewRegistry()
+	require.NoError(t, LoadDefinitionsFromDir(r, dir))
+
+	defs := r.ListDefinitions()
+	require.Len(t, defs, 2)
+}
+
+func TestLoadDefinitionsFromDir_SkipsSubdirectories(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a subdirectory with a JSON file
+	subdir := filepath.Join(dir, "subdir")
+	require.NoError(t, os.MkdirAll(subdir, 0755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(subdir, "nested.json"),
+		[]byte(`{"version":"1.0","challenges":[{"id":"nested","name":"Nested"}]}`),
+		0644,
+	))
+
+	// Create a file in the main directory
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "main.json"),
+		[]byte(`{"version":"1.0","challenges":[{"id":"main","name":"Main"}]}`),
+		0644,
+	))
+
+	r := NewRegistry()
+	require.NoError(t, LoadDefinitionsFromDir(r, dir))
+
+	// Should only load from main directory, not subdirectory
+	defs := r.ListDefinitions()
+	require.Len(t, defs, 1)
+	assert.Equal(t, "Main", defs[0].Name)
+}

@@ -171,6 +171,31 @@ func TestDefaultRegistry_ListByCategory(t *testing.T) {
 	assert.Empty(t, none)
 }
 
+func TestDefaultRegistry_ListByCategory_MultipleSorted(t *testing.T) {
+	r := NewRegistry()
+	// Register challenges in non-alphabetical order
+	require.NoError(t, r.Register(newStub("z-challenge")))
+	require.NoError(t, r.Register(newStub("a-challenge")))
+	require.NoError(t, r.Register(newStub("m-challenge")))
+	// All three have the same category
+	require.NoError(t, r.RegisterDefinition(
+		&challenge.Definition{ID: "z-challenge", Category: "integration"},
+	))
+	require.NoError(t, r.RegisterDefinition(
+		&challenge.Definition{ID: "a-challenge", Category: "integration"},
+	))
+	require.NoError(t, r.RegisterDefinition(
+		&challenge.Definition{ID: "m-challenge", Category: "integration"},
+	))
+
+	result := r.ListByCategory("integration")
+	require.Len(t, result, 3)
+	// Should be sorted alphabetically
+	assert.Equal(t, challenge.ID("a-challenge"), result[0].ID())
+	assert.Equal(t, challenge.ID("m-challenge"), result[1].ID())
+	assert.Equal(t, challenge.ID("z-challenge"), result[2].ID())
+}
+
 func TestDefaultRegistry_ValidateDependencies_OK(t *testing.T) {
 	r := NewRegistry()
 	require.NoError(t, r.Register(newStub("a")))
@@ -217,4 +242,33 @@ func TestDefaultPackageLevelInstance(t *testing.T) {
 	// Default should be a valid registry instance.
 	assert.NotNil(t, Default)
 	assert.Equal(t, 0, Default.Count())
+}
+
+func TestDefaultRegistry_GetDefinition_NotFound(t *testing.T) {
+	r := NewRegistry()
+	_, err := r.GetDefinition("nonexistent")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestDefaultRegistry_ListByCategory_NoDefinition(t *testing.T) {
+	r := NewRegistry()
+	// Register a challenge without a definition
+	require.NoError(t, r.Register(newStub("nodefinition")))
+
+	// Should return empty list since there's no definition
+	result := r.ListByCategory("any")
+	assert.Empty(t, result)
+}
+
+func TestDefaultRegistry_ListByCategory_MismatchedCategory(t *testing.T) {
+	r := NewRegistry()
+	require.NoError(t, r.Register(newStub("a")))
+	require.NoError(t, r.RegisterDefinition(
+		&challenge.Definition{ID: "a", Category: "core"},
+	))
+
+	// Query for a different category
+	result := r.ListByCategory("integration")
+	assert.Empty(t, result)
 }

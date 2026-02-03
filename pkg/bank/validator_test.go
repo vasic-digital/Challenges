@@ -81,3 +81,51 @@ func TestValidationError_Error(t *testing.T) {
 	e2 := ValidationError{Field: "version", Message: "missing", Index: -1}
 	assert.NotContains(t, e2.Error(), "challenges")
 }
+
+func TestValidateFile_MissingName(t *testing.T) {
+	dir := t.TempDir()
+	data, _ := json.Marshal(BankFile{
+		Version: "1.0",
+		Challenges: []challenge.Definition{
+			{ID: "ch-1", Name: ""}, // Missing name
+		},
+	})
+	path := filepath.Join(dir, "missing_name.json")
+	require.NoError(t, os.WriteFile(path, data, 0644))
+
+	errors := ValidateFile(path)
+	assert.NotEmpty(t, errors)
+
+	var hasNameError bool
+	for _, e := range errors {
+		if e.Field == "name" {
+			hasNameError = true
+			assert.Equal(t, 0, e.Index)
+			assert.Contains(t, e.Message, "required")
+		}
+	}
+	assert.True(t, hasNameError, "expected name validation error")
+}
+
+func TestValidateFile_MissingID(t *testing.T) {
+	dir := t.TempDir()
+	data, _ := json.Marshal(BankFile{
+		Version: "1.0",
+		Challenges: []challenge.Definition{
+			{ID: "", Name: "Test"}, // Missing ID
+		},
+	})
+	path := filepath.Join(dir, "missing_id.json")
+	require.NoError(t, os.WriteFile(path, data, 0644))
+
+	errors := ValidateFile(path)
+	assert.NotEmpty(t, errors)
+
+	var hasIDError bool
+	for _, e := range errors {
+		if e.Field == "id" && e.Message == "challenge ID is required" {
+			hasIDError = true
+		}
+	}
+	assert.True(t, hasIDError, "expected ID validation error")
+}

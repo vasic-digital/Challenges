@@ -11,6 +11,18 @@ import (
 	"time"
 )
 
+// commandRunner is a type alias for the function that runs a command.
+// It allows for dependency injection in tests.
+type commandRunner func(cmd *exec.Cmd) error
+
+// defaultCommandRunner runs the command using cmd.Run().
+func defaultCommandRunner(cmd *exec.Cmd) error {
+	return cmd.Run()
+}
+
+// runCommand is the function used to run commands. Can be overridden in tests.
+var runCommand commandRunner = defaultCommandRunner
+
 // ShellChallenge wraps a bash script as a Challenge
 // implementation. The script's exit code determines pass/fail,
 // and stdout/stderr are captured as outputs.
@@ -114,7 +126,7 @@ func (s *ShellChallenge) Execute(
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	err := runCommand(cmd)
 
 	outputs := map[string]string{
 		"stdout":    strings.TrimSpace(stdout.String()),

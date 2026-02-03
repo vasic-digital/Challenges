@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type mockLogger struct {
@@ -192,4 +193,160 @@ func TestRedactHeaders_MixedHeaders(t *testing.T) {
 	assert.Equal(t, "application/json", result["Content-Type"])
 	assert.Equal(t, "****", result["X-Auth-Token"])
 	assert.Equal(t, "text/html", result["Accept"])
+}
+
+// TestRedactingLogger_Debug verifies Debug redacts message and fields.
+func TestRedactingLogger_Debug(t *testing.T) {
+	tests := []struct {
+		name          string
+		secret        string
+		msg           string
+		fields        []Field
+		expectedMsg   string
+		checkFieldVal func(t *testing.T, fields []Field)
+	}{
+		{
+			name:        "redacts message",
+			secret:      "mysupersecrettoken",
+			msg:         "debug: token is mysupersecrettoken",
+			fields:      nil,
+			expectedMsg: "debug: token is mysu**************",
+			checkFieldVal: func(t *testing.T, fields []Field) {
+				assert.Empty(t, fields)
+			},
+		},
+		{
+			name:        "redacts field values",
+			secret:      "apikey12345678",
+			msg:         "debug log",
+			fields:      []Field{LogField("api_key", "apikey12345678")},
+			expectedMsg: "debug log",
+			checkFieldVal: func(t *testing.T, fields []Field) {
+				require.Len(t, fields, 1)
+				assert.Equal(t, "api_key", fields[0].Key)
+				val, ok := fields[0].Value.(string)
+				require.True(t, ok)
+				assert.Equal(t, "apik**********", val)
+			},
+		},
+		{
+			name:        "redacts both message and fields",
+			secret:      "secretvalue123",
+			msg:         "found secretvalue123 in config",
+			fields:      []Field{LogField("token", "secretvalue123")},
+			expectedMsg: "found secr********** in config",
+			checkFieldVal: func(t *testing.T, fields []Field) {
+				require.Len(t, fields, 1)
+				val, ok := fields[0].Value.(string)
+				require.True(t, ok)
+				assert.Equal(t, "secr**********", val)
+			},
+		},
+		{
+			name:        "non-string field values unchanged",
+			secret:      "longsecrethere",
+			msg:         "debug",
+			fields:      []Field{IntField("count", 42), BoolField("active", true)},
+			expectedMsg: "debug",
+			checkFieldVal: func(t *testing.T, fields []Field) {
+				require.Len(t, fields, 2)
+				assert.Equal(t, 42, fields[0].Value)
+				assert.Equal(t, true, fields[1].Value)
+			},
+		},
+		{
+			name:        "short secret ignored",
+			secret:      "abc",
+			msg:         "message with abc inside",
+			fields:      []Field{LogField("val", "abc")},
+			expectedMsg: "message with abc inside",
+			checkFieldVal: func(t *testing.T, fields []Field) {
+				require.Len(t, fields, 1)
+				assert.Equal(t, "abc", fields[0].Value)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inner := new(mockLogger)
+			logger := NewRedactingLogger(inner, tt.secret)
+
+			inner.On("Debug", tt.expectedMsg, mock.MatchedBy(func(fields []Field) bool {
+				return true
+			})).Return().Run(func(args mock.Arguments) {
+				fields := args.Get(1).([]Field)
+				tt.checkFieldVal(t, fields)
+			})
+
+			logger.Debug(tt.msg, tt.fields...)
+			inner.AssertExpectations(t)
+		})
+	}
+}
+
+// TestRedactingLogger_Debug_MultipleSecrets verifies multiple secrets are redacted.
+func TestRedactingLogger_Debug_MultipleSecrets(t *testing.T) {
+	inner := new(mockLogger)
+	secrets := []string{"firstsecret123", "secondsecret456"}
+	logger := NewRedactingLogger(inner, secrets...)
+
+	expectedMsg := "keys: firs********** and seco***********"
+
+	inner.On("Debug", expectedMsg, mock.Anything).Return()
+
+	logger.Debug("keys: firstsecret123 and secondsecret456")
+	inner.AssertExpectations(t)
+}
+
+// TestRedactValue_ShortString verifies short strings are fully masked.
+func TestRedactValue_ShortString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "one char",
+			input:    "a",
+			expected: "*",
+		},
+		{
+			name:     "two chars",
+			input:    "ab",
+			expected: "**",
+		},
+		{
+			name:     "three chars",
+			input:    "abc",
+			expected: "***",
+		},
+		{
+			name:     "four chars",
+			input:    "abcd",
+			expected: "****",
+		},
+		{
+			name:     "five chars - first 4 visible",
+			input:    "abcde",
+			expected: "abcd*",
+		},
+		{
+			name:     "longer string",
+			input:    "abcdefghij",
+			expected: "abcd******",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := redactValue(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

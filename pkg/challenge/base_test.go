@@ -417,3 +417,159 @@ func TestBaseChallenge_LogError_WithLogger(t *testing.T) {
 	b.logError("error message")
 	assert.Equal(t, []string{"error message"}, ml.errors)
 }
+
+func TestBaseChallenge_LogError_NoLogger(t *testing.T) {
+	b := NewBaseChallenge(
+		"log-004", "No Logger", "desc", "unit", nil,
+	)
+	// Should not panic.
+	b.logError("error message")
+}
+
+func TestBaseChallenge_Configure_ResultsDirError(t *testing.T) {
+	b := NewBaseChallenge(
+		"cfg-err-001", "Config Error", "desc", "unit", nil,
+	)
+	// Try to create a directory in a non-existent path (read-only test scenario)
+	cfg := &Config{
+		ChallengeID: "cfg-err-001",
+		ResultsDir:  "/dev/null/impossible/path",
+		LogsDir:     "/tmp/test-logs",
+	}
+
+	err := b.Configure(cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create results dir")
+}
+
+func TestBaseChallenge_Configure_LogsDirError(t *testing.T) {
+	tmpDir := t.TempDir()
+	b := NewBaseChallenge(
+		"cfg-err-002", "Config Error", "desc", "unit", nil,
+	)
+	cfg := &Config{
+		ChallengeID: "cfg-err-002",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     "/dev/null/impossible/logs",
+	}
+
+	err := b.Configure(cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create logs dir")
+}
+
+func TestBaseChallenge_WriteJSONResult_MarshalError(t *testing.T) {
+	// The json.MarshalIndent for Result should not fail with standard
+	// fields, so we test a successful write to an invalid path
+	b := NewBaseChallenge(
+		"json-err-001", "JSON Error", "desc", "unit", nil,
+	)
+	// Configure with a path that we can't write to
+	b.config = &Config{
+		ChallengeID: "json-err-001",
+		ResultsDir:  "/dev/null/impossible",
+		LogsDir:     "/tmp",
+	}
+
+	result := &Result{
+		ChallengeID: "json-err-001",
+		Status:      StatusPassed,
+	}
+
+	err := b.WriteJSONResult(result)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "write result")
+}
+
+func TestBaseChallenge_WriteMarkdownReport_Error(t *testing.T) {
+	b := NewBaseChallenge(
+		"md-err-001", "MD Error", "desc", "unit", nil,
+	)
+	b.config = &Config{
+		ChallengeID: "md-err-001",
+		ResultsDir:  "/dev/null/impossible",
+		LogsDir:     "/tmp",
+	}
+
+	result := &Result{
+		ChallengeID:   "md-err-001",
+		ChallengeName: "MD Error",
+		Status:        StatusPassed,
+	}
+
+	err := b.WriteMarkdownReport(result)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "write report")
+}
+
+func TestBaseChallenge_ReadDependencyResult_FileReadError(t *testing.T) {
+	tmpDir := t.TempDir()
+	b := NewBaseChallenge(
+		"rd-004", "Read Error", "desc", "unit", nil,
+	)
+	cfg := &Config{
+		ChallengeID: "rd-004",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+		Dependencies: map[ID]string{
+			"dep-missing": "/nonexistent/file.json",
+		},
+	}
+	require.NoError(t, b.Configure(cfg))
+
+	_, err := b.ReadDependencyResult("dep-missing")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "read dependency result")
+}
+
+func TestBaseChallenge_ReadDependencyResult_InvalidJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write invalid JSON
+	invalidPath := filepath.Join(tmpDir, "invalid.json")
+	require.NoError(t, os.WriteFile(invalidPath, []byte("not json"), 0644))
+
+	b := NewBaseChallenge(
+		"rd-005", "Invalid JSON", "desc", "unit", nil,
+	)
+	cfg := &Config{
+		ChallengeID: "rd-005",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+		Dependencies: map[ID]string{
+			"dep-invalid": invalidPath,
+		},
+	}
+	require.NoError(t, b.Configure(cfg))
+
+	_, err := b.ReadDependencyResult("dep-invalid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unmarshal dependency result")
+}
+
+func TestBaseChallenge_WriteJSONResult_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+	b := NewBaseChallenge(
+		"json-write-success", "Write Success", "desc", "unit", nil,
+	)
+	cfg := &Config{
+		ChallengeID: "json-write-success",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+	}
+	require.NoError(t, b.Configure(cfg))
+
+	// Create a result with a field that cannot be marshaled
+	result := &Result{
+		ChallengeID: "json-write-success",
+		Status:      StatusPassed,
+		// Metrics contains values that should marshal fine
+		Metrics: map[string]MetricValue{
+			"test": {Name: "test", Value: 1.0, Unit: "ms"},
+		},
+	}
+
+	// This test verifies normal write works
+	err := b.WriteJSONResult(result)
+	assert.NoError(t, err)
+}

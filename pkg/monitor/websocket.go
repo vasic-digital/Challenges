@@ -8,6 +8,9 @@ import (
 	"sync"
 )
 
+// jsonMarshal is a variable for dependency injection in tests.
+var jsonMarshal = json.Marshal
+
 // WebSocketServer provides a WebSocket endpoint for live dashboard updates.
 // This is a simplified implementation that uses Server-Sent Events (SSE)
 // to avoid external dependencies. For full WebSocket support, users can
@@ -41,15 +44,18 @@ func (s *WebSocketServer) Start(ctx context.Context) error {
 		w.Write([]byte("ok"))
 	})
 
-	s.server = &http.Server{
+	srv := &http.Server{
 		Addr:    s.addr,
 		Handler: mux,
 	}
+	s.mu.Lock()
+	s.server = srv
+	s.mu.Unlock()
 
 	// Register event handler to broadcast to clients
 	s.collector.OnEvent(func(event ChallengeEvent) {
 		s.dashboard.UpdateFromEvent(event)
-		data, err := json.Marshal(event)
+		data, err := jsonMarshal(event)
 		if err != nil {
 			return
 		}
@@ -58,10 +64,10 @@ func (s *WebSocketServer) Start(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		s.server.Close()
+		srv.Close()
 	}()
 
-	if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		return fmt.Errorf("monitor server: %w", err)
 	}
 	return nil
@@ -69,8 +75,11 @@ func (s *WebSocketServer) Start(ctx context.Context) error {
 
 // Stop gracefully shuts down the server.
 func (s *WebSocketServer) Stop(ctx context.Context) error {
-	if s.server != nil {
-		return s.server.Shutdown(ctx)
+	s.mu.RLock()
+	srv := s.server
+	s.mu.RUnlock()
+	if srv != nil {
+		return srv.Shutdown(ctx)
 	}
 	return nil
 }
@@ -101,7 +110,7 @@ func (s *WebSocketServer) handleSSE(w http.ResponseWriter, r *http.Request) {
 
 	// Send initial dashboard state
 	snap := s.dashboard.Snapshot()
-	if data, err := json.Marshal(snap); err == nil {
+	if data, err := jsonMarshal(snap); err == nil {
 		fmt.Fprintf(w, "event: dashboard\ndata: %s\n\n", data)
 		flusher.Flush()
 	}
@@ -110,10 +119,7 @@ func (s *WebSocketServer) handleSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
-		case data, ok := <-ch:
-			if !ok {
-				return
-			}
+		case data := <-ch:
 			fmt.Fprintf(w, "event: challenge\ndata: %s\n\n", data)
 			flusher.Flush()
 		}

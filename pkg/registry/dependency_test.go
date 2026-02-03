@@ -108,3 +108,107 @@ func TestGetDeps_Missing(t *testing.T) {
 	deps := getDeps(m, "nonexistent")
 	assert.Nil(t, deps)
 }
+
+func TestDetectCycle_NoCycle(t *testing.T) {
+	// Create a graph with no cycle
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": newStub("a"),
+		"b": newStub("b", "a"),
+		"c": newStub("c", "b"),
+	}
+
+	desc := detectCycle(challenges)
+	// When no cycle is found, should return "unknown cycle"
+	assert.Equal(t, "unknown cycle", desc)
+}
+
+func TestDetectCycle_SelfCycle(t *testing.T) {
+	// A challenge that depends on itself
+	challenges := map[challenge.ID]challenge.Challenge{
+		"self": newStub("self", "self"),
+	}
+
+	desc := detectCycle(challenges)
+	assert.NotEmpty(t, desc)
+	assert.Contains(t, desc, "self")
+}
+
+func TestDetectCycle_LongCycle(t *testing.T) {
+	// a -> b -> c -> d -> a
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": newStub("a", "d"),
+		"b": newStub("b", "a"),
+		"c": newStub("c", "b"),
+		"d": newStub("d", "c"),
+	}
+
+	desc := detectCycle(challenges)
+	assert.NotEmpty(t, desc)
+	assert.NotEqual(t, "unknown cycle", desc)
+}
+
+func TestGetDeps_WithDeps(t *testing.T) {
+	a := newStub("a")
+	b := newStub("b", "a", "c")
+	c := newStub("c")
+
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": a,
+		"b": b,
+		"c": c,
+	}
+
+	deps := getDeps(challenges, "b")
+	assert.Len(t, deps, 2)
+	// Should be sorted
+	assert.Equal(t, challenge.ID("a"), deps[0])
+	assert.Equal(t, challenge.ID("c"), deps[1])
+}
+
+func TestTopologicalSort_WithExternalDeps(t *testing.T) {
+	// Dependency on non-existent challenge
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": newStub("a", "external"),
+	}
+
+	// This should detect the cycle / missing dependency
+	ordered, err := topologicalSort(challenges)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "circular dependency")
+	assert.Nil(t, ordered)
+}
+
+func TestDetectCycle_DisconnectedComponents(t *testing.T) {
+	// Create a graph with multiple disconnected components
+	// where DFS from one component already colors nodes
+	// that are then skipped when starting from another component
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": newStub("a"),
+		"b": newStub("b"),
+		"c": newStub("c"),
+		"d": newStub("d", "c"), // d depends on c
+	}
+
+	// No cycle - should return "unknown cycle" since this function
+	// is called when topological sort already detected an issue
+	desc := detectCycle(challenges)
+	assert.Equal(t, "unknown cycle", desc)
+}
+
+func TestDetectCycle_SkipAlreadyVisited(t *testing.T) {
+	// Create a graph where node "b" is visited via "a"
+	// and then encountered again when iterating sorted IDs
+	// Key: IDs are sorted, so "a" is processed first,
+	// which visits "b" through dependencies, then "b" is
+	// skipped when we reach it in the main loop.
+	challenges := map[challenge.ID]challenge.Challenge{
+		"a": newStub("a", "b"), // a depends on b
+		"b": newStub("b"),      // b is independent
+	}
+
+	// No cycle - when we iterate sorted IDs:
+	// 1. Process "a": colors "a" gray, visits "b" (colors gray then black)
+	// 2. Process "b": already black (visited), so continue
+	desc := detectCycle(challenges)
+	assert.Equal(t, "unknown cycle", desc)
+}

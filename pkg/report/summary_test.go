@@ -149,3 +149,22 @@ func splitLines(s string) []string {
 	}
 	return lines
 }
+
+func TestSaveMasterSummary_CreateDirError(t *testing.T) {
+	// Try to create directory in an impossible path
+	summary := BuildMasterSummary(nil)
+	err := SaveMasterSummary(summary, "/dev/null/impossible/path")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create output directory")
+}
+
+func TestAppendToHistory_OpenFileError(t *testing.T) {
+	// Try to write to a directory instead of a file
+	dir := t.TempDir()
+	result := makeTestResult()
+
+	// Use the directory as the history path
+	err := AppendToHistory(dir, result, "/tmp/results")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open history file")
+}

@@ -9,6 +9,12 @@ import (
 	"digital.vasic.challenges/pkg/challenge"
 )
 
+// jsonMarshal is a variable for dependency injection in tests.
+var jsonMarshal = json.Marshal
+
+// jsonMarshalIndent is a variable for dependency injection in tests.
+var jsonMarshalIndent = json.MarshalIndent
+
 // HistoricalEntry represents a single challenge run in the
 // historical log.
 type HistoricalEntry struct {
@@ -45,7 +51,7 @@ func AppendToHistory(
 		ResultsPath:      resultsPath,
 	}
 
-	data, err := json.Marshal(entry)
+	data, err := jsonMarshal(entry)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to marshal history entry: %w", err,

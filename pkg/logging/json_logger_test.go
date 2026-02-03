@@ -195,3 +195,221 @@ func splitNonEmpty(s string) []string {
 	}
 	return result
 }
+
+func TestJSONLogger_NewJSONLogger_CreateDirError(t *testing.T) {
+	// Try to create logger with output path in a non-existent directory
+	// that cannot be created (path through a file, not a directory)
+	_, err := NewJSONLogger(LoggerConfig{
+		OutputPath: "/dev/null/impossible/path/log.txt",
+		Level:      LevelInfo,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create log directory")
+}
+
+func TestJSONLogger_NewJSONLogger_OpenFileError(t *testing.T) {
+	// Create a directory where we'll try to open a file
+	dir := t.TempDir()
+	// Create a subdirectory with the same name as the log file
+	logPath := filepath.Join(dir, "test.log")
+	require.NoError(t, os.MkdirAll(logPath, 0755))
+
+	_, err := NewJSONLogger(LoggerConfig{
+		OutputPath: logPath,
+		Level:      LevelInfo,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open log file")
+}
+
+func TestJSONLogger_NewJSONLogger_APIRequestLogError(t *testing.T) {
+	dir := t.TempDir()
+	// Create a directory where the API request log file should be
+	reqPath := filepath.Join(dir, "api_req.log")
+	require.NoError(t, os.MkdirAll(reqPath, 0755))
+
+	_, err := NewJSONLogger(LoggerConfig{
+		APIRequestLog: reqPath,
+		Level:         LevelInfo,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open API request log")
+}
+
+func TestJSONLogger_NewJSONLogger_APIResponseLogError(t *testing.T) {
+	dir := t.TempDir()
+	// Create a directory where the API response log file should be
+	respPath := filepath.Join(dir, "api_resp.log")
+	require.NoError(t, os.MkdirAll(respPath, 0755))
+
+	_, err := NewJSONLogger(LoggerConfig{
+		APIResponseLog: respPath,
+		Level:          LevelInfo,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open API response log")
+}
+
+func TestJSONLogger_LogAPIRequest_NilWriter(t *testing.T) {
+	// Logger with no API request log configured
+	logger, err := NewJSONLogger(LoggerConfig{
+		Level: LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Should not panic when apiRequestLog is nil
+	logger.LogAPIRequest(APIRequestLog{
+		RequestID: "req-1",
+		Method:    "GET",
+		URL:       "http://example.com",
+	})
+	require.NoError(t, logger.Close())
+}
+
+func TestJSONLogger_LogAPIResponse_NilWriter(t *testing.T) {
+	// Logger with no API response log configured
+	logger, err := NewJSONLogger(LoggerConfig{
+		Level: LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Should not panic when apiResponseLog is nil
+	logger.LogAPIResponse(APIResponseLog{
+		RequestID:      "req-1",
+		StatusCode:     200,
+		ResponseTimeMs: 42,
+	})
+	require.NoError(t, logger.Close())
+}
+
+func TestJSONLogger_Close_WithFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "main.log")
+	reqPath := filepath.Join(dir, "api_req.log")
+	respPath := filepath.Join(dir, "api_resp.log")
+
+	logger, err := NewJSONLogger(LoggerConfig{
+		OutputPath:     logPath,
+		APIRequestLog:  reqPath,
+		APIResponseLog: respPath,
+		Level:          LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Close should properly close all files
+	err = logger.Close()
+	assert.NoError(t, err)
+
+	// Second close - the logger should handle the closed state gracefully
+	// (it's fine if it returns an error for already closed files)
+	_ = logger.Close()
+}
+
+func TestJSONLogger_NilFields(t *testing.T) {
+	// Test that nil fields in config don't cause issues
+	logger, err := NewJSONLogger(LoggerConfig{
+		Level:  LevelInfo,
+		Fields: nil,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, logger.fields)
+	require.NoError(t, logger.Close())
+}
+
+func TestJSONLogger_LogMarshalError(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "marshal_err.log")
+
+	logger, err := NewJSONLogger(LoggerConfig{
+		OutputPath: logPath,
+		Level:      LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Save original and restore after test
+	originalMarshal := jsonMarshal
+	t.Cleanup(func() { jsonMarshal = originalMarshal })
+
+	// Inject a failing marshaler
+	jsonMarshal = func(v any) ([]byte, error) {
+		return nil, assert.AnError
+	}
+
+	// This should return early without writing anything
+	logger.Info("test message")
+
+	require.NoError(t, logger.Close())
+
+	// File should be empty because marshal failed
+	data, err := os.ReadFile(logPath)
+	require.NoError(t, err)
+	assert.Empty(t, splitNonEmpty(string(data)))
+}
+
+func TestJSONLogger_LogAPIRequestMarshalError(t *testing.T) {
+	dir := t.TempDir()
+	reqPath := filepath.Join(dir, "api_req.log")
+
+	logger, err := NewJSONLogger(LoggerConfig{
+		APIRequestLog: reqPath,
+		Level:         LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Save original and restore after test
+	originalMarshal := jsonMarshal
+	t.Cleanup(func() { jsonMarshal = originalMarshal })
+
+	// Inject a failing marshaler
+	jsonMarshal = func(v any) ([]byte, error) {
+		return nil, assert.AnError
+	}
+
+	// This should return early without writing anything
+	logger.LogAPIRequest(APIRequestLog{
+		RequestID: "req-1",
+		Method:    "GET",
+		URL:       "http://example.com",
+	})
+
+	require.NoError(t, logger.Close())
+
+	// File should be empty because marshal failed
+	data, err := os.ReadFile(reqPath)
+	require.NoError(t, err)
+	assert.Empty(t, splitNonEmpty(string(data)))
+}
+
+func TestJSONLogger_LogAPIResponseMarshalError(t *testing.T) {
+	dir := t.TempDir()
+	respPath := filepath.Join(dir, "api_resp.log")
+
+	logger, err := NewJSONLogger(LoggerConfig{
+		APIResponseLog: respPath,
+		Level:          LevelInfo,
+	})
+	require.NoError(t, err)
+
+	// Save original and restore after test
+	originalMarshal := jsonMarshal
+	t.Cleanup(func() { jsonMarshal = originalMarshal })
+
+	// Inject a failing marshaler
+	jsonMarshal = func(v any) ([]byte, error) {
+		return nil, assert.AnError
+	}
+
+	// This should return early without writing anything
+	logger.LogAPIResponse(APIResponseLog{
+		RequestID:      "req-1",
+		StatusCode:     200,
+		ResponseTimeMs: 42,
+	})
+
+	require.NoError(t, logger.Close())
+
+	// File should be empty because marshal failed
+	data, err := os.ReadFile(respPath)
+	require.NoError(t, err)
+	assert.Empty(t, splitNonEmpty(string(data)))
+}

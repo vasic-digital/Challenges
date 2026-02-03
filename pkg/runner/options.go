@@ -53,3 +53,13 @@ func WithPostHook(h Hook) RunnerOption {
 		r.postHooks = append(r.postHooks, h)
 	}
 }
+
+// WithExecuteHook sets a test hook that is called after
+// executeChallenge completes. It can override the result
+// and error for testing error handling paths.
+// This is intended for testing only.
+func WithExecuteHook(h ExecuteHook) RunnerOption {
+	return func(r *DefaultRunner) {
+		r.executeHook = h
+	}
+}

@@ -1,9 +1,11 @@
 package plugin
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoader_LoadAndInit(t *testing.T) {
@@ -42,4 +44,30 @@ func TestLoader_LoadAndInit_DuplicateError(t *testing.T) {
 
 	err := l.LoadAndInit(plugins, &PluginContext{})
 	assert.Error(t, err)
+}
+
+func TestLoader_LoadOne_RegisterError(t *testing.T) {
+	r := NewRegistry()
+	l := NewLoader(r)
+
+	// Register a plugin first
+	require.NoError(t, l.LoadOne(&mockPlugin{name: "first", version: "1.0"}, &PluginContext{}))
+
+	// Try to register the same plugin again
+	err := l.LoadOne(&mockPlugin{name: "first", version: "2.0"}, &PluginContext{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "load plugin")
+}
+
+func TestLoader_LoadOne_InitError(t *testing.T) {
+	r := NewRegistry()
+	l := NewLoader(r)
+
+	err := l.LoadOne(&mockPlugin{
+		name:    "fail-init",
+		version: "1.0",
+		initErr: fmt.Errorf("init failed"),
+	}, &PluginContext{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "init plugin")
 }

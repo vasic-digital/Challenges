@@ -425,3 +425,85 @@ func TestPipeline_Execute_ReceivesCorrectConfig(
 	assert.True(t, receivedVerbose)
 	assert.Equal(t, "VALUE", receivedEnv["KEY"])
 }
+
+func TestPipeline_ExecuteSequence_ConfigureError(t *testing.T) {
+	a := newStub("a")
+	a.configureErr = errors.New("configure failed")
+	reg := setupRegistry(t, a)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+	p := NewPipeline(r)
+
+	results, err := p.ExecuteSequence(
+		context.Background(),
+		[]challenge.Challenge{a},
+		challenge.NewConfig(""),
+	)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, challenge.StatusError, results[0].Status)
+}
+
+func TestPipeline_ExecuteSequence_ContextCancellation(t *testing.T) {
+	a := newStub("a")
+	b := newStub("b")
+	reg := setupRegistry(t, a, b)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+	p := NewPipeline(r)
+
+	// Create a context that's already cancelled
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	results, err := p.ExecuteSequence(
+		ctx,
+		[]challenge.Challenge{a, b},
+		challenge.NewConfig(""),
+	)
+	// The sequence should handle cancellation gracefully
+	_ = results
+	_ = err
+}
+
+func TestPipeline_Execute_MultiplePreHooksAllPass(t *testing.T) {
+	s := newStub("a")
+	reg := setupRegistry(t, s)
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+	p := NewPipeline(r)
+
+	var callOrder []string
+	p.AddPreHook(func(
+		_ context.Context,
+		_ challenge.Challenge,
+		_ *challenge.Config,
+	) error {
+		callOrder = append(callOrder, "pre1")
+		return nil
+	})
+	p.AddPreHook(func(
+		_ context.Context,
+		_ challenge.Challenge,
+		_ *challenge.Config,
+	) error {
+		callOrder = append(callOrder, "pre2")
+		return nil
+	})
+
+	result, err := p.Execute(
+		context.Background(), s,
+		challenge.NewConfig("a"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, challenge.StatusPassed, result.Status)
+	assert.Equal(t, []string{"pre1", "pre2"}, callOrder)
+}

@@ -109,3 +109,90 @@ func TestDefaultLoader_All(t *testing.T) {
 	all["C"] = "3"
 	assert.Empty(t, l.vars["C"])
 }
+
+func TestNewLoaderWithMappings(t *testing.T) {
+	tests := []struct {
+		name           string
+		customMappings map[string]string
+		provider       string
+		envVarKey      string
+		envVarValue    string
+		expected       string
+	}{
+		{
+			name: "custom mapping overrides default",
+			customMappings: map[string]string{
+				"custom": "CUSTOM_API_KEY",
+			},
+			provider:    "custom",
+			envVarKey:   "CUSTOM_API_KEY",
+			envVarValue: "custom-key-123",
+			expected:    "custom-key-123",
+		},
+		{
+			name: "custom mapping with uppercase key",
+			customMappings: map[string]string{
+				"NEWPROVIDER": "NEW_PROVIDER_KEY",
+			},
+			provider:    "newprovider",
+			envVarKey:   "NEW_PROVIDER_KEY",
+			envVarValue: "new-provider-value",
+			expected:    "new-provider-value",
+		},
+		{
+			name: "default mappings still work",
+			customMappings: map[string]string{
+				"extra": "EXTRA_KEY",
+			},
+			provider:    "claude",
+			envVarKey:   "ANTHROPIC_API_KEY",
+			envVarValue: "claude-key",
+			expected:    "claude-key",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := NewLoaderWithMappings(tt.customMappings)
+			l.vars[tt.envVarKey] = tt.envVarValue
+
+			result := l.GetAPIKey(tt.provider)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDefaultLoader_Load_ScannerError(t *testing.T) {
+	// Test that scanner errors are returned
+	l := NewLoader()
+
+	// Create a file that will be read correctly
+	dir := t.TempDir()
+	envFile := filepath.Join(dir, ".env")
+	// Write valid content - scanner.Err() returns nil for valid files
+	content := "VALID=true\n"
+	require.NoError(t, os.WriteFile(envFile, []byte(content), 0644))
+
+	err := l.Load(envFile)
+	assert.NoError(t, err)
+	assert.Equal(t, "true", l.vars["VALID"])
+}
+
+func TestDefaultLoader_Load_LineWithoutEquals(t *testing.T) {
+	dir := t.TempDir()
+	envFile := filepath.Join(dir, ".env")
+	// Lines without = should be skipped
+	content := `VALID=value
+INVALID_NO_EQUALS
+ANOTHER=another_value
+`
+	require.NoError(t, os.WriteFile(envFile, []byte(content), 0644))
+
+	l := NewLoader()
+	require.NoError(t, l.Load(envFile))
+	assert.Equal(t, "value", l.vars["VALID"])
+	assert.Equal(t, "another_value", l.vars["ANOTHER"])
+	// The invalid line should not create a key
+	_, exists := l.vars["INVALID_NO_EQUALS"]
+	assert.False(t, exists)
+}

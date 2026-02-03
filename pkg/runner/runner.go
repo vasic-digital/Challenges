@@ -47,14 +47,24 @@ type Runner interface {
 	) ([]*challenge.Result, error)
 }
 
+// ExecuteHook allows testing of error paths in executeChallenge.
+// It is called after executeChallenge completes and can override
+// the returned error. This is only intended for testing.
+type ExecuteHook func(
+	c challenge.Challenge,
+	result *challenge.Result,
+	err error,
+) (*challenge.Result, error)
+
 // DefaultRunner is the standard Runner implementation.
 type DefaultRunner struct {
-	registry   registry.Registry
-	logger     challenge.Logger
-	timeout    time.Duration
-	resultsDir string
-	preHooks   []Hook
-	postHooks  []Hook
+	registry    registry.Registry
+	logger      challenge.Logger
+	timeout     time.Duration
+	resultsDir  string
+	preHooks    []Hook
+	postHooks   []Hook
+	executeHook ExecuteHook // test hook for executeChallenge errors
 }
 
 // Hook is a function invoked before or after challenge
@@ -363,6 +373,11 @@ func (r *DefaultRunner) executeChallenge(
 			"challenge_id": c.ID(),
 			"warning":      err.Error(),
 		})
+	}
+
+	// Apply test hook if set.
+	if r.executeHook != nil {
+		return r.executeHook(c, result, nil)
 	}
 
 	return result, nil

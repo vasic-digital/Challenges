@@ -34,10 +34,10 @@ type stubChallenge struct {
 	cleanupCalls   int
 }
 
-func (s *stubChallenge) ID() challenge.ID     { return s.id }
-func (s *stubChallenge) Name() string         { return s.name }
-func (s *stubChallenge) Description() string  { return "stub" }
-func (s *stubChallenge) Category() string     { return "test" }
+func (s *stubChallenge) ID() challenge.ID    { return s.id }
+func (s *stubChallenge) Name() string        { return s.name }
+func (s *stubChallenge) Description() string { return "stub" }
+func (s *stubChallenge) Category() string    { return "test" }
 func (s *stubChallenge) Dependencies() []challenge.ID {
 	return s.deps
 }
@@ -1024,4 +1024,267 @@ func TestDefaultRunner_Run_TableDriven(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultRunner_RunAll_EmptyRegistry(t *testing.T) {
+	reg := setupRegistry(t)
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	results, err := r.RunAll(context.Background(), challenge.NewConfig(""))
+	require.NoError(t, err)
+	assert.Empty(t, results)
+}
+
+func TestDefaultRunner_RunParallel_Basic(t *testing.T) {
+	// Create independent challenges (no dependencies)
+	a := newStub("a")
+	b := newStub("b")
+	c := newStub("c")
+	reg := setupRegistry(t, a, b, c)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	ids := []challenge.ID{"a", "b", "c"}
+	results, err := r.RunParallel(
+		context.Background(), ids, challenge.NewConfig(""), 2,
+	)
+	require.NoError(t, err)
+	assert.Len(t, results, 3)
+	for _, res := range results {
+		assert.Equal(t, challenge.StatusPassed, res.Status)
+	}
+}
+
+func TestDefaultRunner_RunParallel_NotFound(t *testing.T) {
+	reg := setupRegistry(t, newStub("a"))
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	ids := []challenge.ID{"a", "nonexistent"}
+	_, err := r.RunParallel(
+		context.Background(), ids, challenge.NewConfig(""), 2,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestDefaultRunner_RunParallel_WithErrors(t *testing.T) {
+	a := newStub("a")
+	b := newStub("b")
+	b.executeErr = errors.New("b failed")
+	b.execResult = nil
+	reg := setupRegistry(t, a, b)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	ids := []challenge.ID{"a", "b"}
+	results, err := r.RunParallel(
+		context.Background(), ids, challenge.NewConfig(""), 2,
+	)
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+
+	// Find result for b
+	var bResult *challenge.Result
+	for _, res := range results {
+		if res.ChallengeID == "b" {
+			bResult = res
+			break
+		}
+	}
+	require.NotNil(t, bResult)
+	assert.Equal(t, challenge.StatusError, bResult.Status)
+}
+
+func TestDefaultRunner_Run_ExecResultWithStatusSet(t *testing.T) {
+	s := newStub("a")
+	s.execResult = &challenge.Result{
+		Status: challenge.StatusFailed, // Explicitly set status
+		Assertions: []challenge.AssertionResult{
+			{Passed: true},
+		},
+	}
+	reg := setupRegistry(t, s)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	result, err := r.Run(
+		context.Background(), "a",
+		challenge.NewConfig("a"),
+	)
+	require.NoError(t, err)
+	// Status should be preserved since assertions all pass
+	assert.Equal(t, challenge.StatusPassed, result.Status)
+}
+
+func TestDefaultRunner_logEvent_NilLogger(t *testing.T) {
+	r := NewRunner()
+	// Should not panic with nil logger
+	assert.NotPanics(t, func() {
+		r.logEvent("test_event", map[string]any{
+			"key": "value",
+		})
+	})
+}
+
+func TestDefaultRunner_logEvent_WithLogger(t *testing.T) {
+	logger := &stubLogger{}
+	r := NewRunner(WithLogger(logger))
+
+	r.logEvent("test_event", map[string]any{
+		"key": "value",
+	})
+
+	// Logger should have received the event
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	assert.NotEmpty(t, logger.messages)
+}
+
+func TestDefaultRunner_RunAll_WithDependencies(t *testing.T) {
+	a := newStub("a")
+	b := newStub("b", "a") // b depends on a
+	reg := setupRegistry(t, a, b)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	results, err := r.RunAll(context.Background(), challenge.NewConfig(""))
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+	// a should run before b
+	assert.Equal(t, challenge.ID("a"), results[0].ChallengeID)
+	assert.Equal(t, challenge.ID("b"), results[1].ChallengeID)
+}
+
+func TestDefaultRunner_RunAll_CycleError(t *testing.T) {
+	a := newStub("a", "b")
+	b := newStub("b", "a") // Circular dependency
+	reg := setupRegistry(t, a, b)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	_, err := r.RunAll(context.Background(), challenge.NewConfig(""))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "dependency")
+}
+
+func TestDefaultRunner_RunSequence_Basic(t *testing.T) {
+	a := newStub("a")
+	b := newStub("b", "a") // b depends on a
+	reg := setupRegistry(t, a, b)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+	)
+
+	ids := []challenge.ID{"a", "b"}
+	results, err := r.RunSequence(
+		context.Background(), ids, challenge.NewConfig(""),
+	)
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+}
+
+func TestDefaultRunner_setupResultsDir_EmptyResultsDir(t *testing.T) {
+	r := NewRunner()
+
+	cfg := challenge.NewConfig("test")
+	cfg.ResultsDir = ""
+
+	err := r.setupResultsDir(cfg)
+	require.NoError(t, err)
+	assert.NotEmpty(t, cfg.ResultsDir)
+	assert.NotEmpty(t, cfg.LogsDir)
+}
+
+func TestDefaultRunner_Run_PreHookFails(t *testing.T) {
+	s := newStub("a")
+	reg := setupRegistry(t, s)
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+		WithPreHook(func(
+			_ context.Context,
+			_ challenge.Challenge,
+			_ *challenge.Config,
+		) error {
+			return errors.New("pre-hook failure")
+		}),
+	)
+
+	result, err := r.Run(
+		context.Background(), "a",
+		challenge.NewConfig("a"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, challenge.StatusError, result.Status)
+	assert.Contains(t, result.Error, "pre-hook failed")
+}
+
+func TestDefaultRunner_Run_PostHookWarning(t *testing.T) {
+	s := newStub("a")
+	reg := setupRegistry(t, s)
+	logger := &stubLogger{}
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+		WithLogger(logger),
+		WithPostHook(func(
+			_ context.Context,
+			_ challenge.Challenge,
+			_ *challenge.Config,
+		) error {
+			return errors.New("post-hook warning")
+		}),
+	)
+
+	result, err := r.Run(
+		context.Background(), "a",
+		challenge.NewConfig("a"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, challenge.StatusPassed, result.Status)
+}
+
+func TestDefaultRunner_Run_CleanupWarning(t *testing.T) {
+	s := newStub("a")
+	s.cleanupErr = errors.New("cleanup failed")
+	reg := setupRegistry(t, s)
+	logger := &stubLogger{}
+
+	r := NewRunner(
+		WithRegistry(reg),
+		WithResultsDir(t.TempDir()),
+		WithLogger(logger),
+	)
+
+	result, err := r.Run(
+		context.Background(), "a",
+		challenge.NewConfig("a"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, challenge.StatusPassed, result.Status)
 }

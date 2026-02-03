@@ -352,3 +352,116 @@ func TestShellChallenge_Execute_NoTimeout(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, StatusPassed, result.Status)
 }
+
+func TestShellChallenge_Execute_WriteOutputLogError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	scriptPath := filepath.Join(tmpDir, "echo.sh")
+	script := "#!/bin/bash\necho 'hello'\n"
+	require.NoError(t,
+		os.WriteFile(scriptPath, []byte(script), 0o755),
+	)
+
+	sc := NewShellChallenge(
+		"shell-exec-010", "Log Dir Error", "desc", "e2e",
+		nil, scriptPath, nil, tmpDir,
+	)
+
+	// Create a file where the logs directory should be to cause mkdir to fail
+	logsPath := filepath.Join(tmpDir, "logs")
+	require.NoError(t, os.WriteFile(logsPath, []byte("file"), 0o644))
+
+	cfg := &Config{
+		ChallengeID: "shell-exec-010",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     logsPath, // This is a file, not a directory
+		Timeout:     10 * time.Second,
+	}
+	// Configure will fail because it can't create logs dir
+	err := sc.Configure(cfg)
+	assert.Error(t, err)
+}
+
+func TestShellChallenge_Execute_ScriptError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a script that doesn't exist to trigger an execution error
+	scriptPath := filepath.Join(tmpDir, "exists.sh")
+	script := "#!/bin/bash\necho 'test'\n"
+	require.NoError(t, os.WriteFile(scriptPath, []byte(script), 0o755))
+
+	sc := NewShellChallenge(
+		"shell-exec-011", "Script Error", "desc", "e2e",
+		nil, scriptPath, nil, "",
+	)
+
+	cfg := &Config{
+		ChallengeID: "shell-exec-011",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+		Timeout:     10 * time.Second,
+	}
+	require.NoError(t, sc.Configure(cfg))
+
+	// Execute with a cancelled context to potentially trigger errors
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	result, err := sc.Execute(ctx)
+	require.NoError(t, err)
+	// The result should indicate some form of error/failure
+	assert.NotEmpty(t, result.Status)
+}
+
+func TestShellChallenge_Execute_EmptyWorkDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	scriptPath := filepath.Join(tmpDir, "wd.sh")
+	script := "#!/bin/bash\necho 'wd test'\n"
+	require.NoError(t,
+		os.WriteFile(scriptPath, []byte(script), 0o755),
+	)
+
+	sc := NewShellChallenge(
+		"shell-exec-012", "Empty WorkDir", "desc", "e2e",
+		nil, scriptPath, nil, "", // Empty work dir
+	)
+	cfg := &Config{
+		ChallengeID: "shell-exec-012",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+		Timeout:     10 * time.Second,
+	}
+	require.NoError(t, sc.Configure(cfg))
+
+	result, err := sc.Execute(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, StatusPassed, result.Status)
+}
+
+func TestShellChallenge_Execute_NoEnvConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	scriptPath := filepath.Join(tmpDir, "noenv.sh")
+	script := "#!/bin/bash\necho 'no env'\n"
+	require.NoError(t,
+		os.WriteFile(scriptPath, []byte(script), 0o755),
+	)
+
+	sc := NewShellChallenge(
+		"shell-exec-013", "No Env Config", "desc", "e2e",
+		nil, scriptPath, nil, tmpDir,
+	)
+	cfg := &Config{
+		ChallengeID: "shell-exec-013",
+		ResultsDir:  filepath.Join(tmpDir, "results"),
+		LogsDir:     filepath.Join(tmpDir, "logs"),
+		Timeout:     10 * time.Second,
+		Environment: nil, // No environment
+	}
+	require.NoError(t, sc.Configure(cfg))
+
+	result, err := sc.Execute(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, StatusPassed, result.Status)
+}

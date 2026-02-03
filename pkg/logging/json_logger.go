@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// jsonMarshal is a variable for dependency injection in tests.
+var jsonMarshal = json.Marshal
+
 // LogEntry represents a single JSON log entry.
 type LogEntry struct {
 	Timestamp string         `json:"timestamp"`
@@ -133,7 +136,7 @@ func (l *JSONLogger) log(
 		entry.Fields[f.Key] = f.Value
 	}
 
-	data, err := json.Marshal(entry)
+	data, err := jsonMarshal(entry)
 	if err != nil {
 		return
 	}
@@ -194,7 +197,7 @@ func (l *JSONLogger) LogAPIRequest(request APIRequestLog) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	data, err := json.Marshal(request)
+	data, err := jsonMarshal(request)
 	if err != nil {
 		return
 	}
@@ -212,7 +215,7 @@ func (l *JSONLogger) LogAPIResponse(response APIResponseLog) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	data, err := json.Marshal(response)
+	data, err := jsonMarshal(response)
 	if err != nil {
 		return
 	}

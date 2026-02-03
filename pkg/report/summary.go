@@ -1,7 +1,6 @@
 package report
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -106,7 +105,7 @@ func SaveMasterSummary(
 		outputDir,
 		fmt.Sprintf("master_summary_%s.json", ts),
 	)
-	jsonData, err := json.MarshalIndent(summary, "", "  ")
+	jsonData, err := jsonMarshalIndent(summary, "", "  ")
 	if err != nil {
 		return fmt.Errorf(
 			"failed to marshal summary: %w", err,

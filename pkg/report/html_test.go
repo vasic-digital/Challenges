@@ -97,3 +97,43 @@ func TestHTMLReporter_NoMetrics(t *testing.T) {
 	content := string(data)
 	assert.NotContains(t, content, "<h2>Metrics</h2>")
 }
+
+func TestHTMLReporter_NoAssertions(t *testing.T) {
+	r := NewHTMLReporter(t.TempDir())
+	result := makeTestResult()
+	result.Assertions = nil
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.NotContains(t, content, "<h2>Assertions</h2>")
+}
+
+func TestHTMLReporter_NoOutputs(t *testing.T) {
+	r := NewHTMLReporter(t.TempDir())
+	result := makeTestResult()
+	result.Outputs = nil
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.NotContains(t, content, "<h2>Output Files</h2>")
+}
+
+func TestHTMLReporter_MetricsWithEmptyUnit(t *testing.T) {
+	r := NewHTMLReporter(t.TempDir())
+	result := makeTestResult()
+	result.Metrics["nounit"] = challenge.MetricValue{
+		Name:  "nounit",
+		Value: 42.0,
+		Unit:  "", // Empty unit should become "-"
+	}
+
+	data, err := r.GenerateReport(result)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.Contains(t, content, "nounit")
+}

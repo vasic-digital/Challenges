@@ -67,3 +67,14 @@ func TestJSONReporter_GenerateMasterSummary_Empty(
 	require.NoError(t, err)
 	assert.True(t, json.Valid(data))
 }
+
+func TestJSONReporter_GenerateMasterSummary_Compact(t *testing.T) {
+	r := NewJSONReporter(t.TempDir(), false)
+	results := makeTestResults()
+
+	data, err := r.GenerateMasterSummary(results)
+	require.NoError(t, err)
+	assert.True(t, json.Valid(data))
+	// Compact format should not have newlines with indentation
+	assert.NotContains(t, string(data), "\n  ")
+}
