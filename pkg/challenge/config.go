@@ -18,6 +18,14 @@ type Config struct {
 	// A zero value means no timeout.
 	Timeout time.Duration `json:"timeout"`
 
+	// StaleThreshold is the maximum duration a challenge can
+	// go without reporting progress before being declared
+	// stuck. Unlike Timeout which limits total duration,
+	// StaleThreshold limits idle duration — a challenge
+	// running for hours is fine as long as it keeps reporting
+	// progress. A zero value disables stale detection.
+	StaleThreshold time.Duration `json:"stale_threshold"`
+
 	// Verbose enables detailed logging output.
 	Verbose bool `json:"verbose"`
 

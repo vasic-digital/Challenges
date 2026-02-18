@@ -138,6 +138,17 @@ func (l *DefaultLoader) Set(key, value string) error {
 	return os.Setenv(key, value)
 }
 
+// GetOrDefault returns the value of the named OS environment
+// variable, or fallback if the variable is unset or empty.
+// This is a standalone package-level function that does not
+// require a Loader instance.
+func GetOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func (l *DefaultLoader) All() map[string]string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

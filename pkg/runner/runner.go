@@ -58,13 +58,14 @@ type ExecuteHook func(
 
 // DefaultRunner is the standard Runner implementation.
 type DefaultRunner struct {
-	registry    registry.Registry
-	logger      challenge.Logger
-	timeout     time.Duration
-	resultsDir  string
-	preHooks    []Hook
-	postHooks   []Hook
-	executeHook ExecuteHook // test hook for executeChallenge errors
+	registry       registry.Registry
+	logger         challenge.Logger
+	timeout        time.Duration
+	staleThreshold time.Duration
+	resultsDir     string
+	preHooks       []Hook
+	postHooks      []Hook
+	executeHook    ExecuteHook // test hook for executeChallenge errors
 }
 
 // Hook is a function invoked before or after challenge
@@ -291,7 +292,31 @@ func (r *DefaultRunner) executeChallenge(
 		return result, nil
 	}
 
-	// Execute with timeout.
+	// Setup progress-based liveness detection. If the
+	// challenge supports progress reporting, attach a
+	// ProgressReporter so the liveness monitor can track
+	// forward progress. This allows long-running challenges
+	// (hours) while detecting stuck ones (no progress).
+	var progress *challenge.ProgressReporter
+	type progressAware interface {
+		SetProgressReporter(*challenge.ProgressReporter)
+	}
+	if pa, ok := c.(progressAware); ok {
+		progress = challenge.NewProgressReporter()
+		pa.SetProgressReporter(progress)
+		defer progress.Close()
+	}
+
+	// Determine stale threshold: per-challenge config
+	// overrides the runner default.
+	staleThreshold := config.StaleThreshold
+	if staleThreshold == 0 {
+		staleThreshold = r.staleThreshold
+	}
+
+	// Execute with timeout. The timeout is a hard upper
+	// bound; the liveness monitor provides a softer
+	// progress-based check within that window.
 	timeout := config.Timeout
 	if timeout == 0 {
 		timeout = r.timeout
@@ -300,7 +325,53 @@ func (r *DefaultRunner) executeChallenge(
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// Start liveness monitor before Execute. It watches
+	// the progress channel and cancels execCtx if no
+	// progress is reported within the stale threshold.
+	stopLiveness, stuckCh := startLivenessMonitor(
+		progress, staleThreshold, cancel,
+		r.logger, c.ID(),
+	)
+	defer stopLiveness()
+
 	execResult, execErr := c.Execute(execCtx)
+
+	// Stop liveness monitor immediately after Execute
+	// returns to prevent false stuck detection during
+	// post-processing.
+	stopLiveness()
+
+	// Check if the challenge was killed due to no
+	// progress (stuck) vs hard timeout vs normal error.
+	wasStuck := false
+	if stuckCh != nil {
+		select {
+		case <-stuckCh:
+			wasStuck = true
+		default:
+		}
+	}
+
+	// Handle stuck challenge (no progress within stale
+	// threshold). This takes priority over timeout since
+	// the liveness monitor cancelled the context.
+	if wasStuck {
+		result.Status = challenge.StatusStuck
+		result.Error = fmt.Sprintf(
+			"challenge stuck: no progress reported "+
+				"within %v", staleThreshold,
+		)
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(
+			result.StartTime,
+		)
+		r.logEvent("challenge_stuck", map[string]any{
+			"challenge_id":           c.ID(),
+			"stale_threshold_seconds": staleThreshold.Seconds(),
+		})
+		_ = c.Cleanup(ctx)
+		return result, nil
+	}
 
 	// Handle timeout.
 	if execCtx.Err() == context.DeadlineExceeded {

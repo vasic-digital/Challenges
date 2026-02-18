@@ -21,6 +21,7 @@ type BaseChallenge struct {
 	config       *Config
 	logger       Logger
 	assertions   AssertionEngine
+	progress     *ProgressReporter
 }
 
 // NewBaseChallenge creates a BaseChallenge with the given identity
@@ -74,6 +75,32 @@ func (b *BaseChallenge) SetLogger(l Logger) {
 // challenge.
 func (b *BaseChallenge) SetAssertionEngine(e AssertionEngine) {
 	b.assertions = e
+}
+
+// SetProgressReporter sets the progress reporter used by
+// this challenge. Called by the runner before Execute.
+func (b *BaseChallenge) SetProgressReporter(
+	p *ProgressReporter,
+) {
+	b.progress = p
+}
+
+// Progress returns the progress reporter, or nil if none
+// has been set. Use this in Execute to signal liveness.
+func (b *BaseChallenge) Progress() *ProgressReporter {
+	return b.progress
+}
+
+// ReportProgress is a convenience method that reports
+// progress if a reporter is available. Safe to call even
+// when no reporter is set (no-op in that case).
+func (b *BaseChallenge) ReportProgress(
+	msg string,
+	data map[string]any,
+) {
+	if b.progress != nil {
+		b.progress.ReportProgress(msg, data)
+	}
 }
 
 // Configure stores the runtime config and ensures output

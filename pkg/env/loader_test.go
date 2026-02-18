@@ -178,6 +178,20 @@ func TestDefaultLoader_Load_ScannerError(t *testing.T) {
 	assert.Equal(t, "true", l.vars["VALID"])
 }
 
+func TestGetOrDefault(t *testing.T) {
+	t.Setenv("TEST_GET_OR_DEFAULT_SET", "custom_value")
+
+	assert.Equal(t, "custom_value",
+		GetOrDefault("TEST_GET_OR_DEFAULT_SET", "default"))
+
+	t.Setenv("TEST_GET_OR_DEFAULT_EMPTY", "")
+	assert.Equal(t, "default",
+		GetOrDefault("TEST_GET_OR_DEFAULT_EMPTY", "default"))
+
+	assert.Equal(t, "fallback",
+		GetOrDefault("NONEXISTENT_ENV_VAR_99999", "fallback"))
+}
+
 func TestDefaultLoader_Load_LineWithoutEquals(t *testing.T) {
 	dir := t.TempDir()
 	envFile := filepath.Join(dir, ".env")

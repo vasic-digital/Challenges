@@ -10,6 +10,7 @@ const (
 	StatusFailed   = "failed"
 	StatusSkipped  = "skipped"
 	StatusTimedOut = "timed_out"
+	StatusStuck    = "stuck"
 	StatusError    = "error"
 )
 
@@ -118,7 +119,7 @@ func (r *Result) AllPassed() bool {
 func (r *Result) IsFinal() bool {
 	switch r.Status {
 	case StatusPassed, StatusFailed, StatusSkipped,
-		StatusTimedOut, StatusError:
+		StatusTimedOut, StatusStuck, StatusError:
 		return true
 	}
 	return false

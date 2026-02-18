@@ -37,6 +37,7 @@ go test -bench=. ./tests/benchmark/
 | `pkg/report` | Report generation (Markdown, JSON, HTML) |
 | `pkg/logging` | Structured logging (JSON, Console, Multi, Redacting) |
 | `pkg/env` | Environment variable handling with redaction |
+| `pkg/httpclient` | Generic REST API client with JWT auth and functional options |
 | `pkg/bank` | Challenge bank (load definitions from JSON/YAML) |
 | `pkg/monitor` | Live monitoring with WebSocket dashboard |
 | `pkg/metrics` | Prometheus-compatible challenge metrics |
@@ -64,6 +65,39 @@ go test -bench=. ./tests/benchmark/
 - **Decorator**: RedactingLogger wraps Logger
 - **Observer**: Monitor EventCollector for live challenge monitoring
 - **Functional Options**: RunnerOption, etc.
+
+## Progress-Based Liveness Detection
+
+Challenges may run for hours (e.g., scanning a 10TB NAS over SMB). Hard timeouts are **wrong** for long-running challenges. Instead, the framework uses progress-based liveness detection:
+
+- **ProgressReporter** (`pkg/challenge/progress.go`): Buffered channel (64) for challenges to signal forward progress. Call `ReportProgress(msg, data)` periodically.
+- **Liveness Monitor** (`pkg/runner/liveness.go`): Goroutine that watches the progress channel. If no progress is reported within `StaleThreshold`, the challenge is declared **stuck** and cancelled.
+- **StatusStuck** (`"stuck"`): New terminal status distinct from `"timed_out"`. Stuck = no progress; timed out = hard timeout exceeded.
+
+### Usage
+
+```go
+// In your challenge's Execute():
+func (c *MyChallenge) Execute(ctx context.Context) (*Result, error) {
+    for i := range files {
+        c.ReportProgress("scanning", map[string]any{
+            "files_processed": i,
+        })
+        // ... do work ...
+    }
+}
+```
+
+The runner automatically attaches a `ProgressReporter` to any challenge that embeds `BaseChallenge`. Configure thresholds:
+
+```go
+runner.NewRunner(
+    runner.WithTimeout(72*time.Hour),         // Hard upper bound (generous)
+    runner.WithStaleThreshold(5*time.Minute), // Kill if no progress for 5 min
+)
+```
+
+Per-challenge override via `Config.StaleThreshold`.
 
 ## Built-in Assertion Evaluators
 

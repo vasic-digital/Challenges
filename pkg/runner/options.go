@@ -54,6 +54,21 @@ func WithPostHook(h Hook) RunnerOption {
 	}
 }
 
+// WithStaleThreshold sets the default stale threshold for
+// challenges that do not specify their own. If a challenge
+// reports no progress within this duration, it is declared
+// stuck and cancelled. Unlike timeout (which limits total
+// duration), stale threshold limits idle duration — a
+// challenge can run for hours as long as it keeps reporting
+// progress. A zero value disables stale detection.
+func WithStaleThreshold(
+	threshold time.Duration,
+) RunnerOption {
+	return func(r *DefaultRunner) {
+		r.staleThreshold = threshold
+	}
+}
+
 // WithExecuteHook sets a test hook that is called after
 // executeChallenge completes. It can override the result
 // and error for testing error handling paths.
