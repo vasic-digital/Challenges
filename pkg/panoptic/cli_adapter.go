@@ -121,6 +121,11 @@ func (a *CLIAdapter) Run(
 		a.parseJSONReport(result)
 	}
 
+	// If no apps from JSON report, parse stdout for app results.
+	if len(result.Apps) == 0 {
+		a.parseStdoutApps(result)
+	}
+
 	return result, nil
 }
 
@@ -232,5 +237,44 @@ func (a *CLIAdapter) parseJSONReport(
 	var single AppResult
 	if err := json.Unmarshal(data, &single); err == nil {
 		result.Apps = []AppResult{single}
+	}
+}
+
+// parseStdoutApps extracts app results from Panoptic's stdout
+// by scanning for "Processing application:" and "Failed app:"
+// log lines.
+func (a *CLIAdapter) parseStdoutApps(result *PanopticRunResult) {
+	appNames := map[string]*AppResult{}
+	for _, line := range strings.Split(result.Stdout, "\n") {
+		// Extract app names from processing lines.
+		if idx := strings.Index(line, "Processing application:"); idx >= 0 {
+			name := strings.TrimSpace(line[idx+len("Processing application:"):])
+			// Strip trailing " (web)" etc.
+			if paren := strings.Index(name, " ("); paren >= 0 {
+				name = name[:paren]
+			}
+			if _, exists := appNames[name]; !exists {
+				appNames[name] = &AppResult{
+					Name:    name,
+					Success: true,
+				}
+			}
+		}
+		// Mark failed apps.
+		if idx := strings.Index(line, "Failed app:"); idx >= 0 {
+			rest := line[idx+len("Failed app:"):]
+			rest = strings.TrimSpace(rest)
+			// Format: "AppName - error message"
+			if dash := strings.Index(rest, " - "); dash >= 0 {
+				name := strings.TrimSpace(rest[:dash])
+				if app, exists := appNames[name]; exists {
+					app.Success = false
+					app.Error = strings.TrimSpace(rest[dash+3:])
+				}
+			}
+		}
+	}
+	for _, app := range appNames {
+		result.Apps = append(result.Apps, *app)
 	}
 }

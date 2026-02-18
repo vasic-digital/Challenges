@@ -37,15 +37,11 @@ func ParseResultToAssertionValues(
 		"stderr":      r.Stderr,
 	}
 
-	if r.AIErrorReport != "" {
-		values["ai_error_report"] = r.AIErrorReport
-	}
-	if r.AIGeneratedTests != "" {
-		values["ai_generated_tests"] = r.AIGeneratedTests
-	}
-	if r.VisionReport != "" {
-		values["vision_report"] = r.VisionReport
-	}
+	// Always include AI report keys so assertion evaluators
+	// can be called (they handle empty strings gracefully).
+	values["ai_error_report"] = r.AIErrorReport
+	values["ai_generated_tests"] = r.AIGeneratedTests
+	values["vision_report"] = r.VisionReport
 
 	// Add per-app AI confidence if available.
 	if confidence := extractAIConfidence(r); confidence >= 0 {
