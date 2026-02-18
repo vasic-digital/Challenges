@@ -106,9 +106,9 @@ func (m *livenessMonitor) run(
 					m.staleThreshold.Seconds(),
 				)
 			}
-			// Signal stuck and cancel context.
-			close(stuckCh)
+			// Cancel context first, then signal stuck.
 			m.cancel()
+			close(stuckCh)
 			return
 		}
 	}
