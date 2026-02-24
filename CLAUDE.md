@@ -111,15 +111,18 @@ Per-challenge override via `Config.StaleThreshold`.
 
 Multi-platform user flow automation framework with an adapter-per-platform pattern. Generic — no project-specific references in `pkg/userflow/`.
 
-**Adapters** (6 interfaces, 9 CLI implementations):
+**Adapters** (6 interfaces, 10 CLI implementations):
 - `BrowserAdapter` → `PlaywrightCLIAdapter` (web via CDP/WebSocket)
 - `MobileAdapter` → `ADBCLIAdapter` (Android/TV via adb)
+- `RecorderAdapter` → `PanopticRecorderAdapter` (CDP screencast), `ADBRecorderAdapter` (ADB screenrecord)
 - `DesktopAdapter` → `TauriCLIAdapter` (Tauri apps via WebDriver)
 - `APIAdapter` → `HTTPAPIAdapter` (REST API via `pkg/httpclient`)
 - `BuildAdapter` → `GradleCLIAdapter`, `CargoCLIAdapter`, `NPMCLIAdapter`
 - `ProcessAdapter` → `SystemProcessAdapter`
 
-**Challenge Templates** (13 types): `APIFlowChallenge`, `BrowserFlowChallenge`, `MobileFlowChallenge`, `DesktopFlowChallenge`, `BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`, `MultiPlatformChallenge`, `SetupTeardownChallenge`, `HealthCheckChallenge`, `PerformanceChallenge`, `SecurityChallenge`, `AccessibilityChallenge`.
+**Challenge Templates** (17 types): `APIFlowChallenge`, `BrowserFlowChallenge`, `RecordedBrowserFlowChallenge`, `VisionFlowChallenge`, `RecordedVisionFlowChallenge`, `MobileFlowChallenge`, `MobileLaunchChallenge`, `RecordedMobileFlowChallenge`, `RecordedMobileLaunchChallenge`, `AITestGenerationChallenge`, `RecordedAITestGenChallenge`, `DesktopFlowChallenge`, `BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`, `MultiPlatformChallenge`, `SetupTeardownChallenge`.
+
+**Recorded Challenge Templates** wrap their non-recorded counterparts with `RecorderAdapter`, adding video recording with integrity verification (non-zero file size, duration, frame count). Use these for all UI challenges.
 
 **Container Integration**: `TestEnvironment` bridges to `digital.vasic.containers` via `PlatformGroup` concept. Manages Podman container lifecycle (setup/teardown) per platform group within the 4 CPU / 8 GB resource budget.
 
