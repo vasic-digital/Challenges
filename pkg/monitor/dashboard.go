@@ -113,11 +113,16 @@ func (d *DashboardData) recalcSummary() {
 }
 
 // Snapshot returns a copy of the current dashboard state.
-func (d *DashboardData) Snapshot() DashboardData {
+func (d *DashboardData) Snapshot() *DashboardData {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
-	snap := *d
-	snap.Challenges = make(map[challenge.ID]ChallengeState, len(d.Challenges))
+	snap := &DashboardData{
+		RunID:      d.RunID,
+		StartTime:  d.StartTime,
+		Status:     d.Status,
+		Summary:    d.Summary,
+		Challenges: make(map[challenge.ID]ChallengeState, len(d.Challenges)),
+	}
 	for k, v := range d.Challenges {
 		snap.Challenges[k] = v
 	}
