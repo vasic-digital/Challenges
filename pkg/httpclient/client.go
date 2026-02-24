@@ -36,7 +36,7 @@ func NewAPIClient(baseURL string, opts ...ClientOption) *APIClient {
 		userField:  "username",
 		passField:  "password",
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 180 * time.Second,
 		},
 	}
 	for _, o := range opts {
@@ -118,6 +118,30 @@ func (c *APIClient) Login(
 	}
 
 	return result, nil
+}
+
+// LoginWithRetry calls Login with exponential backoff retry.
+// Useful when the server may be under heavy load (e.g., post-scan aggregation).
+func (c *APIClient) LoginWithRetry(
+	ctx context.Context, username, password string, maxRetries int,
+) (map[string]interface{}, error) {
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(1<<uint(attempt-1)) * 5 * time.Second
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+		resp, err := c.Login(ctx, username, password)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+	}
+	return nil, fmt.Errorf("login failed after %d retries: %w", maxRetries, lastErr)
 }
 
 // Get performs an authenticated GET request and returns the
@@ -230,6 +254,65 @@ func (c *APIClient) PostJSON(
 		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
+	}
+
+	return resp.StatusCode, data, nil
+}
+
+// PutJSON performs an authenticated PUT request with a JSON body
+// and returns the status code and raw response bytes.
+func (c *APIClient) PutJSON(
+	ctx context.Context, path string, body string,
+) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodPut, c.baseURL+path, strings.NewReader(body),
+	)
+	if err != nil {
+		return 0, nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
+	}
+
+	return resp.StatusCode, data, nil
+}
+
+// Delete performs an authenticated DELETE request and returns
+// the status code and raw response bytes.
+func (c *APIClient) Delete(
+	ctx context.Context, path string,
+) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodDelete, c.baseURL+path, nil,
+	)
+	if err != nil {
+		return 0, nil, fmt.Errorf("create request: %w", err)
+	}
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}

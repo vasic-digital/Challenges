@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"digital.vasic.challenges/pkg/challenge"
+	"digital.vasic.challenges/pkg/monitor"
 	"digital.vasic.challenges/pkg/registry"
 )
 
@@ -60,6 +61,7 @@ type ExecuteHook func(
 type DefaultRunner struct {
 	registry       registry.Registry
 	logger         challenge.Logger
+	eventCollector *monitor.EventCollector
 	timeout        time.Duration
 	staleThreshold time.Duration
 	resultsDir     string
@@ -246,6 +248,7 @@ func (r *DefaultRunner) executeChallenge(
 		"challenge_id":   c.ID(),
 		"challenge_name": c.Name(),
 	})
+	r.emitEvent(monitor.EventStarted, c.ID(), c.Name())
 
 	// Pre-hooks.
 	for _, hook := range r.preHooks {
@@ -258,6 +261,9 @@ func (r *DefaultRunner) executeChallenge(
 			result.Duration = result.EndTime.Sub(
 				result.StartTime,
 			)
+			r.emitEvent(monitor.EventFailed, c.ID(), c.Name(), map[string]interface{}{
+				"error": result.Error,
+			})
 			return result, nil
 		}
 	}
@@ -274,8 +280,13 @@ func (r *DefaultRunner) executeChallenge(
 			"challenge_id": c.ID(),
 			"error":        result.Error,
 		})
+		r.emitEvent(monitor.EventFailed, c.ID(), c.Name(), map[string]interface{}{
+			"error": result.Error,
+		})
 		return result, nil
 	}
+
+	r.emitEvent(monitor.EventConfigured, c.ID(), c.Name())
 
 	// Validate.
 	if err := c.Validate(ctx); err != nil {
@@ -289,8 +300,13 @@ func (r *DefaultRunner) executeChallenge(
 			"challenge_id": c.ID(),
 			"reason":       result.Error,
 		})
+		r.emitEvent(monitor.EventSkipped, c.ID(), c.Name(), map[string]interface{}{
+			"reason": result.Error,
+		})
 		return result, nil
 	}
+
+	r.emitEvent(monitor.EventValidated, c.ID(), c.Name())
 
 	// Setup progress-based liveness detection. If the
 	// challenge supports progress reporting, attach a
@@ -334,12 +350,18 @@ func (r *DefaultRunner) executeChallenge(
 	)
 	defer stopLiveness()
 
+	r.emitEvent(monitor.EventExecuting, c.ID(), c.Name())
+
 	execResult, execErr := c.Execute(execCtx)
 
 	// Stop liveness monitor immediately after Execute
 	// returns to prevent false stuck detection during
 	// post-processing.
 	stopLiveness()
+
+	r.emitEvent(monitor.EventExecutingCompleted, c.ID(), c.Name(), map[string]interface{}{
+		"duration": time.Since(result.StartTime),
+	})
 
 	// Check if the challenge was killed due to no
 	// progress (stuck) vs hard timeout vs normal error.
@@ -369,6 +391,10 @@ func (r *DefaultRunner) executeChallenge(
 			"challenge_id":            c.ID(),
 			"stale_threshold_seconds": staleThreshold.Seconds(),
 		})
+		r.emitEvent(monitor.EventStuck, c.ID(), c.Name(), map[string]interface{}{
+			"stale_threshold_seconds": staleThreshold.Seconds(),
+			"error":                   result.Error,
+		})
 		_ = c.Cleanup(ctx)
 		return result, nil
 	}
@@ -382,6 +408,10 @@ func (r *DefaultRunner) executeChallenge(
 		r.logEvent("challenge_timeout", map[string]any{
 			"challenge_id":    c.ID(),
 			"timeout_seconds": timeout.Seconds(),
+		})
+		r.emitEvent(monitor.EventTimedOut, c.ID(), c.Name(), map[string]interface{}{
+			"timeout_seconds": timeout.Seconds(),
+			"error":           result.Error,
 		})
 		_ = c.Cleanup(ctx)
 		return result, nil
@@ -398,6 +428,9 @@ func (r *DefaultRunner) executeChallenge(
 		r.logEvent("challenge_error", map[string]any{
 			"challenge_id": c.ID(),
 			"error":        result.Error,
+		})
+		r.emitEvent(monitor.EventFailed, c.ID(), c.Name(), map[string]interface{}{
+			"error": result.Error,
 		})
 		_ = c.Cleanup(ctx)
 		return result, nil
@@ -435,6 +468,19 @@ func (r *DefaultRunner) executeChallenge(
 		}
 	}
 
+	// Calculate assertion stats for event
+	totalAssertions := len(result.Assertions)
+	passedAssertions := 0
+	for _, a := range result.Assertions {
+		if a.Passed {
+			passedAssertions++
+		}
+	}
+	r.emitEvent(monitor.EventAssertionsEvaluated, c.ID(), c.Name(), map[string]interface{}{
+		"passed": passedAssertions,
+		"total":  totalAssertions,
+	})
+
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)
 
@@ -453,6 +499,11 @@ func (r *DefaultRunner) executeChallenge(
 		"status":           result.Status,
 		"duration_seconds": result.Duration.Seconds(),
 	})
+	r.emitEvent(monitor.EventCompleted, c.ID(), c.Name(), map[string]interface{}{
+		"status":   string(result.Status),
+		"duration": result.Duration,
+	})
+	r.emitEvent(monitor.EventCleanupStarted, c.ID(), c.Name())
 
 	// Cleanup.
 	if err := c.Cleanup(ctx); err != nil {
@@ -461,6 +512,7 @@ func (r *DefaultRunner) executeChallenge(
 			"warning":      err.Error(),
 		})
 	}
+	r.emitEvent(monitor.EventCleanupCompleted, c.ID(), c.Name())
 
 	// Apply test hook if set.
 	if r.executeHook != nil {
@@ -516,6 +568,43 @@ func (r *DefaultRunner) setupResultsDir(
 	return nil
 }
 
+// eventEmittingProgressReporter wraps a ProgressReporter to emit
+// EventProgress events for each progress update.
+type eventEmittingProgressReporter struct {
+	*challenge.ProgressReporter
+	eventCollector *monitor.EventCollector
+	challengeID    challenge.ID
+	name           string
+}
+
+// ReportProgress emits a progress event before delegating to the
+// embedded ProgressReporter.
+func (p *eventEmittingProgressReporter) ReportProgress(
+	msg string,
+	data map[string]any,
+) {
+	if p.eventCollector != nil {
+		p.eventCollector.EmitProgress(p.challengeID, p.name, msg, data)
+	}
+	p.ProgressReporter.ReportProgress(msg, data)
+}
+
+// newEventEmittingProgressReporter creates a wrapped progress reporter
+// that emits events for each progress update.
+func newEventEmittingProgressReporter(
+	base *challenge.ProgressReporter,
+	eventCollector *monitor.EventCollector,
+	challengeID challenge.ID,
+	name string,
+) *eventEmittingProgressReporter {
+	return &eventEmittingProgressReporter{
+		ProgressReporter: base,
+		eventCollector:   eventCollector,
+		challengeID:      challengeID,
+		name:             name,
+	}
+}
+
 // logEvent emits a structured log entry if a logger is
 // configured.
 func (r *DefaultRunner) logEvent(
@@ -531,4 +620,51 @@ func (r *DefaultRunner) logEvent(
 		parts = append(parts, k, v)
 	}
 	r.logger.Info(event, parts...)
+}
+
+// emitEvent emits a challenge lifecycle event to the event collector
+// if configured.
+func (r *DefaultRunner) emitEvent(
+	eventType monitor.EventType,
+	challengeID challenge.ID,
+	name string,
+	additionalFields ...map[string]interface{},
+) {
+	if r.eventCollector == nil {
+		return
+	}
+
+	event := monitor.ChallengeEvent{
+		Type:        eventType,
+		ChallengeID: challengeID,
+		Name:        name,
+		Timestamp:   time.Now(),
+	}
+
+	if len(additionalFields) > 0 {
+		fields := additionalFields[0]
+		if status, ok := fields["status"].(string); ok {
+			event.Status = status
+		}
+		if message, ok := fields["message"].(string); ok {
+			event.Message = message
+		}
+		if duration, ok := fields["duration"].(time.Duration); ok {
+			event.Duration = duration
+		}
+		if metrics, ok := fields["metrics"].(map[string]interface{}); ok {
+			event.Metrics = metrics
+		}
+		if progressData, ok := fields["progress_data"].(map[string]interface{}); ok {
+			event.ProgressData = progressData
+		}
+		if errMsg, ok := fields["error"].(string); ok {
+			event.Error = errMsg
+		}
+		if stage, ok := fields["stage"].(string); ok {
+			event.Stage = stage
+		}
+	}
+
+	r.eventCollector.Emit(event)
 }

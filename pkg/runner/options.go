@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"digital.vasic.challenges/pkg/challenge"
+	"digital.vasic.challenges/pkg/monitor"
 	"digital.vasic.challenges/pkg/registry"
 )
 
@@ -76,5 +77,13 @@ func WithStaleThreshold(
 func WithExecuteHook(h ExecuteHook) RunnerOption {
 	return func(r *DefaultRunner) {
 		r.executeHook = h
+	}
+}
+
+// WithEventCollector sets the event collector used by the runner
+// to emit challenge lifecycle events.
+func WithEventCollector(collector *monitor.EventCollector) RunnerOption {
+	return func(r *DefaultRunner) {
+		r.eventCollector = collector
 	}
 }
