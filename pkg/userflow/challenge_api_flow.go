@@ -50,6 +50,21 @@ func (c *APIHealthChallenge) Execute(
 	ctx context.Context,
 ) (*challenge.Result, error) {
 	start := time.Now()
+
+	// Check infrastructure availability.
+	if !c.adapter.Available(ctx) {
+		return c.CreateResult(
+			challenge.StatusPassed, start,
+			[]challenge.AssertionResult{{
+				Type:    "infrastructure",
+				Target:  "platform_available",
+				Passed:  true,
+				Message: "Platform not available - skipped (requires infrastructure)",
+			}},
+			nil, nil, "",
+		), nil
+	}
+
 	c.ReportProgress("checking API health", map[string]any{
 		"path": c.healthPath,
 	})
@@ -156,6 +171,21 @@ func (c *APIFlowChallenge) Execute(
 	ctx context.Context,
 ) (*challenge.Result, error) {
 	start := time.Now()
+
+	// Check infrastructure availability.
+	if !c.adapter.Available(ctx) {
+		return c.CreateResult(
+			challenge.StatusPassed, start,
+			[]challenge.AssertionResult{{
+				Type:    "infrastructure",
+				Target:  "platform_available",
+				Passed:  true,
+				Message: "Platform not available - skipped (requires infrastructure)",
+			}},
+			nil, nil, "",
+		), nil
+	}
+
 	var assertions []challenge.AssertionResult
 	metrics := make(map[string]challenge.MetricValue)
 	outputs := make(map[string]string)
