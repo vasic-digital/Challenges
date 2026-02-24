@@ -17,7 +17,7 @@ func TestUserFlowPlugin_Name(t *testing.T) {
 
 func TestUserFlowPlugin_Version(t *testing.T) {
 	p := &UserFlowPlugin{}
-	assert.Equal(t, "1.0.0", p.Version())
+	assert.Equal(t, "2.0.0", p.Version())
 }
 
 func TestUserFlowPlugin_Init_NilContext(t *testing.T) {
@@ -77,13 +77,28 @@ func TestUserFlowPlugin_Init_Success(t *testing.T) {
 	assert.True(t, engine.HasEvaluator("screenshot_exists"))
 	assert.True(t, engine.HasEvaluator("flow_completes"))
 	assert.True(t, engine.HasEvaluator("within_duration"))
+	assert.True(
+		t, engine.HasEvaluator("vision_element_detected"),
+	)
+	assert.True(
+		t, engine.HasEvaluator("vision_confidence_above"),
+	)
+	assert.True(t, engine.HasEvaluator("video_recorded"))
+	assert.True(
+		t, engine.HasEvaluator("video_duration_within"),
+	)
+	assert.True(t, engine.HasEvaluator("video_integrity"))
+	assert.True(t, engine.HasEvaluator("tests_generated"))
+	assert.True(
+		t, engine.HasEvaluator("generated_test_coverage"),
+	)
 }
 
 func TestUserFlowPlugin_PluginInterface(t *testing.T) {
 	var p plugin.Plugin = &UserFlowPlugin{}
 	assert.NotNil(t, p)
 	assert.Equal(t, "userflow", p.Name())
-	assert.Equal(t, "1.0.0", p.Version())
+	assert.Equal(t, "2.0.0", p.Version())
 }
 
 func TestUserFlowPlugin_Registry(t *testing.T) {

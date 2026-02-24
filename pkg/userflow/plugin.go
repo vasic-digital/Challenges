@@ -11,7 +11,7 @@ const (
 	// PluginName is the unique name of the userflow plugin.
 	PluginName = "userflow"
 	// PluginVersion is the version of the userflow plugin.
-	PluginVersion = "1.0.0"
+	PluginVersion = "2.0.0"
 )
 
 // UserFlowPlugin implements plugin.Plugin for the userflow

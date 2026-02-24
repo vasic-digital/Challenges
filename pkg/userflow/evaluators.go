@@ -7,24 +7,31 @@ import (
 	"digital.vasic.challenges/pkg/assertion"
 )
 
-// RegisterEvaluators registers all 12 userflow assertion
+// RegisterEvaluators registers all 19 userflow assertion
 // evaluators with the given engine.
 func RegisterEvaluators(
 	engine *assertion.DefaultEngine,
 ) error {
 	evaluators := map[string]assertion.Evaluator{
-		"build_succeeds":    evaluateBuildSucceeds,
-		"all_tests_pass":    evaluateAllTestsPass,
-		"lint_passes":       evaluateLintPasses,
-		"app_launches":      evaluateAppLaunches,
-		"app_stable":        evaluateAppStable,
-		"status_code":       evaluateStatusCode,
-		"response_contains": evaluateResponseContains,
-		"response_not_empty": evaluateResponseNotEmpty,
-		"json_field_equals": evaluateJSONFieldEquals,
-		"screenshot_exists": evaluateScreenshotExists,
-		"flow_completes":    evaluateFlowCompletes,
-		"within_duration":   evaluateWithinDuration,
+		"build_succeeds":          evaluateBuildSucceeds,
+		"all_tests_pass":          evaluateAllTestsPass,
+		"lint_passes":             evaluateLintPasses,
+		"app_launches":            evaluateAppLaunches,
+		"app_stable":              evaluateAppStable,
+		"status_code":             evaluateStatusCode,
+		"response_contains":       evaluateResponseContains,
+		"response_not_empty":      evaluateResponseNotEmpty,
+		"json_field_equals":       evaluateJSONFieldEquals,
+		"screenshot_exists":       evaluateScreenshotExists,
+		"flow_completes":          evaluateFlowCompletes,
+		"within_duration":         evaluateWithinDuration,
+		"vision_element_detected": evaluateVisionElementDetected,
+		"vision_confidence_above": evaluateVisionConfidenceAbove,
+		"video_recorded":          evaluateVideoRecorded,
+		"video_duration_within":   evaluateVideoDurationWithin,
+		"video_integrity":         evaluateVideoIntegrity,
+		"tests_generated":         evaluateTestsGenerated,
+		"generated_test_coverage": evaluateGeneratedTestCoverage,
 	}
 
 	for name, eval := range evaluators {
@@ -296,4 +303,215 @@ func evaluateWithinDuration(
 	return false, fmt.Sprintf(
 		"duration %dms exceeds limit %dms", actual, limit,
 	)
+}
+
+// evaluateVisionElementDetected checks that the detected
+// element count is >= def.Value.
+func evaluateVisionElementDetected(
+	def assertion.Definition, value any,
+) (bool, string) {
+	actual, ok := toIntVal(value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"vision_element_detected: expected int, got %T",
+			value,
+		)
+	}
+	expected, ok := toIntVal(def.Value)
+	if !ok {
+		expected = 1
+	}
+	if actual >= expected {
+		return true, fmt.Sprintf(
+			"detected %d elements (>= %d)", actual, expected,
+		)
+	}
+	return false, fmt.Sprintf(
+		"detected %d elements, expected >= %d",
+		actual, expected,
+	)
+}
+
+// evaluateVisionConfidenceAbove checks that the float64
+// value is >= def.Value.
+func evaluateVisionConfidenceAbove(
+	def assertion.Definition, value any,
+) (bool, string) {
+	actual, ok := toFloat64Val(value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"vision_confidence_above: expected float, "+
+				"got %T", value,
+		)
+	}
+	expected, ok := toFloat64Val(def.Value)
+	if !ok {
+		expected = 0.5
+	}
+	if actual >= expected {
+		return true, fmt.Sprintf(
+			"confidence %.2f >= %.2f", actual, expected,
+		)
+	}
+	return false, fmt.Sprintf(
+		"confidence %.2f < %.2f", actual, expected,
+	)
+}
+
+// evaluateVideoRecorded checks that the value is true.
+func evaluateVideoRecorded(
+	def assertion.Definition, value any,
+) (bool, string) {
+	b, ok := value.(bool)
+	if !ok {
+		return false, fmt.Sprintf(
+			"video_recorded: expected bool, got %T", value,
+		)
+	}
+	if b {
+		return true, "video was recorded"
+	}
+	return false, "video was not recorded"
+}
+
+// evaluateVideoDurationWithin checks that the duration (ms)
+// is <= def.Value (ms).
+func evaluateVideoDurationWithin(
+	def assertion.Definition, value any,
+) (bool, string) {
+	actual, ok := toIntVal(value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"video_duration_within: expected int, got %T",
+			value,
+		)
+	}
+	limit, ok := toIntVal(def.Value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"video_duration_within: expected int for "+
+				"def.Value, got %T", def.Value,
+		)
+	}
+	if actual <= limit {
+		return true, fmt.Sprintf(
+			"video duration %dms within %dms",
+			actual, limit,
+		)
+	}
+	return false, fmt.Sprintf(
+		"video duration %dms exceeds %dms", actual, limit,
+	)
+}
+
+// evaluateVideoIntegrity checks that the RecordingResult
+// has non-zero file size, duration, and frame count. The
+// value should be a map with keys: file_size, duration_ms,
+// frame_count.
+func evaluateVideoIntegrity(
+	def assertion.Definition, value any,
+) (bool, string) {
+	m, ok := value.(map[string]any)
+	if !ok {
+		return false, fmt.Sprintf(
+			"video_integrity: expected map[string]any, "+
+				"got %T", value,
+		)
+	}
+	fileSize, _ := toIntVal(m["file_size"])
+	durationMs, _ := toIntVal(m["duration_ms"])
+	frameCount, _ := toIntVal(m["frame_count"])
+
+	if fileSize <= 0 {
+		return false, fmt.Sprintf(
+			"video integrity: file_size is %d (must be > 0)",
+			fileSize,
+		)
+	}
+	if durationMs <= 0 {
+		return false, fmt.Sprintf(
+			"video integrity: duration is %dms "+
+				"(must be > 0)", durationMs,
+		)
+	}
+	if frameCount <= 0 {
+		return false, fmt.Sprintf(
+			"video integrity: frame_count is %d "+
+				"(must be > 0)", frameCount,
+		)
+	}
+	return true, fmt.Sprintf(
+		"video integrity: %d bytes, %dms, %d frames",
+		fileSize, durationMs, frameCount,
+	)
+}
+
+// evaluateTestsGenerated checks that the generated test
+// count is >= def.Value.
+func evaluateTestsGenerated(
+	def assertion.Definition, value any,
+) (bool, string) {
+	actual, ok := toIntVal(value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"tests_generated: expected int, got %T", value,
+		)
+	}
+	expected, ok := toIntVal(def.Value)
+	if !ok {
+		expected = 1
+	}
+	if actual >= expected {
+		return true, fmt.Sprintf(
+			"generated %d tests (>= %d)", actual, expected,
+		)
+	}
+	return false, fmt.Sprintf(
+		"generated %d tests, expected >= %d",
+		actual, expected,
+	)
+}
+
+// evaluateGeneratedTestCoverage checks that the category
+// count is >= def.Value.
+func evaluateGeneratedTestCoverage(
+	def assertion.Definition, value any,
+) (bool, string) {
+	actual, ok := toIntVal(value)
+	if !ok {
+		return false, fmt.Sprintf(
+			"generated_test_coverage: expected int, got %T",
+			value,
+		)
+	}
+	expected, ok := toIntVal(def.Value)
+	if !ok {
+		expected = 1
+	}
+	if actual >= expected {
+		return true, fmt.Sprintf(
+			"covers %d categories (>= %d)",
+			actual, expected,
+		)
+	}
+	return false, fmt.Sprintf(
+		"covers %d categories, expected >= %d",
+		actual, expected,
+	)
+}
+
+// toFloat64Val converts a value to float64.
+func toFloat64Val(v any) (float64, bool) {
+	switch val := v.(type) {
+	case float64:
+		return val, true
+	case float32:
+		return float64(val), true
+	case int:
+		return float64(val), true
+	case int64:
+		return float64(val), true
+	default:
+		return 0, false
+	}
 }
