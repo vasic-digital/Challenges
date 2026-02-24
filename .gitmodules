@@ -1,0 +1,6 @@
+[submodule "Panoptic"]
+	path = Panoptic
+	url = git@github.com:vasic-digital/Panoptic.git
+[submodule "Containers"]
+	path = Containers
+	url = git@github.com:vasic-digital/Containers.git
