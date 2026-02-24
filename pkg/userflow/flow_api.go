@@ -37,6 +37,15 @@ type APIStep struct {
 	// Headers are additional request headers.
 	Headers map[string]string `json:"headers,omitempty"`
 
+	// ExpectedStatus is the HTTP status code expected from
+	// this step. Zero means any status is accepted.
+	ExpectedStatus int `json:"expected_status,omitempty"`
+
+	// ExtractTo maps response JSON field paths to variable
+	// names. Extracted values can be referenced in subsequent
+	// steps via {{var_name}} placeholders in Path and Body.
+	ExtractTo map[string]string `json:"extract_to,omitempty"`
+
 	// Assertions define checks to run on the response.
 	Assertions []StepAssertion `json:"assertions"`
 }
