@@ -150,7 +150,8 @@ func (a *GradleCLIAdapter) Available(
 	if javaErr != nil {
 		return false
 	}
-	// If this is an Android project, verify the SDK is configured.
+	// If this is an Android project, verify the SDK is configured
+	// and Gradle can resolve required toolchains (e.g. JDK 17).
 	if a.isAndroidProject() {
 		sdk := os.Getenv("ANDROID_HOME")
 		if sdk == "" {
@@ -162,8 +163,19 @@ func (a *GradleCLIAdapter) Available(
 		if _, err := os.Stat(sdk); err != nil {
 			return false
 		}
+		// Dry-run assembleDebug to trigger full project
+		// configuration including JDK toolchain resolution.
+		// This catches missing JDKs, SDK components, etc.
+		dryRun := exec.CommandContext(
+			ctx, gradlew, "assembleDebug", "--dry-run",
+		)
+		dryRun.Dir = a.projectRoot
+		if err := dryRun.Run(); err != nil {
+			return false
+		}
+		return true
 	}
-	// Verify gradlew can actually run by checking version.
+	// Non-Android: verify gradlew can run.
 	cmd := exec.CommandContext(ctx, gradlew, "--version")
 	cmd.Dir = a.projectRoot
 	if err := cmd.Run(); err != nil {
