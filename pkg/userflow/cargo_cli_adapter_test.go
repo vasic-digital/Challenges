@@ -3,6 +3,7 @@ package userflow
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,6 +16,11 @@ import (
 var _ BuildAdapter = (*CargoCLIAdapter)(nil)
 
 func TestCargoCLIAdapter_Available_True(t *testing.T) {
+	// Available now requires cargo in PATH.
+	if _, err := exec.LookPath("cargo"); err != nil {
+		t.Skip("cargo not in PATH, skipping")
+	}
+
 	dir := t.TempDir()
 	toml := filepath.Join(dir, "Cargo.toml")
 	err := os.WriteFile(

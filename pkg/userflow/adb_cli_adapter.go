@@ -307,12 +307,18 @@ func (a *ADBCLIAdapter) Close(
 	return nil
 }
 
-// Available returns true if the `adb` binary is found in PATH.
+// Available returns true if the `adb` binary is found in PATH
+// and at least one device is connected and ready.
 func (a *ADBCLIAdapter) Available(
-	_ context.Context,
+	ctx context.Context,
 ) bool {
 	_, err := exec.LookPath("adb")
-	return err == nil
+	if err != nil {
+		return false
+	}
+	// Check if at least one device is connected.
+	avail, _ := a.IsDeviceAvailable(ctx)
+	return avail
 }
 
 // deviceArgs prepends `-s <serial>` to the argument list if

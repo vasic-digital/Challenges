@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -133,14 +134,46 @@ func (a *GradleCLIAdapter) Lint(
 	}, err
 }
 
-// Available returns true if gradlew exists in the project root.
+// Available returns true if gradlew exists in the project root,
+// Java is in PATH, and the Android SDK is configured (when the
+// project is an Android project).
 func (a *GradleCLIAdapter) Available(
 	_ context.Context,
 ) bool {
 	_, err := os.Stat(
 		filepath.Join(a.projectRoot, "gradlew"),
 	)
-	return err == nil
+	if err != nil {
+		return false
+	}
+	// Check that Java is available (required for Gradle).
+	_, javaErr := exec.LookPath("java")
+	if javaErr != nil {
+		return false
+	}
+	// Check that Android SDK is configured if this is an
+	// Android project.
+	buildGradle := filepath.Join(
+		a.projectRoot, "build.gradle",
+	)
+	if _, err := os.Stat(buildGradle); err == nil {
+		// Android project — verify SDK is set.
+		if os.Getenv("ANDROID_HOME") == "" &&
+			os.Getenv("ANDROID_SDK_ROOT") == "" {
+			// Check local.properties for sdk.dir.
+			lpPath := filepath.Join(
+				a.projectRoot, "local.properties",
+			)
+			data, err := os.ReadFile(lpPath)
+			if err != nil ||
+				!strings.Contains(
+					string(data), "sdk.dir",
+				) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // runGradle executes a gradlew command, optionally inside a

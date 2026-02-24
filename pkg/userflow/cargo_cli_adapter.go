@@ -187,14 +187,19 @@ func (a *CargoCLIAdapter) Lint(
 }
 
 // Available returns true if Cargo.toml exists in the project
-// root.
+// root and cargo is in PATH.
 func (a *CargoCLIAdapter) Available(
 	_ context.Context,
 ) bool {
 	_, err := os.Stat(
 		filepath.Join(a.projectRoot, "Cargo.toml"),
 	)
-	return err == nil
+	if err != nil {
+		return false
+	}
+	// Check that cargo is in PATH.
+	_, cargoErr := exec.LookPath("cargo")
+	return cargoErr == nil
 }
 
 // runCargo executes a cargo command in the project root and
