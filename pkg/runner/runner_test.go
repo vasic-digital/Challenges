@@ -1344,8 +1344,8 @@ func TestDefaultRunner_Run_ExecResultWithStatusSet(t *testing.T) {
 		challenge.NewConfig("a"),
 	)
 	require.NoError(t, err)
-	// Status should be preserved since assertions all pass
-	assert.Equal(t, challenge.StatusPassed, result.Status)
+	// Runner preserves explicit failure status from Execute() even if all assertions pass
+	assert.Equal(t, challenge.StatusFailed, result.Status)
 }
 
 func TestDefaultRunner_logEvent_NilLogger(t *testing.T) {

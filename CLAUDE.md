@@ -43,6 +43,7 @@ go test -bench=. ./tests/benchmark/
 | `pkg/metrics` | Prometheus-compatible challenge metrics |
 | `pkg/plugin` | Plugin system for custom challenge types |
 | `pkg/infra` | Infrastructure bridge to Containers module |
+| `pkg/userflow` | Multi-platform user flow automation: adapters, templates, evaluators, container infra |
 
 ## Key Interfaces
 
@@ -55,6 +56,13 @@ go test -bench=. ./tests/benchmark/
 - `env.Loader` — Environment variable management with redaction
 - `plugin.Plugin` — Plugin interface for extending the framework
 - `infra.InfraProvider` — Bridge to container infrastructure
+- `userflow.BrowserAdapter` — Browser automation (Playwright CLI)
+- `userflow.MobileAdapter` — Mobile device automation (ADB CLI)
+- `userflow.DesktopAdapter` — Desktop app automation (Tauri WebDriver)
+- `userflow.APIAdapter` — HTTP API testing adapter
+- `userflow.BuildAdapter` — Build tool adapter (Gradle, Cargo, npm)
+- `userflow.ProcessAdapter` — Process lifecycle management
+- `userflow.TestEnvironment` — Container orchestration bridge to `digital.vasic.containers`
 
 ## Design Patterns
 
@@ -98,6 +106,26 @@ runner.NewRunner(
 ```
 
 Per-challenge override via `Config.StaleThreshold`.
+
+## User Flow Automation (`pkg/userflow`)
+
+Multi-platform user flow automation framework with an adapter-per-platform pattern. Generic — no project-specific references in `pkg/userflow/`.
+
+**Adapters** (6 interfaces, 9 CLI implementations):
+- `BrowserAdapter` → `PlaywrightCLIAdapter` (web via CDP/WebSocket)
+- `MobileAdapter` → `ADBCLIAdapter` (Android/TV via adb)
+- `DesktopAdapter` → `TauriCLIAdapter` (Tauri apps via WebDriver)
+- `APIAdapter` → `HTTPAPIAdapter` (REST API via `pkg/httpclient`)
+- `BuildAdapter` → `GradleCLIAdapter`, `CargoCLIAdapter`, `NPMCLIAdapter`
+- `ProcessAdapter` → `SystemProcessAdapter`
+
+**Challenge Templates** (13 types): `APIFlowChallenge`, `BrowserFlowChallenge`, `MobileFlowChallenge`, `DesktopFlowChallenge`, `BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`, `MultiPlatformChallenge`, `SetupTeardownChallenge`, `HealthCheckChallenge`, `PerformanceChallenge`, `SecurityChallenge`, `AccessibilityChallenge`.
+
+**Container Integration**: `TestEnvironment` bridges to `digital.vasic.containers` via `PlatformGroup` concept. Manages Podman container lifecycle (setup/teardown) per platform group within the 4 CPU / 8 GB resource budget.
+
+**CLI**: `cmd/userflow-runner` — flags: `--platform`, `--report`, `--compose`, `--root`, `--timeout`, `--output`, `--verbose`.
+
+**Evaluators** (12 userflow-specific): `http_status_ok`, `http_status_created`, `http_status_unauthorized`, `http_status_forbidden`, `http_status_not_found`, `http_json_valid`, `browser_element_visible`, `browser_url_matches`, `mobile_activity_visible`, `mobile_element_exists`, `build_success`, `test_pass_rate`.
 
 ## Built-in Assertion Evaluators
 
