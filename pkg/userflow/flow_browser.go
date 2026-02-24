@@ -1,5 +1,7 @@
 package userflow
 
+import "time"
+
 // BrowserFlow defines a sequence of browser interactions to
 // execute as a user flow test.
 type BrowserFlow struct {
@@ -25,7 +27,8 @@ type BrowserStep struct {
 	Name string `json:"name"`
 
 	// Action is the browser action to perform (navigate,
-	// click, fill, select, wait, screenshot, evaluate_js).
+	// click, fill, select, wait, assert_visible, assert_text,
+	// assert_url, screenshot, evaluate_js).
 	Action string `json:"action"`
 
 	// Selector is the CSS selector for the target element.
@@ -37,6 +40,13 @@ type BrowserStep struct {
 	// Script is the JavaScript to evaluate (for
 	// evaluate_js action).
 	Script string `json:"script,omitempty"`
+
+	// Timeout is the maximum duration for wait actions.
+	Timeout time.Duration `json:"timeout,omitempty"`
+
+	// Screenshot indicates whether to take a screenshot
+	// after this step completes.
+	Screenshot bool `json:"screenshot,omitempty"`
 
 	// Assertions define checks to run after this step.
 	Assertions []StepAssertion `json:"assertions,omitempty"`
