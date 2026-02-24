@@ -1,7 +1,0 @@
-Name,Category,Platform,Status,Duration
-"Gradle Build",infrastructure,all,passed,45.2
-"Gradle Tests",infrastructure,all,passed,120.5
-"Lint Check",infrastructure,all,passed,30.1
-"Robolectric Launch",android,android,passed,15.3
-"Desktop Launch",desktop,desktop,passed,20.7
-"Web Launch",web,web,passed,10.2

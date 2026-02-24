@@ -1,5 +1,0 @@
-(A) 2024-01-15 Write unit tests for format parsers @yole +testing due:2024-01-20
-(B) 2024-01-16 Fix Android crash on empty color string @yole +bugfix
-x 2024-01-14 2024-01-10 Set up Challenges integration @yole +infrastructure
-(C) Review Robolectric test coverage @yole +testing
-Add desktop launch challenge @yole +challenges due:2024-02-01
