@@ -198,7 +198,7 @@ func (c *APIFlowChallenge) Execute(
 			"user": c.flow.Credentials.Username,
 		})
 		token, err := c.adapter.LoginWithRetry(
-			ctx, c.flow.Credentials, 3,
+			ctx, c.flow.Credentials, 5,
 		)
 		loginPassed := err == nil && token != ""
 		if !loginPassed {

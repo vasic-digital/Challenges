@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -134,7 +135,8 @@ func (a *GradleCLIAdapter) Lint(
 }
 
 // Available returns true if gradlew exists in the project root,
-// Java is in PATH, and gradlew can actually execute.
+// Java is in PATH, the Android SDK is configured (when
+// build.gradle references Android), and gradlew can execute.
 func (a *GradleCLIAdapter) Available(
 	ctx context.Context,
 ) bool {
@@ -148,6 +150,19 @@ func (a *GradleCLIAdapter) Available(
 	if javaErr != nil {
 		return false
 	}
+	// If this is an Android project, verify the SDK is configured.
+	if a.isAndroidProject() {
+		sdk := os.Getenv("ANDROID_HOME")
+		if sdk == "" {
+			sdk = os.Getenv("ANDROID_SDK_ROOT")
+		}
+		if sdk == "" {
+			return false
+		}
+		if _, err := os.Stat(sdk); err != nil {
+			return false
+		}
+	}
 	// Verify gradlew can actually run by checking version.
 	cmd := exec.CommandContext(ctx, gradlew, "--version")
 	cmd.Dir = a.projectRoot
@@ -155,6 +170,27 @@ func (a *GradleCLIAdapter) Available(
 		return false
 	}
 	return true
+}
+
+// isAndroidProject checks whether build.gradle(.kts) contains
+// the Android Gradle plugin, indicating this needs the Android SDK.
+func (a *GradleCLIAdapter) isAndroidProject() bool {
+	for _, name := range []string{
+		"build.gradle", "build.gradle.kts",
+	} {
+		data, err := os.ReadFile(
+			filepath.Join(a.projectRoot, name),
+		)
+		if err != nil {
+			continue
+		}
+		content := string(data)
+		if strings.Contains(content, "com.android") ||
+			strings.Contains(content, "android {") {
+			return true
+		}
+	}
+	return false
 }
 
 // runGradle executes a gradlew command, optionally inside a
