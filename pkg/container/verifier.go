@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"digital.vasic.challenges/pkg/challenge"
+	"digital.vasic.challenges/pkg/logging"
 )
 
 // ServiceType represents the type of containerized service.
@@ -64,11 +64,11 @@ func DefaultServices() []ServiceConfig {
 // Verifier checks that container services are running and healthy.
 type Verifier struct {
 	services []ServiceConfig
-	logger   challenge.Logger
+	logger   logging.Logger
 }
 
 // NewVerifier creates a new Verifier with default services.
-func NewVerifier(logger challenge.Logger) *Verifier {
+func NewVerifier(logger logging.Logger) *Verifier {
 	return &Verifier{
 		services: DefaultServices(),
 		logger:   logger,
@@ -84,7 +84,7 @@ func (v *Verifier) WithServices(services []ServiceConfig) *Verifier {
 // Verify checks all configured services.
 func (v *Verifier) Verify(ctx context.Context) error {
 	if v.logger != nil {
-		v.logger.Log("Starting container service verification...")
+		v.logger.Info("Starting container service verification...")
 	}
 
 	for _, svc := range v.services {
@@ -94,7 +94,7 @@ func (v *Verifier) Verify(ctx context.Context) error {
 	}
 
 	if v.logger != nil {
-		v.logger.Log("All container services verified successfully")
+		v.logger.Info("All container services verified successfully")
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func (v *Verifier) Verify(ctx context.Context) error {
 // verifyService checks a single service.
 func (v *Verifier) verifyService(ctx context.Context, svc ServiceConfig) error {
 	if v.logger != nil {
-		v.logger.Log(fmt.Sprintf("Verifying service: %s (%s:%d)", svc.Name, svc.Host, svc.Port))
+		v.logger.Info(fmt.Sprintf("Verifying service: %s (%s:%d)", svc.Name, svc.Host, svc.Port))
 	}
 
 	// Check TCP connectivity
@@ -118,7 +118,7 @@ func (v *Verifier) verifyService(ctx context.Context, svc ServiceConfig) error {
 	}
 
 	if v.logger != nil {
-		v.logger.Log(fmt.Sprintf("✓ Service %s is healthy", svc.Name))
+		v.logger.Info(fmt.Sprintf("Service %s is healthy", svc.Name))
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func execCommand(ctx context.Context, cmd string) error {
 
 // PreConditionCheck performs the full pre-condition verification.
 // This is the main entry point used by the challenges framework.
-func PreConditionCheck(ctx context.Context, logger challenge.Logger) error {
+func PreConditionCheck(ctx context.Context, logger logging.Logger) error {
 	// 1. Check if .env file exists in Containers module
 	containersDir := findContainersDir()
 	if containersDir == "" {
@@ -181,8 +181,8 @@ func PreConditionCheck(ctx context.Context, logger challenge.Logger) error {
 	envFile := filepath.Join(containersDir, ".env")
 	if _, err := os.Stat(envFile); err != nil {
 		if logger != nil {
-			logger.Log("WARNING: .env file not found in Containers module")
-			logger.Log("Containers will boot on LOCAL HOST")
+			logger.Warn("WARNING: .env file not found in Containers module")
+			logger.Info("Containers will boot on LOCAL HOST")
 		}
 	} else {
 		content, err := os.ReadFile(envFile)
@@ -192,18 +192,18 @@ func PreConditionCheck(ctx context.Context, logger challenge.Logger) error {
 
 		if len(strings.TrimSpace(string(content))) == 0 {
 			if logger != nil {
-				logger.Log("WARNING: .env file is empty")
-				logger.Log("Containers will boot on LOCAL HOST")
+				logger.Warn("WARNING: .env file is empty")
+				logger.Info("Containers will boot on LOCAL HOST")
 			}
 		} else {
 			if logger != nil {
-				logger.Log("Found .env file in Containers module")
+				logger.Info("Found .env file in Containers module")
 			}
 
 			// Check for remote configuration
 			if strings.Contains(string(content), "CONTAINERS_REMOTE_ENABLED=true") {
 				if logger != nil {
-					logger.Log("Remote container distribution is ENABLED")
+					logger.Info("Remote container distribution is ENABLED")
 				}
 			}
 		}
