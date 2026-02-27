@@ -168,3 +168,25 @@ func (a *PanopticRecorderAdapter) Available(
 	}
 	return false
 }
+
+// Reset stops any in-progress recording and resets the adapter state.
+// This should be called before starting a new challenge to ensure
+// no lingering recording state from previous failed challenges.
+func (a *PanopticRecorderAdapter) Reset(ctx context.Context) error {
+	// Try to stop any running recording
+	if a.recording || a.cmd != nil {
+		// Try to stop via CLI
+		stopCmd := exec.CommandContext(ctx, a.binaryPath, "record", "stop")
+		_ = stopCmd.Run()
+
+		// Kill the process if still running
+		if a.cmd != nil && a.cmd.Process != nil {
+			_ = a.cmd.Process.Kill()
+		}
+	}
+	// Reset state
+	a.recording = false
+	a.cmd = nil
+	a.sessionID = ""
+	return nil
+}

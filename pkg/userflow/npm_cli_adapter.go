@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -44,17 +45,52 @@ func (a *NPMCLIAdapter) Build(
 	}, err
 }
 
-// RunTests runs vitest via npx with JUnit output, parses the
+// RunTests runs vitest or jest via npx with JUnit output, parses the
 // results, and returns a TestResult.
 func (a *NPMCLIAdapter) RunTests(
 	ctx context.Context, target TestTarget,
 ) (*TestResult, error) {
+	// Determine test runner - use npm workspaces for packages, vitest for apps
+	useWorkspaces := strings.Contains(target.Filter, "workspace")
+
 	tmpFile := filepath.Join(
 		os.TempDir(),
-		fmt.Sprintf("vitest-junit-%d.xml", time.Now().UnixNano()),
+		fmt.Sprintf("jest-junit-%d.xml", time.Now().UnixNano()),
 	)
 	defer os.Remove(tmpFile)
 
+	if useWorkspaces {
+		// For npm workspaces (packages/*), run from root with --workspace flag
+		workspace := strings.ReplaceAll(target.Filter, "--workspace=", "")
+		args := []string{
+			"test",
+			"--workspace=" + workspace,
+			"--",
+			"--ci",
+			"--testPathIgnorePatterns=",
+		}
+		start := time.Now()
+		cmd := exec.CommandContext(ctx, "npm", args...)
+		cmd.Dir = a.projectRoot
+		output, runErr := cmd.CombinedOutput()
+		elapsed := time.Since(start)
+
+		// For npm workspaces, return success if no error
+		result := &TestResult{
+			Duration: elapsed,
+			Output:   string(output),
+		}
+		if runErr != nil {
+			result.TotalFailed = 1
+		}
+		return result, runErr
+	}
+
+	// Original vitest logic for apps
+	tmpFile = filepath.Join(
+		os.TempDir(),
+		fmt.Sprintf("vitest-junit-%d.xml", time.Now().UnixNano()),
+	)
 	args := []string{
 		"vitest", "run",
 		"--reporter=junit",

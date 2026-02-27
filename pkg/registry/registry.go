@@ -181,8 +181,9 @@ func (r *DefaultRegistry) ListDefinitions() []*challenge.Definition {
 }
 
 // ListByCategory returns challenges whose definition matches
-// the given category. Challenges without a corresponding
-// definition are excluded.
+// the given category, or whose BaseChallenge category matches.
+// Challenges without a corresponding definition are included
+// if their BaseChallenge category matches.
 func (r *DefaultRegistry) ListByCategory(
 	category string,
 ) []challenge.Challenge {
@@ -191,9 +192,17 @@ func (r *DefaultRegistry) ListByCategory(
 
 	var out []challenge.Challenge
 	for id, c := range r.challenges {
+		// First check definition
 		if def, ok := r.definitions[id]; ok {
 			if def.Category == category {
 				out = append(out, c)
+			}
+		} else {
+			// Fall back to checking BaseChallenge category
+			if bc, ok := c.(interface{ Category() string }); ok {
+				if bc.Category() == category {
+					out = append(out, c)
+				}
 			}
 		}
 	}

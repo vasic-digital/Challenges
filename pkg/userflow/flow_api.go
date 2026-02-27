@@ -41,6 +41,10 @@ type APIStep struct {
 	// this step. Zero means any status is accepted.
 	ExpectedStatus int `json:"expected_status,omitempty"`
 
+	// AcceptedStatuses is a list of HTTP status codes that are
+	// considered successful for this step.
+	AcceptedStatuses []int `json:"accepted_statuses,omitempty"`
+
 	// ExtractTo maps response JSON field paths to variable
 	// names. Extracted values can be referenced in subsequent
 	// steps via {{var_name}} placeholders in Path and Body.

@@ -71,6 +71,12 @@ type APIAdapter interface {
 		ctx context.Context, path string,
 	) (int, []byte, error)
 
+	// DeleteWithBody performs an HTTP DELETE with a body and
+	// returns the status code and raw response.
+	DeleteWithBody(
+		ctx context.Context, path, body string,
+	) (int, []byte, error)
+
 	// WebSocketConnect establishes a WebSocket connection to
 	// the given path.
 	WebSocketConnect(

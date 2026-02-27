@@ -125,6 +125,13 @@ func (a *HTTPAPIAdapter) Delete(
 	return a.client.Delete(ctx, path)
 }
 
+// DeleteWithBody performs an HTTP DELETE with a body.
+func (a *HTTPAPIAdapter) DeleteWithBody(
+	ctx context.Context, path, body string,
+) (int, []byte, error) {
+	return a.client.DeleteWithBody(ctx, path, body)
+}
+
 // WebSocketConnect establishes a WebSocket connection to the
 // given path using gorilla/websocket.
 func (a *HTTPAPIAdapter) WebSocketConnect(

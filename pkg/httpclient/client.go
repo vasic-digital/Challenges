@@ -17,24 +17,26 @@ type ClientOption func(*APIClient)
 // for calling REST APIs. Defaults match common conventions so
 // callers can use NewAPIClient(url) with zero options.
 type APIClient struct {
-	baseURL    string
-	token      string
-	loginPath  string
-	tokenField string
-	userField  string
-	passField  string
-	httpClient *http.Client
+	baseURL     string
+	token       string
+	loginPath   string
+	tokenField  string
+	tokenHeader string
+	userField   string
+	passField   string
+	httpClient  *http.Client
 }
 
 // NewAPIClient creates an API client targeting the given base URL.
 // Pass ClientOption values to override defaults.
 func NewAPIClient(baseURL string, opts ...ClientOption) *APIClient {
 	c := &APIClient{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		loginPath:  "/api/v1/auth/login",
-		tokenField: "session_token",
-		userField:  "username",
-		passField:  "password",
+		baseURL:     strings.TrimRight(baseURL, "/"),
+		loginPath:   "/api/v1/auth/login",
+		tokenField:  "session_token",
+		tokenHeader: "Authorization",
+		userField:   "username",
+		passField:   "password",
 		httpClient: &http.Client{
 			Timeout: 180 * time.Second,
 		},
@@ -54,6 +56,12 @@ func WithLoginPath(path string) ClientOption {
 // the token from the login response.
 func WithTokenField(field string) ClientOption {
 	return func(c *APIClient) { c.tokenField = field }
+}
+
+// WithTokenHeader overrides the header name used to send the token
+// (e.g., "X-Access-Token" for Bear Messenger).
+func WithTokenHeader(header string) ClientOption {
+	return func(c *APIClient) { c.tokenHeader = header }
 }
 
 // WithUsernameField overrides the JSON field name for the username
@@ -156,7 +164,11 @@ func (c *APIClient) Get(
 		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -190,7 +202,11 @@ func (c *APIClient) GetArray(
 		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -225,7 +241,11 @@ func (c *APIClient) GetRaw(
 		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -255,7 +275,11 @@ func (c *APIClient) PostJSON(
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -285,7 +309,11 @@ func (c *APIClient) PutJSON(
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -314,7 +342,45 @@ func (c *APIClient) Delete(
 		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
+	}
+
+	return resp.StatusCode, data, nil
+}
+
+// DeleteWithBody performs an authenticated DELETE request with a body
+// and returns the status code and raw response bytes.
+func (c *APIClient) DeleteWithBody(
+	ctx context.Context, path string, body string,
+) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodDelete, c.baseURL+path, strings.NewReader(body),
+	)
+	if err != nil {
+		return 0, nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		if c.tokenHeader == "Authorization" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		} else {
+			req.Header.Set(c.tokenHeader, c.token)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)

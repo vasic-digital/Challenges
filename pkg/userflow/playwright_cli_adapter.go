@@ -6,10 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
+
+// cdpToHTTP converts a WebSocket CDP endpoint to HTTP for
+// Playwright's connectOverCDP function.
+func cdpToHTTP(endpoint string) string {
+	endpoint = strings.Replace(endpoint, "wss://", "https://", 1)
+	endpoint = strings.Replace(endpoint, "ws://", "http://", 1)
+	return endpoint
+}
 
 // PlaywrightCLIAdapter implements BrowserAdapter by executing
 // Playwright commands via Node.js scripts inside a container
@@ -30,13 +40,13 @@ func NewPlaywrightCLIAdapter(
 	cdpEndpoint string,
 ) *PlaywrightCLIAdapter {
 	return &PlaywrightCLIAdapter{
-		cdpEndpoint:   cdpEndpoint,
+		cdpEndpoint:   cdpToHTTP(cdpEndpoint),
 		containerName: "playwright",
 	}
 }
 
 // Initialize connects to the CDP endpoint and creates a
-// browser context.
+// browser context. Does NOT close the browser - use Close for cleanup.
 func (a *PlaywrightCLIAdapter) Initialize(
 	ctx context.Context, config BrowserConfig,
 ) error {
@@ -395,17 +405,33 @@ func (a *PlaywrightCLIAdapter) Available(
 	return resp.StatusCode < 500
 }
 
-// execNode runs a Node.js script inside the Playwright
-// container via `podman exec`.
+// execNode runs a Node.js script locally or inside a Playwright
+// container via `podman exec`. Falls back to local execution
+// if container is not available.
 func (a *PlaywrightCLIAdapter) execNode(
 	ctx context.Context, script string,
 ) (string, error) {
-	cmd := exec.CommandContext(
+	// Get the directory where bear-challenges binary is located
+	execDir := filepath.Dir(os.Args[0])
+	if execDir == "" {
+		execDir = "."
+	}
+
+	// Try local execution first (from the binary's directory)
+	cmd := exec.CommandContext(ctx, "node", "-e", script)
+	cmd.Dir = execDir
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return string(out), nil
+	}
+	fmt.Fprintf(os.Stderr, "Local node exec failed: %v\nOutput: %s\n", err, string(out))
+
+	// Fall back to container execution
+	cmd = exec.CommandContext(
 		ctx, "podman", "exec", a.containerName,
 		"node", "-e", script,
 	)
-
-	out, err := cmd.CombinedOutput()
+	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf(
 			"node exec: %w\noutput: %s",

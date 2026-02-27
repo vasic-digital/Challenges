@@ -244,21 +244,35 @@ func (c *APIFlowChallenge) Execute(
 		)
 
 		// Check status code if expected.
-		if step.ExpectedStatus > 0 {
-			statusPassed := err == nil &&
-				code == step.ExpectedStatus
+		if step.ExpectedStatus > 0 || len(step.AcceptedStatuses) > 0 {
+			statusPassed := err == nil
+			if statusPassed {
+				if step.ExpectedStatus > 0 {
+					statusPassed = code == step.ExpectedStatus
+				}
+				if !statusPassed && len(step.AcceptedStatuses) > 0 {
+					for _, accepted := range step.AcceptedStatuses {
+						if code == accepted {
+							statusPassed = true
+							break
+						}
+					}
+				}
+			}
 			if !statusPassed {
 				allPassed = false
 			}
+			expectedStr := fmt.Sprintf("%d", step.ExpectedStatus)
+			if len(step.AcceptedStatuses) > 0 {
+				expectedStr = fmt.Sprintf("%v", step.AcceptedStatuses)
+			}
 			assertions = append(
 				assertions, challenge.AssertionResult{
-					Type:   "status_code",
-					Target: step.Name,
-					Expected: fmt.Sprintf(
-						"%d", step.ExpectedStatus,
-					),
-					Actual: fmt.Sprintf("%d", code),
-					Passed: statusPassed,
+					Type:     "status_code",
+					Target:   step.Name,
+					Expected: expectedStr,
+					Actual:   fmt.Sprintf("%d", code),
+					Passed:   statusPassed,
 					Message: stepStatusMessage(
 						step.Name,
 						step.ExpectedStatus,
@@ -270,6 +284,7 @@ func (c *APIFlowChallenge) Execute(
 
 		// Extract variables from response.
 		if len(step.ExtractTo) > 0 && respBody != nil {
+			// Try to parse as object first
 			var respMap map[string]interface{}
 			if jsonErr := json.Unmarshal(
 				respBody, &respMap,
@@ -279,6 +294,27 @@ func (c *APIFlowChallenge) Execute(
 						variables[varName] = fmt.Sprintf(
 							"%v", val,
 						)
+					}
+				}
+			} else {
+				// Try to parse as array
+				var respArray []interface{}
+				if jsonErr := json.Unmarshal(
+					respBody, &respArray,
+				); jsonErr == nil && len(respArray) > 0 {
+					for field, varName := range step.ExtractTo {
+						// Handle "[0].id" syntax
+						if len(field) > 3 && field[0] == '[' {
+							idx := int(field[1] - '0')
+							if idx < len(respArray) {
+								if obj, ok := respArray[idx].(map[string]interface{}); ok {
+									key := field[4:] // Skip "[0]."
+									if val, ok := obj[key]; ok {
+										variables[varName] = fmt.Sprintf("%v", val)
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -360,6 +396,9 @@ func (c *APIFlowChallenge) executeStep(
 	case "PUT":
 		return c.adapter.PutJSON(ctx, path, body)
 	case "DELETE":
+		if body != "" {
+			return c.adapter.DeleteWithBody(ctx, path, body)
+		}
 		return c.adapter.Delete(ctx, path)
 	default:
 		return 0, nil, fmt.Errorf(
