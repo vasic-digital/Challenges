@@ -32,15 +32,14 @@ func NewPanopticRecorderAdapter(
 }
 
 // StartRecording begins a recording session by launching
-// `panoptic record start` as a background process. The
-// record start process blocks (stays alive while recording),
-// so it is started with cmd.Start() and the session ID is
-// read asynchronously from stdout.
+// `panoptic record start` as a background process. If a recording
+// is already in progress, it will be stopped first automatically.
 func (a *PanopticRecorderAdapter) StartRecording(
 	ctx context.Context, config RecordingConfig,
 ) error {
+	// Auto-reset if already recording to handle failed previous challenges
 	if a.recording {
-		return fmt.Errorf("recording already in progress")
+		_ = a.Reset(ctx)
 	}
 
 	args := []string{
