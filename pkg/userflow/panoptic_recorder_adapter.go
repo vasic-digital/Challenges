@@ -2,12 +2,13 @@ package userflow
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
+	"regexp"
 	"time"
 )
 
@@ -62,23 +63,45 @@ func (a *PanopticRecorderAdapter) StartRecording(
 		return fmt.Errorf("start recording: %w", err)
 	}
 
-	// Read the session ID from the first line of stdout.
+	// Read the session ID from panoptic stdout.
 	// The process continues running in the background.
 	sessionCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		scanner := bufio.NewScanner(stdout)
-		if scanner.Scan() {
-			sessionCh <- strings.TrimSpace(scanner.Text())
-		} else {
+		ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+		sessionRegex := regexp.MustCompile(`rec_[0-9]+`)
+		sessionID := ""
+		lineCount := 0
+		for scanner.Scan() {
+			lineCount++
+			line := scanner.Text()
+			fmt.Fprintf(os.Stderr, "panoptic line: %q\n", line)
+			// Strip ANSI escape codes (e.g., \033[36mINFO\033[0m[timestamp])
+			cleanLine := ansiRegex.ReplaceAllString(line, "")
+			// Extract session ID pattern rec_[0-9]+
+			matches := sessionRegex.FindStringSubmatch(cleanLine)
+			if matches != nil {
+				sessionID = matches[0]
+				fmt.Fprintf(os.Stderr, "found session id: %s\n", sessionID)
+				sessionCh <- sessionID
+				// Continue reading to drain remaining output
+				for scanner.Scan() {
+					// discard
+				}
+				break
+			}
+			// If we've read too many lines without finding session ID, give up
+			if lineCount > 10 {
+				errCh <- fmt.Errorf("could not find session ID in first %d lines of panoptic output", lineCount)
+				return
+			}
+		}
+		if sessionID == "" {
 			if scanErr := scanner.Err(); scanErr != nil {
-				errCh <- fmt.Errorf(
-					"read session id: %w", scanErr,
-				)
+				errCh <- fmt.Errorf("read session id: %w", scanErr)
 			} else {
-				errCh <- fmt.Errorf(
-					"read session id: unexpected EOF",
-				)
+				errCh <- fmt.Errorf("read session id: unexpected EOF before session ID")
 			}
 		}
 	}()
@@ -125,9 +148,11 @@ func (a *PanopticRecorderAdapter) StopRecording(
 	}
 
 	cmd := exec.CommandContext(ctx, a.binaryPath, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("stop recording: %w", err)
+		return nil, fmt.Errorf("stop recording: %w (stderr: %s)", err, stderr.String())
 	}
 
 	var sr stopResult
