@@ -105,6 +105,15 @@ func (m *mockAPIAdapter) Delete(
 	return 404, nil, nil
 }
 
+func (m *mockAPIAdapter) DeleteWithBody(
+	_ context.Context, path, _ string,
+) (int, []byte, error) {
+	if resp, ok := m.deleteResponses[path]; ok {
+		return resp.code, resp.body, resp.err
+	}
+	return 404, nil, nil
+}
+
 func (m *mockAPIAdapter) WebSocketConnect(
 	_ context.Context, _ string,
 ) (WebSocketConn, error) {

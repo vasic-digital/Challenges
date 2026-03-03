@@ -56,11 +56,13 @@ go test -bench=. ./tests/benchmark/
 - `env.Loader` — Environment variable management with redaction
 - `plugin.Plugin` — Plugin interface for extending the framework
 - `infra.InfraProvider` — Bridge to container infrastructure
-- `userflow.BrowserAdapter` — Browser automation (Playwright CLI)
-- `userflow.MobileAdapter` — Mobile device automation (ADB CLI)
+- `userflow.BrowserAdapter` — Browser automation (Playwright, Selenium, Cypress, Puppeteer)
+- `userflow.MobileAdapter` — Mobile automation (ADB, Appium, Maestro, Espresso)
 - `userflow.DesktopAdapter` — Desktop app automation (Tauri WebDriver)
 - `userflow.APIAdapter` — HTTP API testing adapter
-- `userflow.BuildAdapter` — Build tool adapter (Gradle, Cargo, npm)
+- `userflow.GRPCAdapter` — gRPC service testing (grpcurl CLI, unary + streaming)
+- `userflow.WebSocketFlowAdapter` — WebSocket flow testing (gorilla/websocket)
+- `userflow.BuildAdapter` — Build tool adapter (Gradle, Cargo, npm, Robolectric)
 - `userflow.ProcessAdapter` — Process lifecycle management
 - `userflow.TestEnvironment` — Container orchestration bridge to `digital.vasic.containers`
 
@@ -111,16 +113,18 @@ Per-challenge override via `Config.StaleThreshold`.
 
 Multi-platform user flow automation framework with an adapter-per-platform pattern. Generic — no project-specific references in `pkg/userflow/`.
 
-**Adapters** (6 interfaces, 10 CLI implementations):
-- `BrowserAdapter` → `PlaywrightCLIAdapter` (web via CDP/WebSocket)
-- `MobileAdapter` → `ADBCLIAdapter` (Android/TV via adb)
+**Adapters** (8 interfaces, 21 implementations):
+- `BrowserAdapter` → `PlaywrightCLIAdapter` (CDP/WebSocket), `SeleniumAdapter` (W3C WebDriver), `CypressCLIAdapter` (Cypress CLI specs), `PuppeteerAdapter` (Node.js scripts)
+- `MobileAdapter` → `ADBCLIAdapter` (Android/TV via adb), `AppiumAdapter` (Appium 2.0 W3C), `MaestroCLIAdapter` (Maestro YAML flows), `EspressoAdapter` (Gradle + ADB hybrid)
 - `RecorderAdapter` → `PanopticRecorderAdapter` (CDP screencast), `ADBRecorderAdapter` (ADB screenrecord)
 - `DesktopAdapter` → `TauriCLIAdapter` (Tauri apps via WebDriver)
 - `APIAdapter` → `HTTPAPIAdapter` (REST API via `pkg/httpclient`)
-- `BuildAdapter` → `GradleCLIAdapter`, `CargoCLIAdapter`, `NPMCLIAdapter`
+- `GRPCAdapter` → `GRPCCLIAdapter` (gRPC via grpcurl CLI, unary + streaming)
+- `WebSocketFlowAdapter` → `GorillaWebSocketAdapter` (gorilla/websocket, thread-safe)
+- `BuildAdapter` → `GradleCLIAdapter`, `CargoCLIAdapter`, `NPMCLIAdapter`, `RobolectricAdapter` (Android JVM tests via Gradle)
 - `ProcessAdapter` → `SystemProcessAdapter`
 
-**Challenge Templates** (17 types): `APIFlowChallenge`, `BrowserFlowChallenge`, `RecordedBrowserFlowChallenge`, `VisionFlowChallenge`, `RecordedVisionFlowChallenge`, `MobileFlowChallenge`, `MobileLaunchChallenge`, `RecordedMobileFlowChallenge`, `RecordedMobileLaunchChallenge`, `AITestGenerationChallenge`, `RecordedAITestGenChallenge`, `DesktopFlowChallenge`, `BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`, `MultiPlatformChallenge`, `SetupTeardownChallenge`.
+**Challenge Templates** (19 types): `APIFlowChallenge`, `BrowserFlowChallenge`, `RecordedBrowserFlowChallenge`, `VisionFlowChallenge`, `RecordedVisionFlowChallenge`, `MobileFlowChallenge`, `MobileLaunchChallenge`, `RecordedMobileFlowChallenge`, `RecordedMobileLaunchChallenge`, `AITestGenerationChallenge`, `RecordedAITestGenChallenge`, `DesktopFlowChallenge`, `BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`, `MultiPlatformChallenge`, `SetupTeardownChallenge`, `GRPCFlowChallenge`, `WebSocketFlowChallenge`.
 
 **Recorded Challenge Templates** wrap their non-recorded counterparts with `RecorderAdapter`, adding video recording with integrity verification (non-zero file size, duration, frame count). Use these for all UI challenges.
 

@@ -134,13 +134,28 @@ Register the challenge with the challenge registry and execute it through the ru
 | Document | Description |
 |----------|-------------|
 | [architecture.md](architecture.md) | High-level architecture: adapter pattern, challenge templates, container infra, plugin system |
+| [framework-comparison.md](framework-comparison.md) | Comprehensive comparison of ALL framework adapters with feature matrix and selection guide |
+| **Core Adapters** | |
 | [api-adapter.md](api-adapter.md) | APIAdapter interface, HTTPAPIAdapter, WebSocket support |
 | [browser-adapter.md](browser-adapter.md) | BrowserAdapter interface, PlaywrightCLIAdapter, CDP connection |
 | [mobile-adapter.md](mobile-adapter.md) | MobileAdapter interface, ADBCLIAdapter, device configuration |
 | [desktop-adapter.md](desktop-adapter.md) | DesktopAdapter interface, TauriCLIAdapter, WebDriver protocol |
 | [build-adapter.md](build-adapter.md) | BuildAdapter interface, Gradle/npm/Go/Cargo implementations |
 | [process-adapter.md](process-adapter.md) | ProcessAdapter interface, ProcessCLIAdapter, lifecycle management |
-| [challenge-templates.md](challenge-templates.md) | All 13 challenge template types with constructor signatures |
+| **Browser Adapters** | |
+| [selenium-adapter.md](selenium-adapter.md) | SeleniumAdapter: W3C WebDriver protocol, Selenium Grid, multi-browser |
+| [cypress-adapter.md](cypress-adapter.md) | CypressCLIAdapter: Cypress CLI spec generation, Chrome-focused |
+| [puppeteer-adapter.md](puppeteer-adapter.md) | PuppeteerAdapter: Node.js scripts, CDP endpoint, container fallback |
+| **Mobile Adapters** | |
+| [appium-adapter.md](appium-adapter.md) | AppiumAdapter: Appium 2.0, cross-platform Android/iOS, W3C extensions |
+| [maestro-adapter.md](maestro-adapter.md) | MaestroCLIAdapter: YAML-driven flows, declarative mobile testing |
+| [espresso-adapter.md](espresso-adapter.md) | EspressoAdapter: instrumented tests via Gradle + ADB hybrid |
+| [robolectric-adapter.md](robolectric-adapter.md) | RobolectricAdapter: JVM-based Android unit tests, no emulator |
+| **Protocol Adapters** | |
+| [grpc-adapter.md](grpc-adapter.md) | GRPCAdapter/GRPCCLIAdapter: grpcurl CLI, server reflection, streaming |
+| [websocket-adapter.md](websocket-adapter.md) | WebSocketFlowAdapter: gorilla/websocket, bidirectional messaging |
+| **Guides** | |
+| [challenge-templates.md](challenge-templates.md) | All challenge template types with constructor signatures |
 | [evaluators.md](evaluators.md) | All 12 evaluators with input types and pass conditions |
 | [container-integration.md](container-integration.md) | TestEnvironment, PlatformGroup, setup/teardown lifecycle |
 | [writing-challenges.md](writing-challenges.md) | Step-by-step guide for creating new challenges |

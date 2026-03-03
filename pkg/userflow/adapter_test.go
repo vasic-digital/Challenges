@@ -244,6 +244,11 @@ func (s *stubAPI) Delete(
 ) (int, []byte, error) {
 	return 0, nil, nil
 }
+func (s *stubAPI) DeleteWithBody(
+	_ context.Context, _, _ string,
+) (int, []byte, error) {
+	return 0, nil, nil
+}
 func (s *stubAPI) WebSocketConnect(
 	_ context.Context, _ string,
 ) (WebSocketConn, error) {
