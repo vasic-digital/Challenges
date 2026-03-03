@@ -10,6 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Compile-time interface check.
+var _ WebSocketFlowAdapter = (*GorillaWebSocketAdapter)(nil)
+
 // WebSocketFlowAdapter defines the interface for WebSocket
 // flow testing beyond simple send/receive. Implementations
 // provide connection management, bidirectional messaging, and
@@ -125,9 +128,12 @@ func (a *GorillaWebSocketAdapter) Send(
 	a.writeMu.Lock()
 	defer a.writeMu.Unlock()
 
-	return a.conn.WriteMessage(
+	if err := a.conn.WriteMessage(
 		websocket.TextMessage, message,
-	)
+	); err != nil {
+		return fmt.Errorf("send message: %w", err)
+	}
+	return nil
 }
 
 // Receive reads the next message with a timeout. Returns an
@@ -238,7 +244,10 @@ func (a *GorillaWebSocketAdapter) Close(
 
 	err := a.conn.Close()
 	a.conn = nil
-	return err
+	if err != nil {
+		return fmt.Errorf("close websocket: %w", err)
+	}
+	return nil
 }
 
 // Available returns true if the WebSocket endpoint is

@@ -10,6 +10,9 @@ import (
 	"digital.vasic.challenges/pkg/challenge"
 )
 
+// Compile-time interface check.
+var _ challenge.Challenge = (*GRPCFlowChallenge)(nil)
+
 // GRPCFlow defines a sequence of gRPC steps to execute as a
 // user flow test.
 type GRPCFlow struct {

@@ -321,7 +321,9 @@ func (a *MaestroCLIAdapter) WaitForApp(
 func (a *MaestroCLIAdapter) RunInstrumentedTests(
 	_ context.Context, _ string,
 ) (*TestResult, error) {
-	return nil, nil
+	return nil, fmt.Errorf(
+		"instrumented tests not supported by Maestro adapter",
+	)
 }
 
 // Close removes the temporary flow directory and releases

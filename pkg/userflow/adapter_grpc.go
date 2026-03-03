@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// Compile-time interface check.
+var _ GRPCAdapter = (*GRPCCLIAdapter)(nil)
+
 // GRPCAdapter defines the interface for gRPC service testing.
 // Implementations wrap gRPC tooling (e.g., grpcurl) to perform
 // service discovery, method invocation, and health checking.
@@ -292,8 +295,8 @@ func (a *GRPCCLIAdapter) runGRPCurl(
 			errMsg = err.Error()
 		}
 		return "", fmt.Errorf(
-			"grpcurl %s: %s",
-			strings.Join(args, " "), errMsg,
+			"grpcurl %s: %s: %w",
+			strings.Join(args, " "), errMsg, err,
 		)
 	}
 

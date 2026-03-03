@@ -10,6 +10,9 @@ import (
 	"digital.vasic.challenges/pkg/challenge"
 )
 
+// Compile-time interface check.
+var _ challenge.Challenge = (*WebSocketFlowChallenge)(nil)
+
 // WebSocketFlow defines a sequence of WebSocket steps to
 // execute as a user flow test.
 type WebSocketFlow struct {
