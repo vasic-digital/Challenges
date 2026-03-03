@@ -80,14 +80,15 @@ func TestMaestroCLIAdapter_Close_WithTempDir(
 	assert.Empty(t, adapter.tempDir)
 }
 
-func TestMaestroCLIAdapter_RunInstrumentedTests_Nil(
+func TestMaestroCLIAdapter_RunInstrumentedTests_Unsupported(
 	t *testing.T,
 ) {
 	adapter := NewMaestroCLIAdapter(MobileConfig{})
 	result, err := adapter.RunInstrumentedTests(
 		context.Background(), "com.test.SomeTest",
 	)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not supported")
 	assert.Nil(t, result)
 }
 
