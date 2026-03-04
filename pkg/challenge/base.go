@@ -57,6 +57,11 @@ func (b *BaseChallenge) Description() string {
 // Category returns the challenge category.
 func (b *BaseChallenge) Category() string { return b.category }
 
+// SetCategory overrides the challenge category.
+func (b *BaseChallenge) SetCategory(cat string) {
+	b.category = cat
+}
+
 // Dependencies returns the challenge dependency IDs.
 func (b *BaseChallenge) Dependencies() []ID {
 	return b.dependencies
