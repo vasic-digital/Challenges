@@ -573,3 +573,19 @@ func TestBaseChallenge_WriteJSONResult_Success(t *testing.T) {
 	err := b.WriteJSONResult(result)
 	assert.NoError(t, err)
 }
+
+func TestBaseChallenge_SetCategory(t *testing.T) {
+	b := NewBaseChallenge(
+		"cat-001", "Category Test", "desc", "unit", nil,
+	)
+	assert.Equal(t, "unit", b.Category(),
+		"initial category should match constructor arg")
+
+	b.SetCategory("integration")
+	assert.Equal(t, "integration", b.Category(),
+		"category should be updated after SetCategory")
+
+	b.SetCategory("e2e")
+	assert.Equal(t, "e2e", b.Category(),
+		"category should be updated on second call")
+}
