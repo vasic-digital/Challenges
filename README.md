@@ -90,6 +90,40 @@ func main() {
 - **Challenge banks**: Load definitions from JSON/YAML files
 - **Parallel execution**: Run independent challenges concurrently
 - **Infrastructure bridge**: Integrates with `digital.vasic.containers`
+- **User flow automation**: Multi-platform testing across browser, mobile, API, gRPC, and WebSocket
+
+## User Flow Automation (`pkg/userflow`)
+
+Multi-platform user flow automation framework with adapter-per-platform pattern.
+
+### Adapters (8 interfaces, 21 implementations)
+
+| Interface | Adapters | Technology |
+|-----------|----------|------------|
+| `BrowserAdapter` | PlaywrightCLI, PlaywrightHTTP, Selenium, Cypress, Puppeteer | CDP, W3C WebDriver, CLI |
+| `MobileAdapter` | ADB, Appium, Maestro, Espresso | ADB, Appium 2.0, YAML flows, Gradle |
+| `DesktopAdapter` | TauriCLI | Tauri WebDriver |
+| `APIAdapter` | HTTPAPIAdapter | REST via `pkg/httpclient` |
+| `GRPCAdapter` | GRPCCLIAdapter | grpcurl (unary + streaming) |
+| `WebSocketFlowAdapter` | GorillaWebSocket | gorilla/websocket (thread-safe) |
+| `BuildAdapter` | Gradle, Cargo, NPM, Robolectric | Build tool integration |
+| `RecorderAdapter` | PanopticRecorder, ADBRecorder | CDP screencast, ADB |
+
+### Challenge Templates (19 types)
+
+`APIFlowChallenge`, `BrowserFlowChallenge`, `MobileFlowChallenge`,
+`DesktopFlowChallenge`, `GRPCFlowChallenge`, `WebSocketFlowChallenge`,
+`BuildChallenge`, `TestRunnerChallenge`, `LintChallenge`,
+`MultiPlatformChallenge`, plus Recorded variants with video verification.
+
+### Evaluators (12 userflow-specific)
+
+`http_status_ok`, `http_status_created`, `http_status_unauthorized`,
+`http_json_valid`, `browser_element_visible`, `browser_url_matches`,
+`mobile_activity_visible`, `mobile_element_exists`, `build_success`,
+`test_pass_rate`, and more.
+
+See `docs/userflow/` for full adapter documentation and framework comparison.
 
 ## Architecture
 
@@ -105,6 +139,9 @@ runner.Runner
 challenge.Challenge (interface)
 ├── challenge.BaseChallenge      (Template method base)
 ├── challenge.ShellChallenge     (Bash script wrapper)
+├── userflow.APIFlowChallenge    (HTTP API flow testing)
+├── userflow.GRPCFlowChallenge   (gRPC service testing)
+├── userflow.WebSocketFlowChallenge (WebSocket flow testing)
 └── [your custom challenges]
 
 infra.InfraProvider
