@@ -15,8 +15,9 @@ func TestPlaywrightCLIAdapter_Constructor(t *testing.T) {
 		"ws://localhost:9222",
 	)
 	assert.NotNil(t, adapter)
+	// cdpToHTTP converts ws:// to http://.
 	assert.Equal(
-		t, "ws://localhost:9222", adapter.cdpEndpoint,
+		t, "http://localhost:9222", adapter.cdpEndpoint,
 	)
 	assert.Equal(
 		t, "playwright", adapter.containerName,
@@ -101,18 +102,22 @@ func TestPlaywrightCLIAdapter_ConfigVariants(
 	tests := []struct {
 		name     string
 		endpoint string
+		expected string
 	}{
 		{
 			name:     "ws_endpoint",
 			endpoint: "ws://localhost:9222",
+			expected: "http://localhost:9222",
 		},
 		{
 			name:     "wss_endpoint",
 			endpoint: "wss://localhost:9222",
+			expected: "https://localhost:9222",
 		},
 		{
 			name:     "custom_port",
 			endpoint: "ws://browser-host:3000/ws",
+			expected: "http://browser-host:3000/ws",
 		},
 	}
 
@@ -122,7 +127,7 @@ func TestPlaywrightCLIAdapter_ConfigVariants(
 				tt.endpoint,
 			)
 			assert.Equal(
-				t, tt.endpoint, adapter.cdpEndpoint,
+				t, tt.expected, adapter.cdpEndpoint,
 			)
 		})
 	}
