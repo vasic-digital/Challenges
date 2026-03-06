@@ -1,0 +1,140 @@
+{
+  "version": "1.0",
+  "name": "Yole Security Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "security",
+    "description": "Challenges validating security posture: XSS prevention, injection protection, dependency scanning"
+  },
+  "challenges": [
+    {
+      "id": "yole-sec-xss-html-escape",
+      "name": "HTML Escaping in Parsers",
+      "description": "Verify all format parsers properly escape HTML special characters (&, <, >, \", ') to prevent XSS in rendered output",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "xss_payloads", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "escape_results", "type": "json", "description": "Map of format to XSS escape test results"},
+        {"name": "vulnerable_formats", "type": "json", "description": "Formats that fail XSS escaping"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "vulnerable_formats", "value": 0, "message": "No format may be vulnerable to XSS"}
+      ],
+      "metrics": ["formats_tested", "payloads_tested"]
+    },
+    {
+      "id": "yole-sec-xss-stylesheet",
+      "name": "CSS Injection Prevention in StyleSheets",
+      "description": "Verify StyleSheets constants do not allow CSS injection via format-controlled content",
+      "category": "security",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "css_injection_payloads", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "injection_results", "type": "json", "description": "CSS injection test results"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "injection_results", "message": "No CSS injection must be possible"}
+      ],
+      "metrics": ["payloads_tested"]
+    },
+    {
+      "id": "yole-sec-path-traversal",
+      "name": "Path Traversal Prevention",
+      "description": "Verify Document path handling prevents directory traversal attacks (../, %2e%2e, etc.)",
+      "category": "security",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "traversal_payloads", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "traversal_results", "type": "json", "description": "Path traversal test results"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "traversal_results", "message": "No path traversal must succeed"}
+      ],
+      "metrics": ["payloads_tested"]
+    },
+    {
+      "id": "yole-sec-dependency-scan",
+      "name": "Dependency Vulnerability Scan",
+      "description": "Run dependency vulnerability scan on Gradle dependencies and report any known CVEs",
+      "category": "security",
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "scan_result", "type": "string", "description": "Scan completion status"},
+        {"name": "critical_vulns", "type": "string", "description": "Number of critical vulnerabilities"},
+        {"name": "high_vulns", "type": "string", "description": "Number of high vulnerabilities"},
+        {"name": "vuln_report", "type": "json", "description": "Full vulnerability report"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "critical_vulns", "value": 0, "message": "No critical vulnerabilities allowed"},
+        {"type": "exact_count", "target": "high_vulns", "value": 0, "message": "No high vulnerabilities allowed"}
+      ],
+      "metrics": ["scan_time_seconds", "total_dependencies", "total_vulnerabilities"]
+    },
+    {
+      "id": "yole-sec-network-tls",
+      "name": "TLS Configuration for Network Protocols",
+      "description": "Verify all network protocol implementations enforce TLS 1.2+ and reject insecure connections",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "tls_test_endpoints", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "tls_results", "type": "json", "description": "TLS validation results per protocol"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "tls_results", "message": "All protocols must enforce TLS 1.2+"}
+      ],
+      "metrics": ["protocols_tested"]
+    },
+    {
+      "id": "yole-sec-credential-handling",
+      "name": "Credential Storage Security",
+      "description": "Verify OAuth tokens and credentials are not stored in plaintext, logs, or crash reports",
+      "category": "security",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "plaintext_findings", "type": "json", "description": "Any credentials found in plaintext"},
+        {"name": "log_findings", "type": "json", "description": "Any credentials found in log outputs"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "plaintext_findings", "value": 0, "message": "No plaintext credentials allowed"},
+        {"type": "exact_count", "target": "log_findings", "value": 0, "message": "No credentials in logs allowed"}
+      ],
+      "metrics": ["files_scanned"]
+    },
+    {
+      "id": "yole-sec-static-analysis",
+      "name": "Static Analysis with Detekt",
+      "description": "Run Detekt static analysis and verify no security-related findings",
+      "category": "security",
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "detekt_result", "type": "string", "description": "Detekt run status"},
+        {"name": "security_findings", "type": "string", "description": "Number of security-related findings"},
+        {"name": "total_findings", "type": "string", "description": "Total number of findings"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "security_findings", "value": 0, "message": "No security findings allowed"}
+      ],
+      "metrics": ["scan_time_seconds", "total_findings"]
+    }
+  ]
+}

@@ -1,0 +1,362 @@
+{
+  "version": "1.0",
+  "name": "Yole Format Parsing Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "format-parsing",
+    "description": "Challenges validating all 17 text format parsers in the Yole editor"
+  },
+  "challenges": [
+    {
+      "id": "yole-fmt-markdown-basic",
+      "name": "Markdown Basic Parsing",
+      "description": "Verify Markdown parser handles headings, bold, italic, links, images, code blocks, and lists correctly",
+      "category": "format-parsing",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "markdown_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "Generated HTML from Markdown input"},
+        {"name": "parse_errors", "type": "json", "description": "List of parser errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Markdown parser must produce HTML output"},
+        {"type": "contains", "target": "parsed_html", "value": "<h1>", "message": "HTML must contain h1 heading tags"},
+        {"type": "contains", "target": "parsed_html", "value": "<strong>", "message": "HTML must contain bold tags"},
+        {"type": "exact_count", "target": "parse_errors", "value": 0, "message": "No parse errors expected for valid Markdown"}
+      ],
+      "metrics": ["parse_time_ms", "html_size_bytes"]
+    },
+    {
+      "id": "yole-fmt-markdown-extensions",
+      "name": "Markdown Extensions Parsing",
+      "description": "Verify Flexmark extensions: tables, task lists, strikethrough, footnotes, abbreviations, definition lists, emoji, TOC, YAML front matter, math",
+      "category": "format-parsing",
+      "dependencies": ["yole-fmt-markdown-basic"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "extended_markdown", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "Generated HTML with extension elements"},
+        {"name": "extension_count", "type": "string", "description": "Number of extensions successfully parsed"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Extended Markdown must produce HTML"},
+        {"type": "contains", "target": "parsed_html", "value": "<table>", "message": "Tables extension must work"},
+        {"type": "contains", "target": "parsed_html", "value": "checkbox", "message": "Task list extension must work"}
+      ],
+      "metrics": ["parse_time_ms", "extensions_loaded"]
+    },
+    {
+      "id": "yole-fmt-todotxt-parse",
+      "name": "Todo.txt Format Parsing",
+      "description": "Verify Todo.txt parser handles priorities, dates, projects, contexts, and completion markers",
+      "category": "format-parsing",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "todotxt_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "Rendered Todo.txt HTML"},
+        {"name": "task_count", "type": "string", "description": "Number of tasks parsed"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Todo.txt parser must produce output"},
+        {"type": "min_count", "target": "task_count", "value": 1, "message": "At least one task must be parsed"},
+        {"type": "exact_count", "target": "parse_errors", "value": 0, "message": "Valid Todo.txt must not produce errors"}
+      ],
+      "metrics": ["parse_time_ms", "task_count"]
+    },
+    {
+      "id": "yole-fmt-todotxt-query",
+      "name": "Todo.txt Query Syntax",
+      "description": "Verify Todo.txt query syntax: filtering by priority, project, context, date ranges, completion status",
+      "category": "format-parsing",
+      "dependencies": ["yole-fmt-todotxt-parse"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "todotxt_content", "source": "config", "required": true},
+        {"name": "query_string", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "filtered_tasks", "type": "json", "description": "Tasks matching the query"},
+        {"name": "match_count", "type": "string", "description": "Number of matching tasks"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "filtered_tasks", "message": "Query must return results for valid input"},
+        {"type": "min_count", "target": "match_count", "value": 1, "message": "At least one task must match"}
+      ],
+      "metrics": ["query_time_ms"]
+    },
+    {
+      "id": "yole-fmt-csv-parse",
+      "name": "CSV Format Parsing",
+      "description": "Verify CSV parser handles headers, quoted fields, escaped delimiters, empty cells, and various line endings",
+      "category": "format-parsing",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "csv_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML table rendering of CSV"},
+        {"name": "row_count", "type": "string", "description": "Number of data rows parsed"},
+        {"name": "column_count", "type": "string", "description": "Number of columns detected"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "CSV parser must produce table HTML"},
+        {"type": "contains", "target": "parsed_html", "value": "<table", "message": "Output must contain table element"},
+        {"type": "min_count", "target": "row_count", "value": 1, "message": "At least one data row expected"}
+      ],
+      "metrics": ["parse_time_ms", "row_count", "column_count"]
+    },
+    {
+      "id": "yole-fmt-latex-parse",
+      "name": "LaTeX Format Parsing",
+      "description": "Verify LaTeX parser handles document structure, sections, math environments, lists, tables, and inline formatting",
+      "category": "format-parsing",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "latex_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of LaTeX document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "LaTeX parser must produce output"},
+        {"type": "contains", "target": "parsed_html", "value": "section", "message": "Sections must be parsed"},
+        {"type": "contains", "target": "parsed_html", "value": "math", "message": "Math environments must be parsed"}
+      ],
+      "metrics": ["parse_time_ms", "html_size_bytes"]
+    },
+    {
+      "id": "yole-fmt-orgmode-parse",
+      "name": "Org-mode Format Parsing",
+      "description": "Verify Org-mode parser handles headings, TODO states, properties, code blocks, tables, links, and inline formatting",
+      "category": "format-parsing",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "orgmode_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of Org-mode document"},
+        {"name": "heading_count", "type": "string", "description": "Number of headings found"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Org-mode parser must produce output"},
+        {"type": "contains", "target": "parsed_html", "value": "org-heading", "message": "Headings must use org-heading class"},
+        {"type": "min_count", "target": "heading_count", "value": 1, "message": "At least one heading expected"}
+      ],
+      "metrics": ["parse_time_ms", "heading_count"]
+    },
+    {
+      "id": "yole-fmt-rst-parse",
+      "name": "reStructuredText Format Parsing",
+      "description": "Verify RST parser handles sections, directives, admonitions, code blocks, tables, field lists, and roles",
+      "category": "format-parsing",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "rst_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of RST document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "RST parser must produce output"},
+        {"type": "contains", "target": "parsed_html", "value": "rst-section", "message": "Sections must use rst-section class"},
+        {"type": "contains", "target": "parsed_html", "value": "rst-directive", "message": "Directives must be parsed"}
+      ],
+      "metrics": ["parse_time_ms", "html_size_bytes"]
+    },
+    {
+      "id": "yole-fmt-asciidoc-parse",
+      "name": "AsciiDoc Format Parsing",
+      "description": "Verify AsciiDoc parser handles headings, admonitions, source blocks, tables, cross-references, and macros",
+      "category": "format-parsing",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "asciidoc_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of AsciiDoc document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "AsciiDoc parser must produce output"},
+        {"type": "contains", "target": "parsed_html", "value": "asciidoc", "message": "Output must use asciidoc CSS class"}
+      ],
+      "metrics": ["parse_time_ms", "html_size_bytes"]
+    },
+    {
+      "id": "yole-fmt-wikitext-parse",
+      "name": "WikiText Format Parsing",
+      "description": "Verify WikiText parser handles headings, bold/italic, links, templates, lists, tables, and categories",
+      "category": "format-parsing",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "wikitext_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of WikiText"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "WikiText parser must produce output"},
+        {"type": "contains", "target": "parsed_html", "value": "wikitext", "message": "Output must use wikitext CSS class"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fmt-keyvalue-parse",
+      "name": "Key-Value Format Parsing",
+      "description": "Verify Key-Value parser handles various separators (=, :), comments, sections, multi-line values",
+      "category": "format-parsing",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "keyvalue_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of Key-Value file"},
+        {"name": "entry_count", "type": "string", "description": "Number of key-value pairs found"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Key-Value parser must produce output"},
+        {"type": "min_count", "target": "entry_count", "value": 1, "message": "At least one entry expected"}
+      ],
+      "metrics": ["parse_time_ms", "entry_count"]
+    },
+    {
+      "id": "yole-fmt-taskpaper-parse",
+      "name": "TaskPaper Format Parsing",
+      "description": "Verify TaskPaper parser handles projects, tasks, notes, tags, and nesting",
+      "category": "format-parsing",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "taskpaper_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of TaskPaper document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "TaskPaper parser must produce output"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fmt-textile-parse",
+      "name": "Textile Format Parsing",
+      "description": "Verify Textile parser handles headings, paragraphs, bold/italic, links, images, lists, and tables",
+      "category": "format-parsing",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "textile_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of Textile document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Textile parser must produce output"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fmt-creole-parse",
+      "name": "Creole Wiki Format Parsing",
+      "description": "Verify Creole parser handles headings, bold/italic, links, images, lists, tables, and nowiki blocks",
+      "category": "format-parsing",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "creole_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of Creole document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Creole parser must produce output"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fmt-tiddlywiki-parse",
+      "name": "TiddlyWiki Format Parsing",
+      "description": "Verify TiddlyWiki parser handles tiddler syntax, transclusion, macros, widgets, and formatting",
+      "category": "format-parsing",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "tiddlywiki_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of TiddlyWiki document"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "TiddlyWiki parser must produce output"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fmt-jupyter-parse",
+      "name": "Jupyter Notebook Format Parsing",
+      "description": "Verify Jupyter parser handles code cells, markdown cells, output cells, metadata, and kernel info",
+      "category": "format-parsing",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "jupyter_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of Jupyter notebook"},
+        {"name": "cell_count", "type": "string", "description": "Number of cells parsed"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "Jupyter parser must produce output"},
+        {"type": "min_count", "target": "cell_count", "value": 1, "message": "At least one cell expected"}
+      ],
+      "metrics": ["parse_time_ms", "cell_count"]
+    },
+    {
+      "id": "yole-fmt-rmarkdown-parse",
+      "name": "R Markdown Format Parsing",
+      "description": "Verify R Markdown parser handles YAML front matter, R code chunks, inline R, and Markdown content",
+      "category": "format-parsing",
+      "dependencies": ["yole-fmt-markdown-basic"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "rmarkdown_content", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parsed_html", "type": "string", "description": "HTML rendering of R Markdown document"},
+        {"name": "chunk_count", "type": "string", "description": "Number of R code chunks found"},
+        {"name": "parse_errors", "type": "json", "description": "Parse errors if any"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "parsed_html", "message": "R Markdown parser must produce output"}
+      ],
+      "metrics": ["parse_time_ms", "chunk_count"]
+    }
+  ]
+}

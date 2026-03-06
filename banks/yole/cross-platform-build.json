@@ -1,0 +1,113 @@
+{
+  "version": "1.0",
+  "name": "Yole Cross-Platform Build Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "cross-platform-build",
+    "description": "Challenges validating Kotlin Multiplatform builds across Android, Desktop, iOS, and Web targets"
+  },
+  "challenges": [
+    {
+      "id": "yole-build-shared-compile",
+      "name": "Shared Module Compilation",
+      "description": "Verify shared KMP module compiles for all targets (commonMain, androidMain, desktopMain, iosMain, wasmJsMain)",
+      "category": "build",
+      "estimated_duration": "5m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "gradle_wrapper", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "build_result", "type": "string", "description": "BUILD SUCCESS or BUILD FAILURE"},
+        {"name": "compile_errors", "type": "json", "description": "Compilation errors if any"},
+        {"name": "target_status", "type": "json", "description": "Map of target to compile status"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "build_result", "value": "BUILD SUCCESS", "message": "Shared module must compile successfully"},
+        {"type": "exact_count", "target": "compile_errors", "value": 0, "message": "No compilation errors expected"}
+      ],
+      "metrics": ["compile_time_seconds", "class_count"]
+    },
+    {
+      "id": "yole-build-android-debug",
+      "name": "Android Debug Build",
+      "description": "Verify Android app assembles debug APK with all dependencies resolved",
+      "category": "build",
+      "dependencies": ["yole-build-shared-compile"],
+      "estimated_duration": "8m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "android_sdk_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "build_result", "type": "string", "description": "BUILD SUCCESS or BUILD FAILURE"},
+        {"name": "apk_path", "type": "file", "description": "Path to generated debug APK"},
+        {"name": "apk_size_bytes", "type": "string", "description": "APK file size"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "build_result", "value": "BUILD SUCCESS", "message": "Android debug build must succeed"},
+        {"type": "not_empty", "target": "apk_path", "message": "APK must be generated"}
+      ],
+      "metrics": ["build_time_seconds", "apk_size_bytes", "method_count"]
+    },
+    {
+      "id": "yole-build-desktop-jar",
+      "name": "Desktop JAR Build",
+      "description": "Verify Desktop (JVM) app compiles and produces runnable JAR",
+      "category": "build",
+      "dependencies": ["yole-build-shared-compile"],
+      "estimated_duration": "5m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "build_result", "type": "string", "description": "BUILD SUCCESS or BUILD FAILURE"},
+        {"name": "jar_path", "type": "file", "description": "Path to generated JAR"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "build_result", "value": "BUILD SUCCESS", "message": "Desktop build must succeed"},
+        {"type": "not_empty", "target": "jar_path", "message": "JAR must be generated"}
+      ],
+      "metrics": ["build_time_seconds", "jar_size_bytes"]
+    },
+    {
+      "id": "yole-build-web-wasm",
+      "name": "Web/Wasm Build",
+      "description": "Verify Wasm/JS web app compiles and produces browser-runnable output",
+      "category": "build",
+      "dependencies": ["yole-build-shared-compile"],
+      "estimated_duration": "5m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "build_result", "type": "string", "description": "BUILD SUCCESS or BUILD FAILURE"},
+        {"name": "wasm_path", "type": "file", "description": "Path to generated Wasm file"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "build_result", "value": "BUILD SUCCESS", "message": "Web/Wasm build must succeed"}
+      ],
+      "metrics": ["build_time_seconds", "wasm_size_bytes"]
+    },
+    {
+      "id": "yole-build-android-lint",
+      "name": "Android Lint Check",
+      "description": "Run Android lint on flavorDefaultDebug and verify no critical issues",
+      "category": "build",
+      "dependencies": ["yole-build-android-debug"],
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "lint_result", "type": "string", "description": "Lint exit code"},
+        {"name": "error_count", "type": "string", "description": "Number of lint errors"},
+        {"name": "warning_count", "type": "string", "description": "Number of lint warnings"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "error_count", "value": 0, "message": "No lint errors allowed"}
+      ],
+      "metrics": ["lint_time_seconds", "error_count", "warning_count"]
+    }
+  ]
+}

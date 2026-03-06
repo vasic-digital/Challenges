@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "name": "Yole Performance Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "performance",
+    "description": "Challenges validating parser performance, memory usage, and scalability"
+  },
+  "challenges": [
+    {
+      "id": "yole-perf-markdown-large",
+      "name": "Markdown Large Document Performance",
+      "description": "Parse a 100KB+ Markdown document and verify parse time stays under threshold",
+      "category": "performance",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "large_markdown", "source": "config", "required": true},
+        {"name": "max_parse_ms", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_time_ms", "type": "string", "description": "Time to parse in milliseconds"},
+        {"name": "html_size_bytes", "type": "string", "description": "Generated HTML size"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "parse_time_ms", "value": 2000, "message": "100KB Markdown must parse under 2 seconds"}
+      ],
+      "metrics": ["parse_time_ms", "html_size_bytes", "memory_used_mb"]
+    },
+    {
+      "id": "yole-perf-csv-large",
+      "name": "CSV Large Dataset Performance",
+      "description": "Parse a 10000-row CSV file and verify parse time and memory stay under thresholds",
+      "category": "performance",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "large_csv", "source": "config", "required": true},
+        {"name": "max_parse_ms", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_time_ms", "type": "string", "description": "Time to parse in milliseconds"},
+        {"name": "row_count", "type": "string", "description": "Number of rows parsed"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "parse_time_ms", "value": 3000, "message": "10K-row CSV must parse under 3 seconds"},
+        {"type": "min_count", "target": "row_count", "value": 10000, "message": "All rows must be parsed"}
+      ],
+      "metrics": ["parse_time_ms", "row_count", "memory_used_mb"]
+    },
+    {
+      "id": "yole-perf-format-detection",
+      "name": "Format Detection Speed",
+      "description": "Run format detection across 100 sample documents and verify average detection time",
+      "category": "performance",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "sample_documents", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "avg_detection_ms", "type": "string", "description": "Average detection time per document"},
+        {"name": "max_detection_ms", "type": "string", "description": "Maximum detection time observed"},
+        {"name": "total_detected", "type": "string", "description": "Number of documents successfully detected"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "avg_detection_ms", "value": 10, "message": "Average format detection must be under 10ms"},
+        {"type": "max_latency", "target": "max_detection_ms", "value": 100, "message": "Worst-case detection must be under 100ms"}
+      ],
+      "metrics": ["avg_detection_ms", "max_detection_ms"]
+    },
+    {
+      "id": "yole-perf-html-cache",
+      "name": "HTML Cache Effectiveness",
+      "description": "Verify ParsedDocument HTML cache: first call generates, subsequent calls return cached (100x speedup expected)",
+      "category": "performance",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "test_documents", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "first_call_ms", "type": "string", "description": "Time for first toHtml() call"},
+        {"name": "cached_call_ms", "type": "string", "description": "Time for cached toHtml() call"},
+        {"name": "speedup_factor", "type": "string", "description": "Speedup ratio (first/cached)"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "speedup_factor", "value": 10.0, "message": "Cache must provide at least 10x speedup"}
+      ],
+      "metrics": ["first_call_ms", "cached_call_ms", "speedup_factor"]
+    },
+    {
+      "id": "yole-perf-concurrent-parse",
+      "name": "Concurrent Parsing Performance",
+      "description": "Parse 50 documents concurrently across multiple formats and verify no deadlocks or data races",
+      "category": "performance",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "concurrent_docs", "source": "config", "required": true},
+        {"name": "max_concurrent", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "total_time_ms", "type": "string", "description": "Total wall-clock time for concurrent parsing"},
+        {"name": "all_succeeded", "type": "string", "description": "Whether all parse operations succeeded"},
+        {"name": "deadlock_detected", "type": "string", "description": "Whether any deadlock was detected"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "all_succeeded", "value": "true", "message": "All concurrent parses must succeed"},
+        {"type": "equals", "target": "deadlock_detected", "value": "false", "message": "No deadlocks allowed"}
+      ],
+      "metrics": ["total_time_ms", "avg_per_doc_ms"]
+    },
+    {
+      "id": "yole-perf-registry-lookup",
+      "name": "FormatRegistry Lookup Performance",
+      "description": "Benchmark FormatRegistry lookups: getById, getByExtension, detectByExtension (10000 iterations)",
+      "category": "performance",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "iterations", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "getById_avg_ns", "type": "string", "description": "Average getById time in nanoseconds"},
+        {"name": "getByExtension_avg_ns", "type": "string", "description": "Average getByExtension time in nanoseconds"},
+        {"name": "detectByExtension_avg_ns", "type": "string", "description": "Average detectByExtension time in nanoseconds"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "getById_avg_ns", "value": 1000, "message": "getById must be under 1 microsecond avg"},
+        {"type": "max_latency", "target": "getByExtension_avg_ns", "value": 1000, "message": "getByExtension must be under 1 microsecond avg"}
+      ],
+      "metrics": ["getById_avg_ns", "getByExtension_avg_ns", "detectByExtension_avg_ns"]
+    },
+    {
+      "id": "yole-perf-lazy-loading",
+      "name": "Lazy Parser Loading Performance",
+      "description": "Verify ParserInitializer lazy-loaded parsers initialize on first use with minimal startup cost",
+      "category": "performance",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "startup_time_ms", "type": "string", "description": "Time to initialize eager parsers only"},
+        {"name": "lazy_init_time_ms", "type": "string", "description": "Time for first lazy parser initialization"},
+        {"name": "total_parsers", "type": "string", "description": "Total number of registered parsers"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "startup_time_ms", "value": 500, "message": "Eager parser initialization must be under 500ms"}
+      ],
+      "metrics": ["startup_time_ms", "lazy_init_time_ms", "total_parsers"]
+    }
+  ]
+}

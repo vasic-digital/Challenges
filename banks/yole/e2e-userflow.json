@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "name": "Yole End-to-End User Flow Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "e2e-userflow",
+    "description": "End-to-end user flow challenges across all platforms using the userflow automation framework"
+  },
+  "challenges": [
+    {
+      "id": "yole-e2e-android-open-file",
+      "name": "Android: Open and Edit File",
+      "description": "User flow: launch Android app, open a Markdown file, verify content loads, edit text, verify changes persisted",
+      "category": "e2e",
+      "dependencies": ["yole-build-android-debug"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "apk_path", "source": "dependency:yole-build-android-debug", "required": true},
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "test_file_content", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "app_launched", "type": "string", "description": "Whether app launched successfully"},
+        {"name": "file_opened", "type": "string", "description": "Whether file was opened"},
+        {"name": "content_loaded", "type": "string", "description": "Whether content was loaded correctly"},
+        {"name": "edit_persisted", "type": "string", "description": "Whether edit was saved"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "app_launched", "value": "true", "message": "Android app must launch"},
+        {"type": "equals", "target": "file_opened", "value": "true", "message": "File must open successfully"},
+        {"type": "equals", "target": "edit_persisted", "value": "true", "message": "Edit must be saved"}
+      ],
+      "metrics": ["launch_time_ms", "file_open_time_ms", "save_time_ms"]
+    },
+    {
+      "id": "yole-e2e-android-format-switch",
+      "name": "Android: Switch Between Formats",
+      "description": "User flow: open files of different formats (MD, CSV, LaTeX, Org) and verify correct rendering for each",
+      "category": "e2e",
+      "dependencies": ["yole-e2e-android-open-file"],
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "test_files", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "format_render_results", "type": "json", "description": "Per-format rendering verification"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "format_render_results", "message": "All formats must render correctly on Android"}
+      ],
+      "metrics": ["formats_tested", "avg_render_time_ms"]
+    },
+    {
+      "id": "yole-e2e-desktop-open-file",
+      "name": "Desktop: Open and Edit File",
+      "description": "User flow: launch Desktop app, open a file via file dialog, verify content, edit and save",
+      "category": "e2e",
+      "dependencies": ["yole-build-desktop-jar"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "app_launched", "type": "string", "description": "Whether Desktop app launched"},
+        {"name": "file_opened", "type": "string", "description": "Whether file was opened"},
+        {"name": "edit_saved", "type": "string", "description": "Whether edit was saved"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "app_launched", "value": "true", "message": "Desktop app must launch"},
+        {"type": "equals", "target": "edit_saved", "value": "true", "message": "Edit must be saved"}
+      ],
+      "metrics": ["launch_time_ms", "file_open_time_ms"]
+    },
+    {
+      "id": "yole-e2e-web-load",
+      "name": "Web: Load PWA and Open Document",
+      "description": "User flow: navigate to Wasm PWA, verify app loads, open a document, verify rendering",
+      "category": "e2e",
+      "dependencies": ["yole-build-web-wasm"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "test_content", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "app_loaded", "type": "string", "description": "Whether web app loaded"},
+        {"name": "document_rendered", "type": "string", "description": "Whether document was rendered"},
+        {"name": "load_time_ms", "type": "string", "description": "Time to load PWA"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "app_loaded", "value": "true", "message": "Web app must load in browser"},
+        {"type": "equals", "target": "document_rendered", "value": "true", "message": "Document must render"},
+        {"type": "max_latency", "target": "load_time_ms", "value": 10000, "message": "PWA must load within 10 seconds"}
+      ],
+      "metrics": ["load_time_ms", "wasm_init_time_ms"]
+    },
+    {
+      "id": "yole-e2e-multiplatform-consistency",
+      "name": "Cross-Platform Rendering Consistency",
+      "description": "Verify the same document produces identical HTML output across Android, Desktop, and Web platforms",
+      "category": "e2e",
+      "dependencies": ["yole-e2e-android-open-file", "yole-e2e-desktop-open-file", "yole-e2e-web-load"],
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "test_document", "source": "config", "required": true},
+        {"name": "format_id", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "html_match_result", "type": "string", "description": "Whether HTML output matches across platforms"},
+        {"name": "platform_outputs", "type": "json", "description": "Per-platform HTML outputs for comparison"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "html_match_result", "value": "true", "message": "HTML output must be identical across platforms"}
+      ],
+      "metrics": ["platforms_compared"]
+    },
+    {
+      "id": "yole-e2e-offline-first",
+      "name": "Offline-First Operation",
+      "description": "Verify app functions fully offline: create, edit, save documents without network. Verify sync queue when connectivity restored.",
+      "category": "e2e",
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "offline_create", "type": "string", "description": "Whether document creation works offline"},
+        {"name": "offline_edit", "type": "string", "description": "Whether editing works offline"},
+        {"name": "offline_save", "type": "string", "description": "Whether saving works offline"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "offline_create", "value": "true", "message": "Must create documents offline"},
+        {"type": "equals", "target": "offline_edit", "value": "true", "message": "Must edit documents offline"},
+        {"type": "equals", "target": "offline_save", "value": "true", "message": "Must save documents offline"}
+      ],
+      "metrics": ["operations_tested"]
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "name": "Yole Format Detection Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "format-detection",
+    "description": "Challenges validating FormatRegistry detection by extension, content, and filename"
+  },
+  "challenges": [
+    {
+      "id": "yole-det-extension-all",
+      "name": "Extension-Based Detection for All Formats",
+      "description": "Verify FormatRegistry.detectByExtension correctly identifies all supported file extensions across 17 text formats",
+      "category": "format-detection",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "extension_map", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Map of extension to detected format ID"},
+        {"name": "success_count", "type": "string", "description": "Number of correctly detected formats"},
+        {"name": "failure_count", "type": "string", "description": "Number of detection failures"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "failure_count", "value": 0, "message": "All extensions must be correctly detected"},
+        {"type": "min_count", "target": "success_count", "value": 30, "message": "At least 30 extension mappings expected"}
+      ],
+      "metrics": ["detection_time_ms", "extensions_tested"]
+    },
+    {
+      "id": "yole-det-content-latex",
+      "name": "Content-Based Detection: LaTeX",
+      "description": "Verify detectByContent identifies LaTeX documents by \\documentclass, \\begin{document}, \\section patterns",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "latex_samples", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Detection results for each sample"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "detection_results", "message": "All LaTeX samples must be detected as latex"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-content-orgmode",
+      "name": "Content-Based Detection: Org-mode",
+      "description": "Verify detectByContent identifies Org-mode documents by #+TITLE, * heading, TODO patterns",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "orgmode_samples", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Detection results for each sample"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "detection_results", "message": "All Org-mode samples must be detected as orgmode"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-content-csv",
+      "name": "Content-Based Detection: CSV",
+      "description": "Verify detectByContent identifies CSV data by comma-delimited patterns with consistent column counts",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "csv_samples", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Detection results for each sample"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "detection_results", "message": "All CSV samples must be detected as csv"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-content-rmarkdown",
+      "name": "Content-Based Detection: R Markdown",
+      "description": "Verify detectByContent identifies R Markdown by YAML front matter with output field and ```{r} code chunks",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "rmarkdown_samples", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Detection results for each sample"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "detection_results", "message": "All R Markdown samples must be detected as rmarkdown"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-priority-order",
+      "name": "Format Detection Priority Ordering",
+      "description": "Verify that R Markdown is detected before Markdown, and more specific formats take priority over general ones",
+      "category": "format-detection",
+      "dependencies": ["yole-det-content-rmarkdown"],
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "ambiguous_content", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "priority_results", "type": "json", "description": "Map of content to detected format showing priority resolution"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "priority_results", "message": "Priority ordering must be correct for all ambiguous samples"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-filename-special",
+      "name": "Filename-Based Detection Edge Cases",
+      "description": "Verify detectByFilename handles dotfiles, multi-dot filenames, files with no extension, and case sensitivity",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "filename_cases", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Detection results for each filename edge case"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "detection_results", "message": "All filename edge cases must be handled correctly"}
+      ],
+      "metrics": ["detection_time_ms"]
+    },
+    {
+      "id": "yole-det-shared-extensions",
+      "name": "Shared Extension Resolution",
+      "description": "Verify getFormatsByExtension returns multiple formats for shared extensions like .txt (plaintext, todotxt, creole, textile)",
+      "category": "format-detection",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "shared_extensions", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "format_lists", "type": "json", "description": "Map of extension to list of matching format IDs"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "format_lists", "message": "Shared extension results must not be empty"}
+      ],
+      "metrics": ["detection_time_ms"]
+    }
+  ]
+}

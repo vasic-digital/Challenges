@@ -1,0 +1,191 @@
+{
+  "version": "1.0",
+  "name": "Yole Network Protocol Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "network-protocols",
+    "description": "Challenges validating cloud storage and network protocol integrations"
+  },
+  "challenges": [
+    {
+      "id": "yole-net-dropbox-auth",
+      "name": "Dropbox OAuth Authentication",
+      "description": "Verify Dropbox OAuth2 flow: token acquisition, refresh, and revocation",
+      "category": "network",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "dropbox_app_key", "source": "env", "required": true},
+        {"name": "dropbox_app_secret", "source": "env", "required": true},
+        {"name": "test_token", "source": "env", "required": false}
+      ],
+      "outputs": [
+        {"name": "auth_result", "type": "string", "description": "Authentication status"},
+        {"name": "token_valid", "type": "string", "description": "Whether token is valid"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "auth_result", "message": "Auth result must not be empty"}
+      ],
+      "metrics": ["auth_time_ms"]
+    },
+    {
+      "id": "yole-net-dropbox-crud",
+      "name": "Dropbox File CRUD Operations",
+      "description": "Verify Dropbox create, read, update, delete file operations via NetworkStorageService",
+      "category": "network",
+      "dependencies": ["yole-net-dropbox-auth"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "dropbox_token", "source": "dependency:yole-net-dropbox-auth", "required": true},
+        {"name": "test_folder", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "create_result", "type": "string", "description": "File creation status"},
+        {"name": "read_result", "type": "string", "description": "File read status"},
+        {"name": "update_result", "type": "string", "description": "File update status"},
+        {"name": "delete_result", "type": "string", "description": "File deletion status"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "create_result", "message": "File creation must succeed"},
+        {"type": "all_pass", "target": "read_result", "message": "File read must succeed"},
+        {"type": "all_pass", "target": "delete_result", "message": "File deletion must succeed"}
+      ],
+      "metrics": ["create_time_ms", "read_time_ms", "delete_time_ms"]
+    },
+    {
+      "id": "yole-net-gdrive-auth",
+      "name": "Google Drive OAuth Authentication",
+      "description": "Verify Google Drive OAuth2 flow with service account or user credentials",
+      "category": "network",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "gdrive_credentials", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "auth_result", "type": "string", "description": "Authentication status"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "auth_result", "message": "Auth result must not be empty"}
+      ],
+      "metrics": ["auth_time_ms"]
+    },
+    {
+      "id": "yole-net-gdrive-crud",
+      "name": "Google Drive File CRUD Operations",
+      "description": "Verify Google Drive create, read, update, delete operations via NetworkStorageService",
+      "category": "network",
+      "dependencies": ["yole-net-gdrive-auth"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "gdrive_token", "source": "dependency:yole-net-gdrive-auth", "required": true},
+        {"name": "test_folder", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "crud_results", "type": "json", "description": "CRUD operation results"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "crud_results", "message": "All CRUD operations must succeed"}
+      ],
+      "metrics": ["create_time_ms", "read_time_ms", "delete_time_ms"]
+    },
+    {
+      "id": "yole-net-onedrive-auth",
+      "name": "OneDrive OAuth Authentication",
+      "description": "Verify OneDrive/Microsoft Graph OAuth2 flow",
+      "category": "network",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "onedrive_client_id", "source": "env", "required": true},
+        {"name": "onedrive_client_secret", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "auth_result", "type": "string", "description": "Authentication status"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "auth_result", "message": "Auth result must not be empty"}
+      ],
+      "metrics": ["auth_time_ms"]
+    },
+    {
+      "id": "yole-net-ftp-connect",
+      "name": "FTP Connection and Operations",
+      "description": "Verify FTP protocol adapter: connect, list, upload, download, delete against test FTP server",
+      "category": "network",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "ftp_host", "source": "env", "required": true},
+        {"name": "ftp_port", "source": "env", "required": true},
+        {"name": "ftp_user", "source": "env", "required": true},
+        {"name": "ftp_pass", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "connect_result", "type": "string", "description": "Connection status"},
+        {"name": "list_result", "type": "json", "description": "Directory listing"},
+        {"name": "upload_result", "type": "string", "description": "Upload status"},
+        {"name": "download_result", "type": "string", "description": "Download status"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "connect_result", "message": "FTP connection must succeed"},
+        {"type": "not_empty", "target": "list_result", "message": "Directory listing must return results"}
+      ],
+      "metrics": ["connect_time_ms", "upload_time_ms", "download_time_ms"]
+    },
+    {
+      "id": "yole-net-sftp-connect",
+      "name": "SFTP Connection and Operations",
+      "description": "Verify SFTP protocol adapter: connect with key/password auth, list, upload, download, delete",
+      "category": "network",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "sftp_host", "source": "env", "required": true},
+        {"name": "sftp_port", "source": "env", "required": true},
+        {"name": "sftp_user", "source": "env", "required": true},
+        {"name": "sftp_key_path", "source": "env", "required": false}
+      ],
+      "outputs": [
+        {"name": "connect_result", "type": "string", "description": "Connection status"},
+        {"name": "operations_result", "type": "json", "description": "File operation results"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "connect_result", "message": "SFTP connection must succeed"}
+      ],
+      "metrics": ["connect_time_ms", "upload_time_ms", "download_time_ms"]
+    },
+    {
+      "id": "yole-net-rate-limiting",
+      "name": "Rate Limited Storage Service",
+      "description": "Verify RateLimitedStorageService correctly throttles concurrent operations with semaphore-based limiting",
+      "category": "network",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "max_concurrent", "source": "config", "required": true},
+        {"name": "total_operations", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "max_concurrent_observed", "type": "string", "description": "Maximum concurrent operations observed"},
+        {"name": "all_completed", "type": "string", "description": "Whether all operations completed"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "all_completed", "value": "true", "message": "All operations must complete"},
+        {"type": "not_empty", "target": "max_concurrent_observed", "message": "Concurrency tracking must work"}
+      ],
+      "metrics": ["total_time_ms", "max_concurrent_observed"]
+    },
+    {
+      "id": "yole-net-storage-quota",
+      "name": "Storage Quota Display",
+      "description": "Verify StorageQuota formatting: formatBytes for B/KB/MB/GB, computed display properties, usage percentage",
+      "category": "network",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "quota_test_cases", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "format_results", "type": "json", "description": "Formatted byte string results for various sizes"}
+      ],
+      "assertions": [
+        {"type": "all_pass", "target": "format_results", "message": "All byte formatting must be correct"}
+      ],
+      "metrics": []
+    }
+  ]
+}

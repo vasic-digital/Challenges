@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "name": "Yole UI and Accessibility Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "ui-accessibility",
+    "description": "Challenges validating Compose Multiplatform UI, themes, animations, and accessibility"
+  },
+  "challenges": [
+    {
+      "id": "yole-ui-theme-light",
+      "name": "Light Theme Rendering",
+      "description": "Verify light theme applies correct colors, typography, and spacing across all components",
+      "category": "ui",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "theme_valid", "type": "string", "description": "Whether light theme renders correctly"},
+        {"name": "color_issues", "type": "json", "description": "Color contrast issues found"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "theme_valid", "value": "true", "message": "Light theme must render correctly"},
+        {"type": "exact_count", "target": "color_issues", "value": 0, "message": "No color issues in light theme"}
+      ],
+      "metrics": ["components_tested"]
+    },
+    {
+      "id": "yole-ui-theme-dark",
+      "name": "Dark Theme Rendering",
+      "description": "Verify dark theme applies correct colors with sufficient contrast ratios",
+      "category": "ui",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "theme_valid", "type": "string", "description": "Whether dark theme renders correctly"},
+        {"name": "contrast_issues", "type": "json", "description": "Contrast ratio issues found"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "theme_valid", "value": "true", "message": "Dark theme must render correctly"},
+        {"type": "exact_count", "target": "contrast_issues", "value": 0, "message": "No contrast issues in dark theme"}
+      ],
+      "metrics": ["components_tested", "min_contrast_ratio"]
+    },
+    {
+      "id": "yole-ui-stylesheet-consistency",
+      "name": "StyleSheet Light/Dark Consistency",
+      "description": "Verify CSS stylesheets for all themed formats (RST, OrgMode, AsciiDoc, LaTeX) have both light and dark variants with matching structure",
+      "category": "ui",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "consistency_results", "type": "json", "description": "Per-format light/dark consistency check"},
+        {"name": "missing_rules", "type": "json", "description": "CSS rules present in light but missing in dark or vice versa"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "missing_rules", "value": 0, "message": "Light and dark stylesheets must have matching CSS rules"}
+      ],
+      "metrics": ["formats_checked", "rules_compared"]
+    },
+    {
+      "id": "yole-ui-animation-timing",
+      "name": "Animation Timing Constants",
+      "description": "Verify AnimationTiming constants are within acceptable ranges for smooth 60fps rendering",
+      "category": "ui",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "timing_valid", "type": "string", "description": "Whether all timings are within range"},
+        {"name": "timing_results", "type": "json", "description": "Per-constant validation results"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "timing_valid", "value": "true", "message": "All animation timings must be within valid ranges"}
+      ],
+      "metrics": ["constants_checked"]
+    },
+    {
+      "id": "yole-a11y-content-description",
+      "name": "Accessibility Content Descriptions",
+      "description": "Verify all interactive UI elements have content descriptions for screen readers",
+      "category": "accessibility",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "missing_descriptions", "type": "json", "description": "Elements missing content descriptions"},
+        {"name": "total_elements", "type": "string", "description": "Total interactive elements checked"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "missing_descriptions", "value": 0, "message": "All interactive elements must have content descriptions"}
+      ],
+      "metrics": ["total_elements", "compliant_elements"]
+    },
+    {
+      "id": "yole-a11y-color-contrast",
+      "name": "WCAG Color Contrast Compliance",
+      "description": "Verify text color contrast ratios meet WCAG 2.1 AA standards (4.5:1 for normal text, 3:1 for large text)",
+      "category": "accessibility",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "contrast_violations", "type": "json", "description": "Color pairs failing contrast requirements"},
+        {"name": "min_ratio_found", "type": "string", "description": "Lowest contrast ratio found"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "contrast_violations", "value": 0, "message": "All text must meet WCAG AA contrast ratios"}
+      ],
+      "metrics": ["color_pairs_tested", "min_ratio_found"]
+    }
+  ]
+}

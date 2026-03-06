@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "name": "Yole Test Coverage Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "test-coverage",
+    "description": "Challenges validating test suite execution and coverage thresholds"
+  },
+  "challenges": [
+    {
+      "id": "yole-test-common-all",
+      "name": "All Common Tests Pass",
+      "description": "Run all commonTest tests and verify zero failures across ~3000+ test cases",
+      "category": "testing",
+      "estimated_duration": "5m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "test_result", "type": "string", "description": "Overall pass/fail status"},
+        {"name": "total_tests", "type": "string", "description": "Total number of tests executed"},
+        {"name": "passed_tests", "type": "string", "description": "Number of passed tests"},
+        {"name": "failed_tests", "type": "string", "description": "Number of failed tests"},
+        {"name": "skipped_tests", "type": "string", "description": "Number of skipped tests"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "test_result", "value": "PASS", "message": "All common tests must pass"},
+        {"type": "exact_count", "target": "failed_tests", "value": 0, "message": "No test failures allowed"},
+        {"type": "exact_count", "target": "skipped_tests", "value": 0, "message": "No tests may be skipped"},
+        {"type": "min_count", "target": "total_tests", "value": 3000, "message": "At least 3000 tests expected"}
+      ],
+      "metrics": ["test_time_seconds", "total_tests", "passed_tests"]
+    },
+    {
+      "id": "yole-test-desktop-all",
+      "name": "All Desktop Tests Pass",
+      "description": "Run all desktopTest tests and verify zero failures",
+      "category": "testing",
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "test_result", "type": "string", "description": "Overall pass/fail status"},
+        {"name": "total_tests", "type": "string", "description": "Total number of tests executed"},
+        {"name": "failed_tests", "type": "string", "description": "Number of failed tests"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "test_result", "value": "PASS", "message": "All desktop tests must pass"},
+        {"type": "exact_count", "target": "failed_tests", "value": 0, "message": "No test failures allowed"}
+      ],
+      "metrics": ["test_time_seconds", "total_tests"]
+    },
+    {
+      "id": "yole-test-coverage-line",
+      "name": "Line Coverage Threshold",
+      "description": "Verify Kover line coverage meets minimum threshold of 50%",
+      "category": "testing",
+      "dependencies": ["yole-test-common-all"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "line_coverage", "type": "string", "description": "Line coverage percentage"},
+        {"name": "branch_coverage", "type": "string", "description": "Branch coverage percentage"},
+        {"name": "class_coverage", "type": "string", "description": "Class coverage percentage"},
+        {"name": "method_coverage", "type": "string", "description": "Method coverage percentage"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "line_coverage", "value": 50.0, "message": "Line coverage must be at least 50%"},
+        {"type": "min_score", "target": "class_coverage", "value": 60.0, "message": "Class coverage must be at least 60%"},
+        {"type": "min_score", "target": "method_coverage", "value": 60.0, "message": "Method coverage must be at least 60%"}
+      ],
+      "metrics": ["line_coverage", "branch_coverage", "class_coverage", "method_coverage"]
+    },
+    {
+      "id": "yole-test-format-coverage",
+      "name": "Per-Format Test Coverage",
+      "description": "Verify each of the 17 format parsers has dedicated test coverage with minimum thresholds",
+      "category": "testing",
+      "dependencies": ["yole-test-common-all"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "format_ids", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "coverage_by_format", "type": "json", "description": "Map of format ID to coverage percentage"},
+        {"name": "uncovered_formats", "type": "json", "description": "Formats without dedicated tests"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "uncovered_formats", "value": 0, "message": "All formats must have dedicated tests"}
+      ],
+      "metrics": ["coverage_by_format"]
+    },
+    {
+      "id": "yole-test-stress-parsers",
+      "name": "Parser Stress Tests Pass",
+      "description": "Run stress test suite targeting parser performance and memory under large inputs",
+      "category": "testing",
+      "dependencies": ["yole-test-common-all"],
+      "estimated_duration": "3m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "test_result", "type": "string", "description": "Stress test pass/fail"},
+        {"name": "max_parse_time_ms", "type": "string", "description": "Longest parse time observed"},
+        {"name": "peak_memory_mb", "type": "string", "description": "Peak memory usage during stress tests"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "test_result", "value": "PASS", "message": "All stress tests must pass"},
+        {"type": "max_latency", "target": "max_parse_time_ms", "value": 5000, "message": "No parse should take over 5 seconds"}
+      ],
+      "metrics": ["max_parse_time_ms", "peak_memory_mb"]
+    },
+    {
+      "id": "yole-test-integration",
+      "name": "Integration Tests Pass",
+      "description": "Run cross-format integration tests verifying format interop, registry consistency, and pipeline integrity",
+      "category": "testing",
+      "dependencies": ["yole-test-common-all"],
+      "estimated_duration": "2m",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "test_result", "type": "string", "description": "Integration test pass/fail"},
+        {"name": "total_tests", "type": "string", "description": "Number of integration tests run"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "test_result", "value": "PASS", "message": "All integration tests must pass"},
+        {"type": "min_count", "target": "total_tests", "value": 50, "message": "At least 50 integration tests expected"}
+      ],
+      "metrics": ["test_time_seconds"]
+    }
+  ]
+}
