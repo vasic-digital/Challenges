@@ -1,0 +1,353 @@
+{
+  "version": "1.0",
+  "name": "Yole Protocol Resilience Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "protocol-resilience",
+    "description": "Challenges validating resilience patterns in network protocol services: circuit breaker state transitions, connection limiter saturation, timeout handling, reconnection behavior, concurrent operation limits, error cascading prevention, and graceful degradation under failure conditions"
+  },
+  "challenges": [
+    {
+      "id": "yole-pres-cb-closed-to-open",
+      "name": "Circuit Breaker: CLOSED to OPEN Transition",
+      "description": "Verify that CircuitBreaker transitions from CLOSED to OPEN state after the configured failure threshold is reached. Send exactly failureThreshold consecutive failing requests and verify the circuit opens. Verify that the (failureThreshold - 1)th failure keeps the circuit closed while the failureThreshold-th failure opens it.",
+      "category": "protocol-resilience",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "failure_threshold", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "state_before_threshold", "type": "string", "description": "Circuit state after (threshold - 1) failures"},
+        {"name": "state_at_threshold", "type": "string", "description": "Circuit state after exactly threshold failures"},
+        {"name": "transition_correct", "type": "string", "description": "Whether the transition occurred at the correct failure count"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "state_before_threshold", "value": "CLOSED", "message": "Circuit must remain CLOSED before failure threshold is reached"},
+        {"type": "contains", "target": "state_at_threshold", "value": "OPEN", "message": "Circuit must transition to OPEN at failure threshold"},
+        {"type": "contains", "target": "transition_correct", "value": "true", "message": "Transition must occur at exactly the configured threshold"}
+      ],
+      "metrics": ["failures_before_open", "transition_time_ms"]
+    },
+    {
+      "id": "yole-pres-cb-open-rejection",
+      "name": "Circuit Breaker: Request Rejection While OPEN",
+      "description": "Verify that CircuitBreaker in OPEN state immediately rejects all incoming requests without forwarding them to the underlying service. After opening the circuit, send 100 requests and verify all are rejected with CircuitBreakerOpenException. Measure rejection latency to ensure it is near-zero (no network call made).",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-cb-closed-to-open"],
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "requests_while_open", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "rejected_count", "type": "string", "description": "Number of requests rejected while circuit is open"},
+        {"name": "forwarded_count", "type": "string", "description": "Number of requests forwarded to underlying service"},
+        {"name": "avg_rejection_latency_ms", "type": "string", "description": "Average latency for rejected requests"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "forwarded_count", "value": 0, "message": "No request may be forwarded while circuit is OPEN"},
+        {"type": "min_count", "target": "rejected_count", "value": 100, "message": "All 100 requests must be rejected"},
+        {"type": "max_latency", "target": "avg_rejection_latency_ms", "value": 5, "message": "Rejection latency must be near-zero (under 5ms)"}
+      ],
+      "metrics": ["rejected_count", "avg_rejection_latency_ms"]
+    },
+    {
+      "id": "yole-pres-cb-half-open",
+      "name": "Circuit Breaker: OPEN to HALF_OPEN Transition",
+      "description": "Verify that CircuitBreaker transitions from OPEN to HALF_OPEN after the configured reset timeout expires. After opening the circuit, wait for resetTimeout duration and verify the state changes to HALF_OPEN. Then send one successful request and verify the circuit transitions back to CLOSED.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-cb-open-rejection"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "reset_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "state_before_timeout", "type": "string", "description": "Circuit state before reset timeout expires"},
+        {"name": "state_after_timeout", "type": "string", "description": "Circuit state after reset timeout expires"},
+        {"name": "state_after_success", "type": "string", "description": "Circuit state after successful request in HALF_OPEN"},
+        {"name": "full_cycle_completed", "type": "string", "description": "Whether CLOSED -> OPEN -> HALF_OPEN -> CLOSED cycle completed"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "state_before_timeout", "value": "OPEN", "message": "Circuit must remain OPEN before reset timeout"},
+        {"type": "contains", "target": "state_after_timeout", "value": "HALF_OPEN", "message": "Circuit must transition to HALF_OPEN after reset timeout"},
+        {"type": "contains", "target": "state_after_success", "value": "CLOSED", "message": "Circuit must return to CLOSED after successful HALF_OPEN request"},
+        {"type": "contains", "target": "full_cycle_completed", "value": "true", "message": "Full circuit breaker lifecycle must complete"}
+      ],
+      "metrics": ["actual_timeout_ms", "half_open_duration_ms"]
+    },
+    {
+      "id": "yole-pres-cb-half-open-failure",
+      "name": "Circuit Breaker: HALF_OPEN Failure Reopens Circuit",
+      "description": "Verify that a failed request during HALF_OPEN state immediately returns the circuit to OPEN state. After the circuit transitions to HALF_OPEN, send a failing request and verify the circuit reopens. This prevents premature recovery when the underlying service is still unhealthy.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-cb-half-open"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "reset_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "state_after_half_open_failure", "type": "string", "description": "Circuit state after failure in HALF_OPEN"},
+        {"name": "reopen_immediate", "type": "string", "description": "Whether the circuit reopened immediately on HALF_OPEN failure"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "state_after_half_open_failure", "value": "OPEN", "message": "Circuit must return to OPEN after HALF_OPEN failure"},
+        {"type": "contains", "target": "reopen_immediate", "value": "true", "message": "Reopening must be immediate on HALF_OPEN failure"}
+      ],
+      "metrics": ["reopen_latency_ms"]
+    },
+    {
+      "id": "yole-pres-cl-saturation",
+      "name": "Connection Limiter: Saturation Behavior",
+      "description": "Verify that ConnectionLimiter correctly limits concurrent connections to the configured maximum. Start maxConnections simultaneous operations, then attempt one more and verify it either queues or is rejected. After one operation completes, verify the queued operation proceeds.",
+      "category": "protocol-resilience",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "max_connections", "source": "config", "required": true},
+        {"name": "operation_duration_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "concurrent_at_saturation", "type": "string", "description": "Number of concurrent operations at saturation"},
+        {"name": "overflow_behavior", "type": "string", "description": "How overflow operation was handled (queued/rejected)"},
+        {"name": "overflow_completed_after_release", "type": "string", "description": "Whether overflow operation completed after a slot was released"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "concurrent_at_saturation", "value": 5, "message": "Concurrent operations at saturation must equal max_connections"},
+        {"type": "contains", "target": "overflow_completed_after_release", "value": "true", "message": "Overflow operation must complete after a connection slot is released"}
+      ],
+      "metrics": ["max_concurrent", "overflow_wait_ms"]
+    },
+    {
+      "id": "yole-pres-cl-nonblocking",
+      "name": "Connection Limiter: Non-Blocking Semaphore",
+      "description": "Verify that ConnectionLimiter uses a non-blocking semaphore implementation. When the limiter is saturated, new acquire attempts must not block the calling thread but instead suspend the coroutine. Verify by running on a single-threaded dispatcher and confirming no deadlock occurs.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-cl-saturation"],
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "max_connections", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "deadlock_detected", "type": "string", "description": "Whether a deadlock was detected on single-threaded dispatcher"},
+        {"name": "all_operations_completed", "type": "string", "description": "Whether all operations completed successfully"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "deadlock_detected", "value": "false", "message": "No deadlock may occur with non-blocking semaphore"},
+        {"type": "contains", "target": "all_operations_completed", "value": "true", "message": "All operations must complete even on single-threaded dispatcher"}
+      ],
+      "metrics": ["completion_time_ms"]
+    },
+    {
+      "id": "yole-pres-timeout-connect",
+      "name": "Connection Timeout Enforcement",
+      "description": "Verify that all protocol services enforce connection timeouts. Configure a 5-second connection timeout, then attempt to connect to an unreachable host. The connection attempt must fail within the timeout window (5 seconds + tolerance) rather than hanging indefinitely. Test across FTP, SFTP, WebDAV, SMB, and S3 services.",
+      "category": "protocol-resilience",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "connection_timeout_ms", "source": "config", "required": true},
+        {"name": "unreachable_host", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "timeout_results", "type": "json", "description": "Connection timeout results per protocol"},
+        {"name": "hanging_protocols", "type": "json", "description": "Protocols that exceeded the timeout window"},
+        {"name": "all_timed_out_correctly", "type": "string", "description": "Whether all protocols timed out within the configured window"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "hanging_protocols", "value": 0, "message": "No protocol may hang beyond the configured connection timeout"},
+        {"type": "contains", "target": "all_timed_out_correctly", "value": "true", "message": "All protocols must enforce connection timeout"},
+        {"type": "all_valid", "target": "timeout_results", "message": "All timeout results must show correct enforcement"}
+      ],
+      "metrics": ["protocols_tested", "avg_timeout_ms", "max_timeout_ms"]
+    },
+    {
+      "id": "yole-pres-timeout-request",
+      "name": "Request Timeout Enforcement",
+      "description": "Verify that protocol services enforce request-level timeouts independent of connection timeouts. Establish a connection successfully, then send a request to an endpoint that intentionally delays response. The request must fail within the configured request timeout.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-timeout-connect"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "request_timeout_ms", "source": "config", "required": true},
+        {"name": "slow_endpoint", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "request_timeout_results", "type": "json", "description": "Request timeout results per protocol"},
+        {"name": "exceeded_timeout", "type": "json", "description": "Protocols where request exceeded timeout"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "exceeded_timeout", "value": 0, "message": "No protocol may exceed the configured request timeout"},
+        {"type": "all_valid", "target": "request_timeout_results", "message": "All request timeout results must show correct enforcement"}
+      ],
+      "metrics": ["protocols_tested", "avg_request_timeout_ms"]
+    },
+    {
+      "id": "yole-pres-reconnect-after-disconnect",
+      "name": "Reconnection After Graceful Disconnect",
+      "description": "Verify that protocol services can successfully reconnect after a graceful disconnect. For each protocol, connect, perform an operation, disconnect, then reconnect and perform another operation. Both operations must succeed and the service must reach CONNECTED state after reconnection.",
+      "category": "protocol-resilience",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "reconnection_results", "type": "json", "description": "Reconnection results per protocol"},
+        {"name": "reconnection_failed", "type": "json", "description": "Protocols that failed to reconnect"},
+        {"name": "state_after_reconnect", "type": "json", "description": "Service state after reconnection per protocol"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "reconnection_failed", "value": 0, "message": "All protocols must successfully reconnect after disconnect"},
+        {"type": "all_valid", "target": "reconnection_results", "message": "All reconnection sequences must succeed"}
+      ],
+      "metrics": ["protocols_tested", "reconnect_time_ms"]
+    },
+    {
+      "id": "yole-pres-reconnect-after-error",
+      "name": "Reconnection After Connection Error",
+      "description": "Verify that protocol services can recover from connection errors by reconnecting. Simulate a connection drop (network error, server crash) during an active operation, then verify the service detects the error, transitions to DISCONNECTED/ERROR state, and can be reconnected.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-reconnect-after-disconnect"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "error_scenarios", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "recovery_results", "type": "json", "description": "Error recovery results per protocol"},
+        {"name": "unrecoverable_errors", "type": "json", "description": "Errors from which the service could not recover"},
+        {"name": "state_transitions", "type": "json", "description": "State transition log during error and recovery"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unrecoverable_errors", "value": 0, "message": "All connection errors must be recoverable via reconnection"},
+        {"type": "all_valid", "target": "recovery_results", "message": "All error recovery sequences must succeed"}
+      ],
+      "metrics": ["protocols_tested", "avg_recovery_time_ms", "error_scenarios_tested"]
+    },
+    {
+      "id": "yole-pres-concurrent-ops-limit",
+      "name": "Concurrent Operation Limits per Protocol",
+      "description": "Verify that each protocol service correctly limits concurrent operations to prevent overwhelming the remote server. Launch 50 simultaneous file listing operations against a single protocol and verify that no more than the configured maximum run concurrently. Verify all operations eventually complete.",
+      "category": "protocol-resilience",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "concurrent_requests", "source": "config", "required": true},
+        {"name": "max_concurrent_per_protocol", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "max_observed_concurrent", "type": "json", "description": "Maximum observed concurrent operations per protocol"},
+        {"name": "limit_exceeded", "type": "json", "description": "Protocols where concurrent limit was exceeded"},
+        {"name": "all_operations_completed", "type": "string", "description": "Whether all operations eventually completed"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "limit_exceeded", "value": 0, "message": "No protocol may exceed its concurrent operation limit"},
+        {"type": "contains", "target": "all_operations_completed", "value": "true", "message": "All operations must eventually complete"}
+      ],
+      "metrics": ["protocols_tested", "max_concurrent_observed", "total_completion_time_ms"]
+    },
+    {
+      "id": "yole-pres-error-cascade-prevention",
+      "name": "Error Cascading Prevention Across Protocols",
+      "description": "Verify that a failure in one protocol service does not cascade to other protocol services. Simultaneously connect to multiple protocols, cause one to fail (e.g., Dropbox authentication failure), and verify that other protocols (Google Drive, OneDrive, FTP) continue operating normally without errors.",
+      "category": "protocol-resilience",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "failing_protocol", "source": "config", "required": true},
+        {"name": "healthy_protocols", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "failing_protocol_state", "type": "string", "description": "State of the intentionally failed protocol"},
+        {"name": "healthy_protocol_states", "type": "json", "description": "States of protocols that should remain healthy"},
+        {"name": "cascade_detected", "type": "string", "description": "Whether error cascaded from failing to healthy protocols"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "cascade_detected", "value": "false", "message": "Errors must not cascade between protocol services"},
+        {"type": "all_valid", "target": "healthy_protocol_states", "message": "All healthy protocols must remain operational"}
+      ],
+      "metrics": ["protocols_tested", "isolation_verified"]
+    },
+    {
+      "id": "yole-pres-error-cascade-shared-resources",
+      "name": "Error Cascading Prevention in Shared Resources",
+      "description": "Verify that shared resources (DocumentCache, ConnectionLimiter, FormatRegistry) do not become corrupted when one protocol service fails. After a protocol failure, verify that cache lookups still work, the connection limiter still accepts new connections, and format detection still functions.",
+      "category": "protocol-resilience",
+      "dependencies": ["yole-pres-error-cascade-prevention"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_functional", "type": "string", "description": "Whether DocumentCache remains functional after protocol failure"},
+        {"name": "limiter_functional", "type": "string", "description": "Whether ConnectionLimiter remains functional after protocol failure"},
+        {"name": "registry_functional", "type": "string", "description": "Whether FormatRegistry remains functional after protocol failure"},
+        {"name": "shared_resource_corruption", "type": "json", "description": "Any shared resource corruption detected"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "cache_functional", "value": "true", "message": "DocumentCache must remain functional after protocol failure"},
+        {"type": "contains", "target": "limiter_functional", "value": "true", "message": "ConnectionLimiter must remain functional after protocol failure"},
+        {"type": "contains", "target": "registry_functional", "value": "true", "message": "FormatRegistry must remain functional after protocol failure"},
+        {"type": "exact_count", "target": "shared_resource_corruption", "value": 0, "message": "No shared resource corruption may occur"}
+      ],
+      "metrics": ["resources_tested"]
+    },
+    {
+      "id": "yole-pres-rapid-connect-disconnect",
+      "name": "Rapid Connect/Disconnect Cycle Stability",
+      "description": "Verify that protocol services remain stable during rapid connect/disconnect cycles. Execute 100 consecutive connect/disconnect cycles for each cloud protocol (Dropbox, GoogleDrive, OneDrive) and verify no resource leaks (coroutine, connection, memory), no deadlocks, and the service remains usable after the final cycle.",
+      "category": "protocol-resilience",
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "cycle_count", "source": "config", "required": true},
+        {"name": "cloud_protocols", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cycle_results", "type": "json", "description": "Connect/disconnect cycle results per protocol"},
+        {"name": "resource_leaks", "type": "json", "description": "Resource leaks detected during rapid cycling"},
+        {"name": "deadlocks_detected", "type": "string", "description": "Whether any deadlocks were detected"},
+        {"name": "final_state_usable", "type": "string", "description": "Whether the service is usable after all cycles"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "resource_leaks", "value": 0, "message": "No resource leaks during rapid connect/disconnect cycles"},
+        {"type": "contains", "target": "deadlocks_detected", "value": "false", "message": "No deadlocks during rapid connect/disconnect cycles"},
+        {"type": "contains", "target": "final_state_usable", "value": "true", "message": "Service must be usable after rapid connect/disconnect cycles"}
+      ],
+      "metrics": ["cycles_completed", "avg_cycle_time_ms", "memory_before_mb", "memory_after_mb"]
+    },
+    {
+      "id": "yole-pres-document-cache-eviction",
+      "name": "DocumentCache LRU Eviction Under Memory Pressure",
+      "description": "Verify that DocumentCache correctly evicts least-recently-used entries when the cache reaches its size limit. Fill the cache beyond capacity, then verify that the oldest entries were evicted while recently accessed entries remain. Also verify that hit/miss metrics are accurate throughout.",
+      "category": "protocol-resilience",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "cache_max_size", "source": "config", "required": true},
+        {"name": "overflow_entries", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "eviction_results", "type": "json", "description": "LRU eviction behavior results"},
+        {"name": "oldest_entries_evicted", "type": "string", "description": "Whether oldest entries were evicted first"},
+        {"name": "recent_entries_retained", "type": "string", "description": "Whether recently accessed entries were retained"},
+        {"name": "metrics_accurate", "type": "string", "description": "Whether hit/miss metrics matched actual behavior"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "oldest_entries_evicted", "value": "true", "message": "Oldest entries must be evicted first under LRU policy"},
+        {"type": "contains", "target": "recent_entries_retained", "value": "true", "message": "Recently accessed entries must be retained"},
+        {"type": "contains", "target": "metrics_accurate", "value": "true", "message": "Cache hit/miss metrics must be accurate"}
+      ],
+      "metrics": ["evictions_count", "hits", "misses", "hit_rate"]
+    }
+  ]
+}

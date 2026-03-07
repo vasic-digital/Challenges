@@ -1,0 +1,329 @@
+{
+  "version": "1.0",
+  "name": "Yole Format Edge Cases Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "format-edge-cases",
+    "description": "Challenges validating edge-case handling across all 17 text format parsers: empty files, maximum file sizes, binary content detection, corrupted headers, mixed encodings, nested format embedding, and boundary conditions"
+  },
+  "challenges": [
+    {
+      "id": "yole-fedge-empty-file-all-formats",
+      "name": "Empty File Parsing for All 17 Formats",
+      "description": "Verify that all 17 format parsers handle empty string input gracefully without crashing, throwing exceptions, or producing invalid ParsedDocument. Each parser must return a valid ParsedDocument with empty or minimal content, no errors, and a valid toHtml() output.",
+      "category": "format-edge-cases",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse result per format for empty input"},
+        {"name": "formats_crashed", "type": "json", "description": "Formats that crashed on empty input"},
+        {"name": "formats_with_errors", "type": "json", "description": "Formats that reported errors on empty input"},
+        {"name": "html_valid", "type": "json", "description": "Whether toHtml() produced valid output for each format"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "formats_crashed", "value": 0, "message": "No format parser may crash on empty input"},
+        {"type": "exact_count", "target": "formats_with_errors", "value": 0, "message": "No format parser should report errors for empty input"},
+        {"type": "all_valid", "target": "html_valid", "message": "All formats must produce valid HTML output from empty input"}
+      ],
+      "metrics": ["formats_tested", "parse_time_ms"]
+    },
+    {
+      "id": "yole-fedge-whitespace-only",
+      "name": "Whitespace-Only Content Parsing",
+      "description": "Verify that all 17 format parsers handle content consisting only of whitespace (spaces, tabs, newlines, carriage returns, form feeds) without errors. Test with various whitespace-only patterns including single space, multiple newlines, mixed whitespace, and Unicode whitespace characters.",
+      "category": "format-edge-cases",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "whitespace_patterns", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results per format per whitespace pattern"},
+        {"name": "formats_failed", "type": "json", "description": "Formats that failed on whitespace-only input"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "formats_failed", "value": 0, "message": "No format parser may fail on whitespace-only input"},
+        {"type": "all_valid", "target": "parse_results", "message": "All parse results must be valid for whitespace-only content"}
+      ],
+      "metrics": ["patterns_tested", "formats_tested"]
+    },
+    {
+      "id": "yole-fedge-max-file-size",
+      "name": "Maximum File Size Handling",
+      "description": "Verify that format parsers handle large documents (1MB, 5MB, 10MB) without OutOfMemoryError or excessive parse times. For each supported format, generate documents of increasing sizes and verify that parsing completes within a time budget proportional to file size, and that memory usage stays within bounds.",
+      "category": "format-edge-cases",
+      "estimated_duration": "180s",
+      "inputs": [
+        {"name": "size_thresholds_kb", "source": "config", "required": true},
+        {"name": "time_budget_per_mb_ms", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "size_results", "type": "json", "description": "Parse time and memory usage per format per size threshold"},
+        {"name": "oom_formats", "type": "json", "description": "Formats that threw OutOfMemoryError"},
+        {"name": "timeout_formats", "type": "json", "description": "Formats that exceeded the time budget"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "oom_formats", "value": 0, "message": "No format parser may throw OutOfMemoryError for supported file sizes"},
+        {"type": "exact_count", "target": "timeout_formats", "value": 0, "message": "No format parser may exceed its time budget"}
+      ],
+      "metrics": ["max_parse_time_ms", "max_memory_mb", "avg_throughput_kb_per_sec"]
+    },
+    {
+      "id": "yole-fedge-single-line",
+      "name": "Single-Line Document Parsing",
+      "description": "Verify that all format parsers handle documents consisting of a single very long line (100KB) without stack overflow, excessive memory usage, or regex catastrophic backtracking. This tests parsers that may rely on line-by-line processing.",
+      "category": "format-edge-cases",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "line_length_chars", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results per format for single-line input"},
+        {"name": "stackoverflow_formats", "type": "json", "description": "Formats that threw StackOverflowError"},
+        {"name": "backtracking_formats", "type": "json", "description": "Formats that exhibited catastrophic regex backtracking"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "stackoverflow_formats", "value": 0, "message": "No format parser may throw StackOverflowError on long single-line input"},
+        {"type": "exact_count", "target": "backtracking_formats", "value": 0, "message": "No format parser may exhibit catastrophic regex backtracking"}
+      ],
+      "metrics": ["parse_time_ms", "max_memory_mb"]
+    },
+    {
+      "id": "yole-fedge-binary-detection",
+      "name": "Binary Content Detection Accuracy",
+      "description": "Verify that FormatRegistry correctly identifies binary content and routes it to the binary format parser. Test with actual binary payloads including PNG headers, ZIP headers, ELF binaries, PDF magic bytes, and random binary data. Also test that text files with occasional high bytes are not falsely detected as binary.",
+      "category": "format-edge-cases",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "binary_samples", "source": "config", "required": true},
+        {"name": "text_with_high_bytes", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "detection_results", "type": "json", "description": "Binary detection results for each sample"},
+        {"name": "false_negatives", "type": "json", "description": "Binary files not detected as binary"},
+        {"name": "false_positives", "type": "json", "description": "Text files falsely detected as binary"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "false_negatives", "value": 0, "message": "All binary content must be detected as binary"},
+        {"type": "exact_count", "target": "false_positives", "value": 0, "message": "No text content should be falsely detected as binary"},
+        {"type": "all_valid", "target": "detection_results", "message": "All detection results must be correct"}
+      ],
+      "metrics": ["samples_tested", "detection_time_ms"]
+    },
+    {
+      "id": "yole-fedge-corrupted-markdown",
+      "name": "Corrupted Markdown Header Handling",
+      "description": "Verify Markdown parser handles corrupted or malformed headers gracefully: unclosed code fences, mismatched heading levels, broken link syntax ([link(url), deeply nested blockquotes (>>>>>), and truncated YAML front matter (--- without closing ---).",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "corrupted_markdown", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results for each corrupted Markdown sample"},
+        {"name": "parser_crashed", "type": "string", "description": "Whether the parser crashed on any sample"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "parser_crashed", "value": "false", "message": "Markdown parser must not crash on corrupted input"},
+        {"type": "all_valid", "target": "parse_results", "message": "All corrupted inputs must produce a valid ParsedDocument"}
+      ],
+      "metrics": ["samples_tested", "errors_reported"]
+    },
+    {
+      "id": "yole-fedge-corrupted-todotxt",
+      "name": "Corrupted Todo.txt Format Handling",
+      "description": "Verify Todo.txt parser handles malformed entries: invalid priority markers ((Z)), invalid dates (2025-13-32), entries with only whitespace between fields, excessively long context/project tags, and mixed line endings within a single file.",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "corrupted_todotxt", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results for each corrupted Todo.txt sample"},
+        {"name": "parser_crashed", "type": "string", "description": "Whether the parser crashed on any sample"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "parser_crashed", "value": "false", "message": "Todo.txt parser must not crash on corrupted input"},
+        {"type": "all_valid", "target": "parse_results", "message": "All corrupted inputs must produce a valid ParsedDocument"}
+      ],
+      "metrics": ["samples_tested"]
+    },
+    {
+      "id": "yole-fedge-corrupted-csv",
+      "name": "Corrupted CSV Format Handling",
+      "description": "Verify CSV parser handles malformed data: unclosed quotes, inconsistent column counts across rows, embedded newlines in unquoted fields, BOM markers, null bytes in cells, and files with only delimiters and no data.",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "corrupted_csv", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results for each corrupted CSV sample"},
+        {"name": "parser_crashed", "type": "string", "description": "Whether the parser crashed on any sample"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "parser_crashed", "value": "false", "message": "CSV parser must not crash on corrupted input"},
+        {"type": "all_valid", "target": "parse_results", "message": "All corrupted inputs must produce a valid ParsedDocument"}
+      ],
+      "metrics": ["samples_tested"]
+    },
+    {
+      "id": "yole-fedge-corrupted-latex",
+      "name": "Corrupted LaTeX Document Handling",
+      "description": "Verify LaTeX parser handles corrupted documents: missing \\end{document}, unmatched braces, invalid command sequences, deeply nested environments (100 levels), and binary garbage after \\documentclass.",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "corrupted_latex", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results for each corrupted LaTeX sample"},
+        {"name": "parser_crashed", "type": "string", "description": "Whether the parser crashed on any sample"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "parser_crashed", "value": "false", "message": "LaTeX parser must not crash on corrupted input"},
+        {"type": "all_valid", "target": "parse_results", "message": "All corrupted inputs must produce a valid ParsedDocument"}
+      ],
+      "metrics": ["samples_tested"]
+    },
+    {
+      "id": "yole-fedge-mixed-encoding",
+      "name": "Mixed Encoding Detection and Handling",
+      "description": "Verify that format parsers handle documents with mixed character encodings: UTF-8 with embedded Latin-1 sequences, UTF-16 BOM followed by UTF-8 content, Shift-JIS in a UTF-8 document, and invalid UTF-8 continuation bytes. Parsers must not crash and should produce valid output even if some characters are replaced.",
+      "category": "format-edge-cases",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "encoding_samples", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "encoding_results", "type": "json", "description": "Encoding handling results per format per sample"},
+        {"name": "formats_crashed", "type": "json", "description": "Formats that crashed on mixed encoding"},
+        {"name": "replacement_used", "type": "json", "description": "Whether Unicode replacement character was used for invalid sequences"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "formats_crashed", "value": 0, "message": "No format parser may crash on mixed encoding input"},
+        {"type": "all_valid", "target": "encoding_results", "message": "All encoding test results must show graceful handling"}
+      ],
+      "metrics": ["formats_tested", "samples_tested"]
+    },
+    {
+      "id": "yole-fedge-nested-markdown-in-orgmode",
+      "name": "Nested Format Embedding: Markdown Inside Org-mode",
+      "description": "Verify that Org-mode parser handles content that contains valid Markdown syntax (# headings, **bold**, [links](url)) within Org-mode src blocks or plain text. The Markdown syntax must not confuse the Org-mode parser or corrupt its output.",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "orgmode_with_markdown", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_result", "type": "json", "description": "Parse result for Org-mode with embedded Markdown"},
+        {"name": "output_corrupted", "type": "string", "description": "Whether the Org-mode output was corrupted by Markdown syntax"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "output_corrupted", "value": "false", "message": "Embedded Markdown must not corrupt Org-mode parser output"},
+        {"type": "not_empty", "target": "parse_result", "message": "Parse result must not be empty"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fedge-nested-latex-in-markdown",
+      "name": "Nested Format Embedding: LaTeX Inside Markdown",
+      "description": "Verify that Markdown parser handles embedded LaTeX math notation ($E=mc^2$, $$\\int_0^1 f(x)dx$$, \\begin{equation}...\\end{equation}) without corrupting the document structure or crashing on unmatched delimiters.",
+      "category": "format-edge-cases",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "markdown_with_latex", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_result", "type": "json", "description": "Parse result for Markdown with embedded LaTeX"},
+        {"name": "latex_preserved", "type": "string", "description": "Whether LaTeX notation was preserved in output"},
+        {"name": "structure_valid", "type": "string", "description": "Whether document structure remained valid"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "structure_valid", "value": "true", "message": "Markdown document structure must remain valid with embedded LaTeX"},
+        {"type": "not_empty", "target": "parse_result", "message": "Parse result must not be empty"}
+      ],
+      "metrics": ["parse_time_ms"]
+    },
+    {
+      "id": "yole-fedge-nested-code-blocks",
+      "name": "Nested Format Embedding: Code Blocks with Format Syntax",
+      "description": "Verify that format parsers correctly handle code blocks or verbatim sections that contain syntax from other formats. For example, Markdown code blocks containing Org-mode headers, AsciiDoc listing blocks containing CSV data, or WikiText nowiki blocks containing HTML.",
+      "category": "format-edge-cases",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "nested_code_samples", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_results", "type": "json", "description": "Parse results for each nested code block scenario"},
+        {"name": "inner_syntax_leaked", "type": "json", "description": "Cases where inner format syntax was interpreted instead of being treated as code"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "inner_syntax_leaked", "value": 0, "message": "Code block content must never be interpreted as outer format syntax"},
+        {"type": "all_valid", "target": "parse_results", "message": "All nested code block scenarios must parse correctly"}
+      ],
+      "metrics": ["scenarios_tested"]
+    },
+    {
+      "id": "yole-fedge-deep-nesting",
+      "name": "Deep Nesting Depth Limits",
+      "description": "Verify that format parsers handle extremely deep nesting without stack overflow: 100-level nested Markdown blockquotes, 100-level nested LaTeX environments, 100-level nested Org-mode headings, and 100-level nested WikiText templates. Parsers must either handle the depth or fail gracefully.",
+      "category": "format-edge-cases",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "nesting_depth", "source": "config", "required": true},
+        {"name": "nesting_formats", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "nesting_results", "type": "json", "description": "Results per format for deep nesting tests"},
+        {"name": "stackoverflow_formats", "type": "json", "description": "Formats that threw StackOverflowError"},
+        {"name": "max_safe_depth", "type": "json", "description": "Maximum safe nesting depth per format"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "stackoverflow_formats", "value": 0, "message": "No format parser may throw StackOverflowError on deep nesting"},
+        {"type": "all_valid", "target": "nesting_results", "message": "All deep nesting tests must complete without crashing"}
+      ],
+      "metrics": ["formats_tested", "max_depth_tested"]
+    },
+    {
+      "id": "yole-fedge-html-cache-consistency",
+      "name": "ParsedDocument HTML Cache Consistency",
+      "description": "Verify that ParsedDocument.toHtml() lazy caching is consistent: the first call generates HTML, subsequent calls return the cached value, and the cached value is identical to the first generation. Test across all 17 formats with documents that include special characters and Unicode.",
+      "category": "format-edge-cases",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_results", "type": "json", "description": "Cache consistency results per format"},
+        {"name": "inconsistent_formats", "type": "json", "description": "Formats where cached HTML differs from first generation"},
+        {"name": "cache_hit_verified", "type": "string", "description": "Whether cache hit was verified for all formats"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "inconsistent_formats", "value": 0, "message": "Cached HTML must always match first-generated HTML"},
+        {"type": "contains", "target": "cache_hit_verified", "value": "true", "message": "Cache hit must be verified for all formats"}
+      ],
+      "metrics": ["formats_tested", "first_gen_time_ms", "cached_access_time_ms"]
+    }
+  ]
+}

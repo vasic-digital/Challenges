@@ -1,0 +1,357 @@
+{
+  "version": "1.0",
+  "name": "Yole Security Deep Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "security-deep",
+    "description": "Deep security challenges validating path traversal prevention, XSS prevention in HTML output, query injection prevention, CancellationException rethrow safety, credential storage, HTTPS enforcement, certificate validation, and input sanitization across all protocol services and format parsers"
+  },
+  "challenges": [
+    {
+      "id": "yole-secdp-path-traversal-normalization",
+      "name": "Path Traversal Prevention via normalizePath()",
+      "description": "Verify that normalizePath() in Dropbox, FTP, SFTP, and SMB services resolves '..' segments and enforces root boundary. Test with payloads including '../../../etc/passwd', '..\\..\\windows\\system32', URL-encoded '%2e%2e%2f', double-encoded '%252e%252e%252f', and null-byte injection 'file%00.txt'. All must be neutralized to safe paths within the service root.",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "traversal_payloads", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "normalization_results", "type": "json", "description": "Map of protocol to list of payload/normalized-path pairs"},
+        {"name": "traversal_escaped_root", "type": "json", "description": "Payloads that escaped the root boundary"},
+        {"name": "protocols_tested", "type": "string", "description": "Number of protocols tested"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "traversal_escaped_root", "value": 0, "message": "No path traversal payload may escape the root boundary"},
+        {"type": "min_count", "target": "protocols_tested", "value": 4, "message": "At least 4 protocol services must be tested (Dropbox, FTP, SFTP, SMB)"},
+        {"type": "all_valid", "target": "normalization_results", "message": "All normalization results must show safe resolved paths"}
+      ],
+      "metrics": ["payloads_tested", "protocols_tested", "escaped_count"]
+    },
+    {
+      "id": "yole-secdp-path-traversal-symlink",
+      "name": "Symlink-Based Path Traversal Prevention",
+      "description": "Verify that protocol services do not follow symbolic links that point outside the service root. Create test symlinks pointing to parent directories and verify that file operations through them are rejected or resolved safely.",
+      "category": "security",
+      "dependencies": ["yole-secdp-path-traversal-normalization"],
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "symlink_scenarios", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "symlink_results", "type": "json", "description": "Results of symlink traversal attempts"},
+        {"name": "symlinks_followed_unsafely", "type": "json", "description": "Symlinks that were followed to locations outside root"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "symlinks_followed_unsafely", "value": 0, "message": "No symlink may be followed to a location outside the service root"}
+      ],
+      "metrics": ["scenarios_tested", "symlinks_rejected"]
+    },
+    {
+      "id": "yole-secdp-xss-html-output",
+      "name": "XSS Prevention in HTML Output for All 17 Formats",
+      "description": "Verify that all 17 format parsers properly escape or sanitize HTML special characters in their toHtml() output. Inject XSS payloads including '<script>alert(1)</script>', '<img onerror=alert(1) src=x>', 'javascript:alert(1)', '<svg onload=alert(1)>', and attribute injection '\" onfocus=alert(1) autofocus=\"' into document content and verify none appear unescaped in the generated HTML.",
+      "category": "security",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "xss_payloads", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "xss_results", "type": "json", "description": "Map of format ID to list of XSS test results"},
+        {"name": "vulnerable_formats", "type": "json", "description": "Formats where XSS payload appeared unescaped in HTML"},
+        {"name": "formats_tested", "type": "string", "description": "Number of formats tested"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "vulnerable_formats", "value": 0, "message": "No format parser may produce HTML containing unescaped XSS payloads"},
+        {"type": "min_count", "target": "formats_tested", "value": 17, "message": "All 17 format parsers must be tested for XSS"},
+        {"type": "all_valid", "target": "xss_results", "message": "All XSS test results must show proper escaping"}
+      ],
+      "metrics": ["formats_tested", "payloads_per_format", "total_tests"]
+    },
+    {
+      "id": "yole-secdp-xss-css-injection",
+      "name": "CSS Injection Prevention in StyleSheets",
+      "description": "Verify that StyleSheets.kt CSS generation does not allow CSS injection through format-controlled content or theme parameters. Test with payloads including 'expression(alert(1))', 'url(javascript:alert(1))', '-moz-binding', '@import url(evil.css)', and 'behavior:url(evil.htc)'. None must appear in generated CSS output.",
+      "category": "security",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "css_injection_payloads", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "css_results", "type": "json", "description": "CSS injection test results"},
+        {"name": "injections_found", "type": "json", "description": "CSS injections that passed through"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "injections_found", "value": 0, "message": "No CSS injection payload may appear in generated stylesheets"},
+        {"type": "all_pass", "target": "css_results", "message": "All CSS injection tests must pass"}
+      ],
+      "metrics": ["payloads_tested"]
+    },
+    {
+      "id": "yole-secdp-query-injection-gdrive",
+      "name": "Query Injection Prevention in Google Drive API",
+      "description": "Verify that GoogleDriveService sanitizes API query strings by escaping single quotes, URL encoding, and JSON escaping. Test with payloads including SQL-like injection ('; DROP TABLE--'), single-quote escaping ('file' OR '1'='1'), and JSON injection ('{\"key\": \"value\"}') in file search and list operations.",
+      "category": "security",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "query_payloads", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "sanitization_results", "type": "json", "description": "Results of query sanitization for each payload"},
+        {"name": "unsanitized_payloads", "type": "json", "description": "Payloads that were not properly sanitized"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unsanitized_payloads", "value": 0, "message": "All query payloads must be properly sanitized for Google Drive API"},
+        {"type": "all_pass", "target": "sanitization_results", "message": "All sanitization tests must pass"}
+      ],
+      "metrics": ["payloads_tested", "escaping_methods_verified"]
+    },
+    {
+      "id": "yole-secdp-query-injection-onedrive",
+      "name": "Query Injection Prevention in OneDrive API",
+      "description": "Verify that OneDriveService sanitizes OData filter expressions and search queries. Test with OData injection ('$filter=true eq true'), path injection ('/me/drive/root:/etc/passwd'), and Unicode normalization attacks in file paths.",
+      "category": "security",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "odata_payloads", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "sanitization_results", "type": "json", "description": "OData injection test results"},
+        {"name": "unsanitized_payloads", "type": "json", "description": "Payloads that passed through unsanitized"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unsanitized_payloads", "value": 0, "message": "All OData payloads must be sanitized for OneDrive API"},
+        {"type": "all_pass", "target": "sanitization_results", "message": "All sanitization tests must pass"}
+      ],
+      "metrics": ["payloads_tested"]
+    },
+    {
+      "id": "yole-secdp-query-injection-dropbox",
+      "name": "Query Injection Prevention in Dropbox API",
+      "description": "Verify that DropboxService sanitizes JSON request bodies and path parameters. Test with JSON injection in file paths, path parameter pollution, and content-type confusion attacks.",
+      "category": "security",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "dropbox_payloads", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "sanitization_results", "type": "json", "description": "Dropbox API injection test results"},
+        {"name": "unsanitized_payloads", "type": "json", "description": "Payloads that bypassed sanitization"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unsanitized_payloads", "value": 0, "message": "All payloads must be sanitized for Dropbox API"},
+        {"type": "all_pass", "target": "sanitization_results", "message": "All Dropbox sanitization tests must pass"}
+      ],
+      "metrics": ["payloads_tested"]
+    },
+    {
+      "id": "yole-secdp-cancellation-rethrow",
+      "name": "CancellationException Rethrow in All Protocol Services",
+      "description": "Verify that all catch blocks in all 8 protocol services (Dropbox, GoogleDrive, OneDrive, FTP, SFTP, SMB, WebDAV, S3) rethrow kotlin.coroutines.cancellation.CancellationException instead of swallowing it. Simulate coroutine cancellation during network operations and verify the exception propagates to the caller.",
+      "category": "security",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "rethrow_results", "type": "json", "description": "CancellationException rethrow verification per service"},
+        {"name": "services_swallowing_cancellation", "type": "json", "description": "Services that swallow CancellationException"},
+        {"name": "catch_blocks_verified", "type": "string", "description": "Total catch blocks verified across all services"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "services_swallowing_cancellation", "value": 0, "message": "No protocol service may swallow CancellationException"},
+        {"type": "min_count", "target": "catch_blocks_verified", "value": 40, "message": "At least 40 catch blocks must be verified across all services"},
+        {"type": "all_valid", "target": "rethrow_results", "message": "All services must correctly rethrow CancellationException"}
+      ],
+      "metrics": ["services_tested", "catch_blocks_verified", "rethrows_confirmed"]
+    },
+    {
+      "id": "yole-secdp-credential-plaintext",
+      "name": "Credential Storage Plaintext Prevention",
+      "description": "Scan the entire codebase for plaintext credentials, API keys, tokens, and secrets. Verify that AuthTokenManager uses SecureStorage from Security-KMP rather than plaintext SharedPreferences or file storage. Check that no hardcoded credentials exist in source files, test files, or configuration.",
+      "category": "security",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "credential_patterns", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "plaintext_findings", "type": "json", "description": "Files containing potential plaintext credentials"},
+        {"name": "secure_storage_used", "type": "string", "description": "Whether AuthTokenManager uses SecureStorage"},
+        {"name": "hardcoded_secrets", "type": "json", "description": "Hardcoded secrets found in source code"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "plaintext_findings", "value": 0, "message": "No plaintext credentials may exist in the codebase"},
+        {"type": "contains", "target": "secure_storage_used", "value": "true", "message": "AuthTokenManager must use SecureStorage from Security-KMP"},
+        {"type": "exact_count", "target": "hardcoded_secrets", "value": 0, "message": "No hardcoded secrets allowed in source code"}
+      ],
+      "metrics": ["files_scanned", "patterns_checked", "findings_count"]
+    },
+    {
+      "id": "yole-secdp-credential-logging",
+      "name": "Credential Leak Prevention in Logs",
+      "description": "Verify that OAuth tokens, refresh tokens, API keys, and passwords are never written to application logs, crash reports, or debug output. Trigger authentication flows and network operations while capturing log output, then scan for leaked credentials.",
+      "category": "security",
+      "dependencies": ["yole-secdp-credential-plaintext"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "sensitive_patterns", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "log_findings", "type": "json", "description": "Credentials found in log output"},
+        {"name": "redaction_working", "type": "string", "description": "Whether credential redaction is active in logging"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "log_findings", "value": 0, "message": "No credentials may appear in log output"},
+        {"type": "contains", "target": "redaction_working", "value": "true", "message": "Credential redaction must be active in the logging system"}
+      ],
+      "metrics": ["log_lines_scanned", "patterns_checked"]
+    },
+    {
+      "id": "yole-secdp-https-enforcement",
+      "name": "HTTPS Enforcement for Cloud Protocol Services",
+      "description": "Verify that Dropbox, Google Drive, and OneDrive services enforce HTTPS for all API calls and reject HTTP. Check that base URLs use https://, that HTTP redirects are not followed to plain HTTP, and that mixed-content requests are blocked.",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "cloud_protocols", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "https_results", "type": "json", "description": "HTTPS enforcement results per protocol"},
+        {"name": "http_allowed_protocols", "type": "json", "description": "Protocols that allow plain HTTP"},
+        {"name": "base_urls_secure", "type": "string", "description": "Whether all base URLs use https://"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "http_allowed_protocols", "value": 0, "message": "No cloud protocol may allow plain HTTP connections"},
+        {"type": "contains", "target": "base_urls_secure", "value": "true", "message": "All base URLs must use https://"},
+        {"type": "all_pass", "target": "https_results", "message": "All HTTPS enforcement checks must pass"}
+      ],
+      "metrics": ["protocols_tested", "urls_verified"]
+    },
+    {
+      "id": "yole-secdp-certificate-validation",
+      "name": "TLS Certificate Validation",
+      "description": "Verify that Ktor HTTP clients used by cloud protocol services perform proper TLS certificate validation. Check that self-signed certificates are rejected, expired certificates are rejected, hostname mismatches are detected, and certificate pinning is enforced where configured.",
+      "category": "security",
+      "dependencies": ["yole-secdp-https-enforcement"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "certificate_scenarios", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "validation_results", "type": "json", "description": "Certificate validation results per scenario"},
+        {"name": "invalid_certs_accepted", "type": "json", "description": "Invalid certificates that were accepted"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "invalid_certs_accepted", "value": 0, "message": "No invalid certificate may be accepted by protocol services"},
+        {"type": "all_pass", "target": "validation_results", "message": "All certificate validation scenarios must pass"}
+      ],
+      "metrics": ["scenarios_tested", "certificates_rejected"]
+    },
+    {
+      "id": "yole-secdp-input-sanitization-filenames",
+      "name": "Input Sanitization for Filenames",
+      "description": "Verify that filenames provided to protocol services are sanitized to remove dangerous characters including null bytes, control characters, path separators, shell metacharacters (;, |, &, $, `), and overly long names. Test across all 8 protocol services.",
+      "category": "security",
+      "estimated_duration": "35s",
+      "inputs": [
+        {"name": "filename_payloads", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "sanitization_results", "type": "json", "description": "Filename sanitization results per protocol"},
+        {"name": "dangerous_filenames_accepted", "type": "json", "description": "Dangerous filenames that were accepted without sanitization"},
+        {"name": "protocols_tested", "type": "string", "description": "Number of protocols tested"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "dangerous_filenames_accepted", "value": 0, "message": "No dangerous filename may be accepted without sanitization"},
+        {"type": "min_count", "target": "protocols_tested", "value": 8, "message": "All 8 protocol services must be tested"},
+        {"type": "all_valid", "target": "sanitization_results", "message": "All filename sanitization results must show safe outputs"}
+      ],
+      "metrics": ["payloads_tested", "protocols_tested"]
+    },
+    {
+      "id": "yole-secdp-input-sanitization-content",
+      "name": "Input Sanitization for Document Content",
+      "description": "Verify that document content containing control characters (except newline, tab, carriage return), BOM markers, right-to-left override characters (U+202E), and zero-width characters is handled safely by all 17 format parsers without producing malicious HTML output.",
+      "category": "security",
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "content_payloads", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "sanitization_results", "type": "json", "description": "Content sanitization results per format"},
+        {"name": "dangerous_output_produced", "type": "json", "description": "Formats that produced dangerous HTML from malicious content"},
+        {"name": "formats_tested", "type": "string", "description": "Number of formats tested"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "dangerous_output_produced", "value": 0, "message": "No format may produce dangerous HTML from malicious content"},
+        {"type": "min_count", "target": "formats_tested", "value": 17, "message": "All 17 format parsers must be tested"},
+        {"type": "all_valid", "target": "sanitization_results", "message": "All content sanitization results must be safe"}
+      ],
+      "metrics": ["payloads_tested", "formats_tested"]
+    },
+    {
+      "id": "yole-secdp-scope-lifecycle",
+      "name": "CoroutineScope Lifecycle Safety",
+      "description": "Verify that serviceScope in Dropbox, GoogleDrive, and OneDrive services is cancelled on reconnect and disconnect to prevent coroutine leaks. Simulate rapid connect/disconnect/reconnect cycles and verify no orphaned coroutines remain after disconnection.",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "cycle_count", "source": "config", "required": true},
+        {"name": "cloud_protocols", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "lifecycle_results", "type": "json", "description": "Scope lifecycle results per protocol"},
+        {"name": "orphaned_coroutines", "type": "json", "description": "Orphaned coroutines detected after disconnect"},
+        {"name": "scope_cancelled_on_disconnect", "type": "string", "description": "Whether serviceScope is properly cancelled on disconnect"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "orphaned_coroutines", "value": 0, "message": "No orphaned coroutines may remain after disconnect"},
+        {"type": "contains", "target": "scope_cancelled_on_disconnect", "value": "true", "message": "serviceScope must be cancelled on disconnect for all cloud protocols"},
+        {"type": "all_pass", "target": "lifecycle_results", "message": "All lifecycle checks must pass"}
+      ],
+      "metrics": ["cycles_tested", "protocols_tested", "orphaned_count"]
+    },
+    {
+      "id": "yole-secdp-memory-disclosure",
+      "name": "Memory Disclosure Prevention",
+      "description": "Verify that sensitive data (tokens, passwords, decrypted content) is cleared from memory after use and does not appear in heap dumps or toString() representations. Check that AuthTokenManager clears token buffers and that protocol service error messages do not leak sensitive data.",
+      "category": "security",
+      "dependencies": ["yole-secdp-credential-plaintext"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "sensitive_fields", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "disclosure_results", "type": "json", "description": "Memory disclosure test results"},
+        {"name": "sensitive_in_tostring", "type": "json", "description": "Sensitive data found in toString() output"},
+        {"name": "sensitive_in_errors", "type": "json", "description": "Sensitive data found in error messages"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "sensitive_in_tostring", "value": 0, "message": "No sensitive data may appear in toString() output"},
+        {"type": "exact_count", "target": "sensitive_in_errors", "value": 0, "message": "No sensitive data may appear in error messages"},
+        {"type": "all_pass", "target": "disclosure_results", "message": "All memory disclosure tests must pass"}
+      ],
+      "metrics": ["fields_checked", "disclosures_found"]
+    }
+  ]
+}
