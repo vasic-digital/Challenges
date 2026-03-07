@@ -1,0 +1,135 @@
+{
+  "version": "1.0",
+  "name": "Yole Resilience Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "resilience",
+    "description": "Challenges validating resilience patterns including circuit breakers, timeouts, retries, graceful degradation, and connection pool recovery"
+  },
+  "challenges": [
+    {
+      "id": "yole-res-circuit-breaker-activation",
+      "name": "Circuit Breaker Activation and Recovery",
+      "description": "Verify that the AdaptiveRateLimiter circuit breaker opens after consecutive failures exceed the threshold, rejects requests while open, and transitions back to closed after a cooldown period. Test with 1000 rapid failing calls followed by a recovery period.",
+      "category": "resilience",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "failure_threshold", "source": "config", "required": true},
+        {"name": "cooldown_period_ms", "source": "config", "required": true},
+        {"name": "rapid_call_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "circuit_opened", "type": "string", "description": "Whether the circuit breaker opened after failures"},
+        {"name": "requests_rejected_while_open", "type": "string", "description": "Number of requests rejected while circuit is open"},
+        {"name": "circuit_recovered", "type": "string", "description": "Whether the circuit breaker recovered after cooldown"},
+        {"name": "recovery_time_ms", "type": "string", "description": "Time taken for circuit breaker to recover"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "circuit_opened", "value": "true", "message": "Circuit breaker must open after consecutive failures"},
+        {"type": "min_count", "target": "requests_rejected_while_open", "value": 1, "message": "At least one request must be rejected while circuit is open"},
+        {"type": "contains", "target": "circuit_recovered", "value": "true", "message": "Circuit breaker must recover after cooldown period"}
+      ],
+      "metrics": ["open_time_ms", "recovery_time_ms", "total_rejected", "total_accepted_after_recovery"]
+    },
+    {
+      "id": "yole-res-timeout-handling",
+      "name": "Timeout Handling Across Protocols",
+      "description": "Verify that all network protocol services (Dropbox, Google Drive, OneDrive, FTP, WebDAV) correctly handle connection timeouts and request timeouts. Each protocol must respect configured timeout values and throw appropriate timeout exceptions rather than hanging indefinitely.",
+      "category": "resilience",
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "connection_timeout_ms", "source": "config", "required": true},
+        {"name": "request_timeout_ms", "source": "config", "required": true},
+        {"name": "protocol_list", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "timeout_results", "type": "json", "description": "Timeout behavior for each protocol"},
+        {"name": "all_protocols_respect_timeout", "type": "string", "description": "Whether all protocols respected the configured timeout"},
+        {"name": "hanging_protocols", "type": "json", "description": "Protocols that hung beyond the configured timeout"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "all_protocols_respect_timeout", "value": "true", "message": "All protocols must respect configured timeouts"},
+        {"type": "exact_count", "target": "hanging_protocols", "value": 0, "message": "No protocol should hang beyond its configured timeout"},
+        {"type": "all_valid", "target": "timeout_results", "message": "All timeout results must indicate proper timeout handling"}
+      ],
+      "metrics": ["avg_timeout_ms", "max_timeout_ms", "protocols_tested"]
+    },
+    {
+      "id": "yole-res-retry-behavior",
+      "name": "Retry Behavior with Exponential Backoff",
+      "description": "Verify that the OperationThrottler correctly implements retry logic with exponential backoff. Test that retries occur at increasing intervals, respect the maximum retry count, and eventually succeed when the underlying operation recovers.",
+      "category": "resilience",
+      "dependencies": ["yole-res-timeout-handling"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "max_retries", "source": "config", "required": true},
+        {"name": "initial_delay_ms", "source": "config", "required": true},
+        {"name": "backoff_multiplier", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "retry_count", "type": "string", "description": "Number of retries attempted before success"},
+        {"name": "retry_intervals_ms", "type": "json", "description": "Actual delay between each retry attempt"},
+        {"name": "backoff_pattern_correct", "type": "string", "description": "Whether retry intervals follow exponential backoff"},
+        {"name": "operation_succeeded", "type": "string", "description": "Whether the operation eventually succeeded after retries"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "retry_count", "value": 1, "message": "At least one retry must be attempted"},
+        {"type": "contains", "target": "backoff_pattern_correct", "value": "true", "message": "Retry intervals must follow exponential backoff pattern"},
+        {"type": "contains", "target": "operation_succeeded", "value": "true", "message": "Operation must eventually succeed after retries"}
+      ],
+      "metrics": ["total_retry_time_ms", "retry_count", "final_delay_ms"]
+    },
+    {
+      "id": "yole-res-graceful-degradation",
+      "name": "Graceful Degradation Under Load",
+      "description": "Verify that the system degrades gracefully when overwhelmed with concurrent parsing requests. Under load of 500 concurrent parse operations, the system should complete all operations (possibly with increased latency) rather than crashing, deadlocking, or producing corrupted results.",
+      "category": "resilience",
+      "estimated_duration": "120s",
+      "inputs": [
+        {"name": "concurrent_operations", "source": "config", "required": true},
+        {"name": "document_sizes", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "operations_completed", "type": "string", "description": "Number of operations completed successfully"},
+        {"name": "operations_failed", "type": "string", "description": "Number of operations that failed"},
+        {"name": "avg_latency_ms", "type": "string", "description": "Average latency per operation under load"},
+        {"name": "system_stable", "type": "string", "description": "Whether the system remained stable throughout the test"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "operations_completed", "value": 450, "message": "At least 90% of operations must complete successfully"},
+        {"type": "contains", "target": "system_stable", "value": "true", "message": "System must remain stable under load"},
+        {"type": "max_latency", "target": "avg_latency_ms", "value": 5000, "message": "Average latency must remain under 5 seconds even under load"}
+      ],
+      "metrics": ["total_time_ms", "avg_latency_ms", "p99_latency_ms", "success_rate"]
+    },
+    {
+      "id": "yole-res-connection-pool-exhaustion",
+      "name": "Connection Pool Exhaustion Recovery",
+      "description": "Verify that the system recovers from connection pool exhaustion. Saturate the connection pool by opening maximum connections, then verify that new requests queue or fail gracefully rather than crashing. After connections are released, verify that queued requests are served.",
+      "category": "resilience",
+      "dependencies": ["yole-res-graceful-degradation"],
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "pool_size", "source": "config", "required": true},
+        {"name": "overflow_requests", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "pool_saturated", "type": "string", "description": "Whether the connection pool was successfully saturated"},
+        {"name": "overflow_handled_gracefully", "type": "string", "description": "Whether overflow requests were handled gracefully"},
+        {"name": "recovery_after_release", "type": "string", "description": "Whether queued requests were served after connections released"},
+        {"name": "exceptions_during_overflow", "type": "json", "description": "Exceptions thrown during pool overflow"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "pool_saturated", "value": "true", "message": "Connection pool must reach saturation"},
+        {"type": "contains", "target": "overflow_handled_gracefully", "value": "true", "message": "Overflow requests must be handled gracefully"},
+        {"type": "contains", "target": "recovery_after_release", "value": "true", "message": "System must recover after connections are released"}
+      ],
+      "metrics": ["saturation_time_ms", "overflow_queue_depth", "recovery_time_ms"]
+    }
+  ]
+}

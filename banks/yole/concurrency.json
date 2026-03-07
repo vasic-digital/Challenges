@@ -1,0 +1,128 @@
+{
+  "version": "1.0",
+  "name": "Yole Concurrency Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "concurrency",
+    "description": "Challenges validating concurrent access patterns across format parsers, protocol connections, and shared resources"
+  },
+  "challenges": [
+    {
+      "id": "yole-conc-parallel-format-parsing",
+      "name": "Concurrent Format Parsing (10 Threads)",
+      "description": "Verify that 10 threads can simultaneously parse different text formats without data corruption, race conditions, or crashes. Each thread parses a distinct format (Markdown, CSV, LaTeX, Org Mode, TodoTxt, WikiText, AsciiDoc, RST, Textile, Creole).",
+      "category": "concurrency",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "thread_count", "source": "config", "required": true},
+        {"name": "format_list", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "completed_threads", "type": "string", "description": "Number of threads that completed successfully"},
+        {"name": "parse_results", "type": "json", "description": "Parse result per thread including format ID and validity"},
+        {"name": "data_corruption_detected", "type": "string", "description": "Whether any cross-thread data corruption was detected"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "completed_threads", "value": 10, "message": "All 10 threads must complete successfully"},
+        {"type": "contains", "target": "data_corruption_detected", "value": "false", "message": "No cross-thread data corruption allowed"},
+        {"type": "all_valid", "target": "parse_results", "message": "Every thread must produce a valid ParsedDocument"}
+      ],
+      "metrics": ["total_time_ms", "max_thread_time_ms", "min_thread_time_ms", "avg_thread_time_ms"]
+    },
+    {
+      "id": "yole-conc-protocol-connections",
+      "name": "Concurrent Protocol Connections",
+      "description": "Verify that multiple protocol services (Dropbox, Google Drive, OneDrive, FTP, WebDAV) can be connected and disconnected concurrently without deadlocks or state corruption. Tests stateMutex-protected state transitions under contention.",
+      "category": "concurrency",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_list", "source": "config", "required": true},
+        {"name": "concurrent_operations", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "connection_results", "type": "json", "description": "Result of each connect/disconnect cycle per protocol"},
+        {"name": "final_state_consistent", "type": "string", "description": "Whether all services ended in a consistent state"},
+        {"name": "deadlock_detected", "type": "string", "description": "Whether any deadlock was detected during operations"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "final_state_consistent", "value": "true", "message": "All protocol services must end in a consistent state"},
+        {"type": "contains", "target": "deadlock_detected", "value": "false", "message": "No deadlocks allowed during concurrent protocol operations"},
+        {"type": "all_valid", "target": "connection_results", "message": "All connection operations must complete without exceptions"}
+      ],
+      "metrics": ["total_time_ms", "connections_per_second", "max_contention_wait_ms"]
+    },
+    {
+      "id": "yole-conc-deadlock-detection",
+      "name": "Deadlock Detection Under High Contention",
+      "description": "Verify the system is free of deadlocks when 200 coroutines simultaneously access ParserRegistry, FormatRegistry, and ParsedDocument HTML caching. Uses a 10-second timeout as a deadlock detection mechanism.",
+      "category": "concurrency",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "coroutine_count", "source": "config", "required": true},
+        {"name": "timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "completed_within_timeout", "type": "string", "description": "Whether all coroutines completed before the timeout"},
+        {"name": "coroutines_completed", "type": "string", "description": "Number of coroutines that completed"},
+        {"name": "timeout_exceeded", "type": "string", "description": "Whether the timeout was exceeded (indicates potential deadlock)"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "completed_within_timeout", "value": "true", "message": "All coroutines must complete within timeout (no deadlock)"},
+        {"type": "exact_count", "target": "coroutines_completed", "value": 200, "message": "All 200 coroutines must complete"},
+        {"type": "contains", "target": "timeout_exceeded", "value": "false", "message": "Timeout must not be exceeded"}
+      ],
+      "metrics": ["total_time_ms", "max_coroutine_time_ms"]
+    },
+    {
+      "id": "yole-conc-race-condition-detection",
+      "name": "Race Condition Detection in Parser Registry",
+      "description": "Verify that concurrent register/unregister/lookup operations on ParserRegistry do not produce inconsistent state. Interleaves register, getParser, hasParser, and clear operations across 50 coroutines to expose potential race conditions in the platformSynchronized lock.",
+      "category": "concurrency",
+      "dependencies": ["yole-conc-deadlock-detection"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "coroutine_count", "source": "config", "required": true},
+        {"name": "operations_per_coroutine", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "inconsistencies_found", "type": "string", "description": "Number of state inconsistencies detected"},
+        {"name": "exceptions_thrown", "type": "json", "description": "Any unexpected exceptions during concurrent operations"},
+        {"name": "operations_completed", "type": "string", "description": "Total number of operations completed successfully"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "inconsistencies_found", "value": 0, "message": "No state inconsistencies allowed under concurrent access"},
+        {"type": "exact_count", "target": "exceptions_thrown", "value": 0, "message": "No unexpected exceptions during concurrent operations"},
+        {"type": "min_count", "target": "operations_completed", "value": 1000, "message": "At least 1000 operations must complete"}
+      ],
+      "metrics": ["total_operations", "operations_per_second", "contention_events"]
+    },
+    {
+      "id": "yole-conc-lock-contention-measurement",
+      "name": "Lock Contention Measurement",
+      "description": "Measure lock contention on ParserRegistry and ParsedDocument HTML cache under escalating concurrency levels (1, 10, 50, 100 coroutines). Verify that throughput degrades gracefully rather than collapsing under contention, and that p99 latency remains bounded.",
+      "category": "concurrency",
+      "dependencies": ["yole-conc-race-condition-detection"],
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "concurrency_levels", "source": "config", "required": true},
+        {"name": "operations_per_level", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "throughput_by_level", "type": "json", "description": "Operations per second at each concurrency level"},
+        {"name": "p99_latency_by_level", "type": "json", "description": "p99 latency in ms at each concurrency level"},
+        {"name": "degradation_factor", "type": "string", "description": "Ratio of throughput at max vs min concurrency"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "throughput_by_level", "message": "Throughput measurements must be collected at all levels"},
+        {"type": "not_empty", "target": "p99_latency_by_level", "message": "Latency measurements must be collected at all levels"},
+        {"type": "min_score", "target": "degradation_factor", "value": 0.1, "message": "Throughput at max concurrency must be at least 10% of single-threaded throughput"}
+      ],
+      "metrics": ["throughput_1", "throughput_10", "throughput_50", "throughput_100", "p99_1", "p99_10", "p99_50", "p99_100"]
+    }
+  ]
+}

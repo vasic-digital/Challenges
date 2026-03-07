@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "name": "Yole Lazy Loading Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "lazy-loading",
+    "description": "Challenges validating lazy initialization correctness, caching, thread-safety, and performance benefits across parsers and documents"
+  },
+  "challenges": [
+    {
+      "id": "yole-lazy-parser-loading-correctness",
+      "name": "Parser Lazy Loading Correctness",
+      "description": "Verify that registerAllParsersLazy() defers parser instantiation until first access. After lazy registration, getInstantiatedParserCount() must be 0 and getPendingParserCount() must be 17. After accessing each parser, instantiated count must increment by 1 and pending must decrement by 1.",
+      "category": "lazy-loading",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "total_formats", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "pending_before_access", "type": "string", "description": "Pending parser count before any access"},
+        {"name": "instantiated_before_access", "type": "string", "description": "Instantiated parser count before any access"},
+        {"name": "pending_after_first_access", "type": "string", "description": "Pending count after accessing one parser"},
+        {"name": "instantiated_after_first_access", "type": "string", "description": "Instantiated count after accessing one parser"},
+        {"name": "pending_after_all_access", "type": "string", "description": "Pending count after accessing all parsers"},
+        {"name": "instantiated_after_all_access", "type": "string", "description": "Instantiated count after accessing all parsers"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "instantiated_before_access", "value": 0, "message": "No parsers should be instantiated before first access"},
+        {"type": "exact_count", "target": "pending_before_access", "value": 17, "message": "All 17 parsers should be pending before access"},
+        {"type": "exact_count", "target": "instantiated_after_first_access", "value": 1, "message": "Exactly 1 parser should be instantiated after first access"},
+        {"type": "exact_count", "target": "pending_after_all_access", "value": 0, "message": "No parsers should be pending after all have been accessed"},
+        {"type": "exact_count", "target": "instantiated_after_all_access", "value": 17, "message": "All 17 parsers should be instantiated after full access"}
+      ],
+      "metrics": ["lazy_registration_time_ms", "first_access_latency_ms", "full_access_time_ms"]
+    },
+    {
+      "id": "yole-lazy-html-generation-caching",
+      "name": "Lazy HTML Generation Caching",
+      "description": "Verify that ParsedDocument.toHtml() generates HTML lazily on first call and returns cached HTML on subsequent calls. The first call must populate the cache (hasHtmlCached returns true), and clearHtmlCache() must invalidate the cache (hasHtmlCached returns false).",
+      "category": "lazy-loading",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "test_documents", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_empty_before_first_call", "type": "string", "description": "Whether hasHtmlCached was false before first toHtml call"},
+        {"name": "cache_populated_after_first_call", "type": "string", "description": "Whether hasHtmlCached was true after first toHtml call"},
+        {"name": "first_call_html", "type": "string", "description": "HTML from first toHtml call"},
+        {"name": "second_call_html", "type": "string", "description": "HTML from second toHtml call"},
+        {"name": "html_identical", "type": "string", "description": "Whether first and second call returned identical HTML"},
+        {"name": "cache_cleared", "type": "string", "description": "Whether clearHtmlCache successfully invalidated the cache"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "cache_empty_before_first_call", "value": "true", "message": "Cache must be empty before first toHtml call"},
+        {"type": "contains", "target": "cache_populated_after_first_call", "value": "true", "message": "Cache must be populated after first toHtml call"},
+        {"type": "contains", "target": "html_identical", "value": "true", "message": "Cached HTML must be identical to first generation"},
+        {"type": "contains", "target": "cache_cleared", "value": "true", "message": "clearHtmlCache must successfully invalidate cache"}
+      ],
+      "metrics": ["first_call_time_ns", "second_call_time_ns", "cache_speedup_factor"]
+    },
+    {
+      "id": "yole-lazy-thread-safe-init",
+      "name": "Thread-Safe Lazy Initialization",
+      "description": "Verify that lazy parser initialization via ParserRegistry is thread-safe. Launch 100 coroutines that simultaneously call getParser() for the same lazily-registered format. Only one parser instance should be created, and all coroutines must receive the same instance.",
+      "category": "lazy-loading",
+      "dependencies": ["yole-lazy-parser-loading-correctness"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "coroutine_count", "source": "config", "required": true},
+        {"name": "format_id", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "unique_instances", "type": "string", "description": "Number of unique parser instances created"},
+        {"name": "all_same_instance", "type": "string", "description": "Whether all coroutines received the same parser instance"},
+        {"name": "coroutines_completed", "type": "string", "description": "Number of coroutines that completed successfully"},
+        {"name": "initialization_errors", "type": "json", "description": "Any errors during concurrent initialization"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unique_instances", "value": 1, "message": "Exactly one parser instance must be created (no double initialization)"},
+        {"type": "contains", "target": "all_same_instance", "value": "true", "message": "All coroutines must receive the same parser instance"},
+        {"type": "exact_count", "target": "coroutines_completed", "value": 100, "message": "All 100 coroutines must complete successfully"},
+        {"type": "exact_count", "target": "initialization_errors", "value": 0, "message": "No initialization errors allowed"}
+      ],
+      "metrics": ["total_time_ms", "first_init_latency_ms"]
+    },
+    {
+      "id": "yole-lazy-performance-benefit",
+      "name": "Lazy Loading Performance Benefit",
+      "description": "Measure the startup performance benefit of lazy vs eager parser registration. Compare registerAllParsers() time against registerAllParsersLazy() time. Lazy registration should be at least 50% faster since it defers instantiation.",
+      "category": "lazy-loading",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "measurement_iterations", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "eager_registration_time_ms", "type": "string", "description": "Time for registerAllParsers (eager)"},
+        {"name": "lazy_registration_time_ms", "type": "string", "description": "Time for registerAllParsersLazy (lazy)"},
+        {"name": "speedup_factor", "type": "string", "description": "Ratio of eager time to lazy time"},
+        {"name": "lazy_faster", "type": "string", "description": "Whether lazy registration was faster than eager"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "lazy_faster", "value": "true", "message": "Lazy registration must be faster than eager registration"},
+        {"type": "min_score", "target": "speedup_factor", "value": 1.5, "message": "Lazy registration should be at least 1.5x faster than eager"},
+        {"type": "not_empty", "target": "eager_registration_time_ms", "message": "Eager registration time must be measured"},
+        {"type": "not_empty", "target": "lazy_registration_time_ms", "message": "Lazy registration time must be measured"}
+      ],
+      "metrics": ["eager_time_ms", "lazy_time_ms", "speedup_factor", "memory_saved_bytes"]
+    }
+  ]
+}

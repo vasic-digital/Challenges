@@ -1,0 +1,136 @@
+{
+  "version": "1.0",
+  "name": "Yole Memory Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "memory",
+    "description": "Challenges validating memory management including leak detection, GC pressure, large document handling, cache eviction, and coroutine scope cleanup"
+  },
+  "challenges": [
+    {
+      "id": "yole-mem-leak-detection",
+      "name": "Memory Leak Detection (10K Documents)",
+      "description": "Parse 10,000 small documents and verify that memory does not grow unboundedly. After parsing, clear all references and trigger GC. Memory should return to within 2x of the baseline. Tracks heap usage before, during, and after the parsing batch.",
+      "category": "memory",
+      "estimated_duration": "120s",
+      "inputs": [
+        {"name": "document_count", "source": "config", "required": true},
+        {"name": "document_size_bytes", "source": "config", "required": true},
+        {"name": "memory_growth_factor_max", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "memory_baseline_bytes", "type": "string", "description": "Heap memory before parsing starts"},
+        {"name": "memory_peak_bytes", "type": "string", "description": "Peak heap memory during parsing"},
+        {"name": "memory_after_gc_bytes", "type": "string", "description": "Heap memory after GC and cache clearing"},
+        {"name": "growth_factor", "type": "string", "description": "Ratio of post-GC memory to baseline"},
+        {"name": "leak_detected", "type": "string", "description": "Whether a memory leak was detected"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "leak_detected", "value": "false", "message": "No memory leak should be detected after parsing 10K documents"},
+        {"type": "not_empty", "target": "memory_baseline_bytes", "message": "Baseline memory must be measured"},
+        {"type": "not_empty", "target": "memory_peak_bytes", "message": "Peak memory must be measured"},
+        {"type": "not_empty", "target": "memory_after_gc_bytes", "message": "Post-GC memory must be measured"}
+      ],
+      "metrics": ["memory_baseline_bytes", "memory_peak_bytes", "memory_after_gc_bytes", "growth_factor", "documents_per_second"]
+    },
+    {
+      "id": "yole-mem-gc-pressure",
+      "name": "GC Pressure Measurement",
+      "description": "Measure garbage collection pressure during rapid document parsing. Parse 5,000 documents in quick succession and monitor allocation rate, GC frequency, and GC pause times. High GC pressure indicates excessive object allocation that should be optimized.",
+      "category": "memory",
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "document_count", "source": "config", "required": true},
+        {"name": "target_allocation_rate_mbps", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "total_allocated_bytes", "type": "string", "description": "Total bytes allocated during the test"},
+        {"name": "allocation_rate_mbps", "type": "string", "description": "Allocation rate in MB per second"},
+        {"name": "gc_count", "type": "string", "description": "Number of GC cycles during the test"},
+        {"name": "avg_gc_pause_ms", "type": "string", "description": "Average GC pause time in milliseconds"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "total_allocated_bytes", "message": "Total allocation must be measured"},
+        {"type": "not_empty", "target": "gc_count", "message": "GC count must be tracked"},
+        {"type": "min_count", "target": "gc_count", "value": 0, "message": "GC count must be a non-negative number"}
+      ],
+      "metrics": ["total_allocated_bytes", "allocation_rate_mbps", "gc_count", "avg_gc_pause_ms", "max_gc_pause_ms"]
+    },
+    {
+      "id": "yole-mem-large-document-handling",
+      "name": "Large Document Handling (100MB+)",
+      "description": "Verify that the system can handle very large documents (100MB+) without running out of memory or crashing. Parse a 100MB Markdown document and a 100MB CSV document, then generate HTML for both. Memory usage should remain bounded and the operations should complete successfully.",
+      "category": "memory",
+      "dependencies": ["yole-mem-gc-pressure"],
+      "estimated_duration": "180s",
+      "inputs": [
+        {"name": "document_size_mb", "source": "config", "required": true},
+        {"name": "formats_to_test", "source": "config", "required": true},
+        {"name": "max_memory_mb", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "parse_completed", "type": "json", "description": "Whether parsing completed for each format"},
+        {"name": "html_completed", "type": "json", "description": "Whether HTML generation completed for each format"},
+        {"name": "peak_memory_mb", "type": "string", "description": "Peak memory usage in MB during the test"},
+        {"name": "memory_within_budget", "type": "string", "description": "Whether peak memory stayed within the allowed budget"}
+      ],
+      "assertions": [
+        {"type": "all_valid", "target": "parse_completed", "message": "All format parsers must successfully parse the large document"},
+        {"type": "all_valid", "target": "html_completed", "message": "HTML generation must complete for all formats"},
+        {"type": "contains", "target": "memory_within_budget", "value": "true", "message": "Memory usage must stay within the configured budget"}
+      ],
+      "metrics": ["parse_time_ms", "html_time_ms", "peak_memory_mb", "avg_memory_mb"]
+    },
+    {
+      "id": "yole-mem-cache-eviction",
+      "name": "Cache Eviction Under Memory Pressure",
+      "description": "Verify that ParsedDocument HTML caches can be evicted to relieve memory pressure. Generate HTML caches for 1,000 documents, then call clearHtmlCache() on each and verify that hasHtmlCached() returns false. Measure the memory reclaimed by cache eviction.",
+      "category": "memory",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "document_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "caches_populated", "type": "string", "description": "Number of documents with populated HTML caches"},
+        {"name": "caches_cleared", "type": "string", "description": "Number of documents with caches successfully cleared"},
+        {"name": "memory_before_clear_bytes", "type": "string", "description": "Memory usage before clearing caches"},
+        {"name": "memory_after_clear_bytes", "type": "string", "description": "Memory usage after clearing caches and GC"},
+        {"name": "memory_reclaimed_bytes", "type": "string", "description": "Memory reclaimed by cache eviction"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "caches_populated", "value": 1000, "message": "All 1000 document caches must be populated"},
+        {"type": "exact_count", "target": "caches_cleared", "value": 1000, "message": "All 1000 document caches must be cleared"},
+        {"type": "min_count", "target": "memory_reclaimed_bytes", "value": 0, "message": "Cache eviction must reclaim non-negative memory"}
+      ],
+      "metrics": ["memory_before_clear_bytes", "memory_after_clear_bytes", "memory_reclaimed_bytes", "eviction_time_ms"]
+    },
+    {
+      "id": "yole-mem-coroutine-scope-cleanup",
+      "name": "CoroutineScope Cleanup Verification",
+      "description": "Verify that coroutine scopes used for concurrent parsing are properly cleaned up after completion. Launch 500 coroutines for concurrent parsing, then verify that all coroutines complete and their scopes do not leak. No orphaned coroutines should remain active after the test.",
+      "category": "memory",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "coroutine_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "coroutines_launched", "type": "string", "description": "Number of coroutines launched"},
+        {"name": "coroutines_completed", "type": "string", "description": "Number of coroutines that completed"},
+        {"name": "orphaned_coroutines", "type": "string", "description": "Number of orphaned coroutines after test"},
+        {"name": "scope_cleaned_up", "type": "string", "description": "Whether the coroutine scope was properly cleaned up"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "coroutines_launched", "value": 500, "message": "All 500 coroutines must be launched"},
+        {"type": "exact_count", "target": "coroutines_completed", "value": 500, "message": "All 500 coroutines must complete"},
+        {"type": "exact_count", "target": "orphaned_coroutines", "value": 0, "message": "No orphaned coroutines should remain after test"},
+        {"type": "contains", "target": "scope_cleaned_up", "value": "true", "message": "Coroutine scope must be properly cleaned up"}
+      ],
+      "metrics": ["total_time_ms", "avg_coroutine_time_ms", "max_coroutine_time_ms"]
+    }
+  ]
+}

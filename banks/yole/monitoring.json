@@ -1,0 +1,136 @@
+{
+  "version": "1.0",
+  "name": "Yole Monitoring Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "monitoring",
+    "description": "Challenges validating metrics collection, performance baselines, memory tracking, cache monitoring, and error rate observability"
+  },
+  "challenges": [
+    {
+      "id": "yole-mon-metrics-collection-accuracy",
+      "name": "Metrics Collection Accuracy",
+      "description": "Verify that ParserRegistry instantiation counts, lazy-loading statistics, and parse timing metrics are collected accurately. After registering parsers lazily and accessing a subset, getInstantiatedParserCount() and getPendingParserCount() must reflect the exact state.",
+      "category": "monitoring",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "total_formats", "source": "config", "required": true},
+        {"name": "formats_to_access", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "instantiated_count", "type": "string", "description": "Number of parsers that have been instantiated"},
+        {"name": "pending_count", "type": "string", "description": "Number of parsers still pending (lazy, not yet accessed)"},
+        {"name": "counts_match_expected", "type": "string", "description": "Whether instantiated + pending equals total registered"},
+        {"name": "initialization_status", "type": "json", "description": "Per-format initialization status map"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "counts_match_expected", "value": "true", "message": "Instantiated + pending must equal total registered parsers"},
+        {"type": "not_empty", "target": "initialization_status", "message": "Initialization status map must be populated"},
+        {"type": "min_count", "target": "instantiated_count", "value": 1, "message": "At least one parser must be instantiated after access"}
+      ],
+      "metrics": ["instantiated_count", "pending_count", "total_registered", "access_time_ms"]
+    },
+    {
+      "id": "yole-mon-performance-baseline",
+      "name": "Performance Baseline Validation",
+      "description": "Establish and validate performance baselines for all 17 format parsers. Each parser must parse a representative document within a defined time budget. Measure parse time, HTML generation time, and total pipeline time for each format.",
+      "category": "monitoring",
+      "estimated_duration": "120s",
+      "inputs": [
+        {"name": "format_documents", "source": "config", "required": true},
+        {"name": "parse_budget_ms", "source": "config", "required": true},
+        {"name": "html_budget_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "baseline_results", "type": "json", "description": "Parse and HTML generation times per format"},
+        {"name": "formats_within_budget", "type": "string", "description": "Number of formats within their time budget"},
+        {"name": "slowest_format", "type": "string", "description": "Format with the longest total pipeline time"},
+        {"name": "fastest_format", "type": "string", "description": "Format with the shortest total pipeline time"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "baseline_results", "message": "Baseline results must be collected for all formats"},
+        {"type": "min_count", "target": "formats_within_budget", "value": 14, "message": "At least 80% of formats must be within their time budget"},
+        {"type": "not_empty", "target": "slowest_format", "message": "Slowest format must be identified"},
+        {"type": "not_empty", "target": "fastest_format", "message": "Fastest format must be identified"}
+      ],
+      "metrics": ["avg_parse_ms", "avg_html_ms", "max_parse_ms", "max_html_ms", "total_pipeline_ms"]
+    },
+    {
+      "id": "yole-mon-memory-usage-tracking",
+      "name": "Memory Usage Tracking",
+      "description": "Track memory usage during document parsing and HTML generation. Parse 1000 documents of varying sizes, measure memory before and after, and verify that memory is reclaimed after clearing HTML caches via clearHtmlCache().",
+      "category": "monitoring",
+      "dependencies": ["yole-mon-performance-baseline"],
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "document_count", "source": "config", "required": true},
+        {"name": "document_sizes", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "memory_before_bytes", "type": "string", "description": "Heap memory usage before parsing"},
+        {"name": "memory_after_parse_bytes", "type": "string", "description": "Heap memory usage after parsing all documents"},
+        {"name": "memory_after_html_bytes", "type": "string", "description": "Heap memory usage after HTML generation"},
+        {"name": "memory_after_clear_bytes", "type": "string", "description": "Heap memory usage after clearing HTML caches"},
+        {"name": "cache_cleared_successfully", "type": "string", "description": "Whether clearHtmlCache reduced memory usage"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "memory_before_bytes", "message": "Initial memory measurement must be recorded"},
+        {"type": "not_empty", "target": "memory_after_parse_bytes", "message": "Post-parse memory measurement must be recorded"},
+        {"type": "contains", "target": "cache_cleared_successfully", "value": "true", "message": "Clearing HTML cache must reduce memory usage"}
+      ],
+      "metrics": ["memory_delta_parse_bytes", "memory_delta_html_bytes", "memory_reclaimed_bytes", "gc_count"]
+    },
+    {
+      "id": "yole-mon-cache-hit-rate",
+      "name": "Cache Hit Rate Monitoring",
+      "description": "Verify that ParsedDocument HTML caching achieves expected hit rates. After the first toHtml() call, subsequent calls must return cached HTML. Measure cache hit rate across 1000 toHtml() calls on 100 documents with mixed light/dark modes.",
+      "category": "monitoring",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "document_count", "source": "config", "required": true},
+        {"name": "calls_per_document", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "total_calls", "type": "string", "description": "Total number of toHtml() calls made"},
+        {"name": "cache_hits", "type": "string", "description": "Number of calls that returned cached HTML"},
+        {"name": "cache_misses", "type": "string", "description": "Number of calls that generated new HTML (first call per mode)"},
+        {"name": "hit_rate_percent", "type": "string", "description": "Cache hit rate as a percentage"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "hit_rate_percent", "value": 75, "message": "Cache hit rate must be at least 75% (each doc has 2 misses: light + dark)"},
+        {"type": "min_count", "target": "cache_hits", "value": 500, "message": "At least 500 cache hits expected for 1000 calls on 100 documents"},
+        {"type": "not_empty", "target": "total_calls", "message": "Total call count must be recorded"}
+      ],
+      "metrics": ["hit_rate_percent", "avg_cache_hit_time_ns", "avg_cache_miss_time_ns", "speedup_factor"]
+    },
+    {
+      "id": "yole-mon-error-rate-monitoring",
+      "name": "Error Rate Monitoring",
+      "description": "Verify that parse errors are correctly tracked and reported. Feed a mix of valid and intentionally malformed documents to all parsers and verify that error counts match expectations. Validate that ParsedDocument.errors accurately reflects all parse issues.",
+      "category": "monitoring",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "valid_document_count", "source": "config", "required": true},
+        {"name": "malformed_document_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "total_documents_processed", "type": "string", "description": "Total number of documents processed"},
+        {"name": "documents_with_errors", "type": "string", "description": "Number of documents that produced parse errors"},
+        {"name": "total_errors", "type": "string", "description": "Total number of individual parse errors across all documents"},
+        {"name": "error_rate_percent", "type": "string", "description": "Percentage of documents with at least one error"},
+        {"name": "errors_by_format", "type": "json", "description": "Error count broken down by format"}
+      ],
+      "assertions": [
+        {"type": "not_empty", "target": "total_documents_processed", "message": "Must process all test documents"},
+        {"type": "not_empty", "target": "errors_by_format", "message": "Error breakdown by format must be collected"},
+        {"type": "min_count", "target": "total_errors", "value": 0, "message": "Error count must be a non-negative number"}
+      ],
+      "metrics": ["error_rate_percent", "avg_errors_per_document", "max_errors_single_document", "formats_with_errors"]
+    }
+  ]
+}
