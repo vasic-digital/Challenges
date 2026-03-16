@@ -1,0 +1,278 @@
+{
+  "version": "1.0",
+  "name": "Yole Stress Responsiveness Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "stress-responsiveness",
+    "description": "Challenges validating system responsiveness under stress conditions including concurrent parsing latency, FormatRegistry initialization under contention, cache overflow handling, rate limiter saturation recovery, non-blocking operation guarantees, connection pool exhaustion behavior, and coroutine scope stress across all protocol services and format parsers"
+  },
+  "challenges": [
+    {
+      "id": "yole-stress-concurrent-parsing-latency",
+      "name": "Concurrent Parsing Latency Under Load",
+      "description": "Verify that parsing latency for all 17 formats remains within acceptable bounds when 50 concurrent parse requests are active simultaneously. Measure p50, p95, and p99 latency for each format. P95 latency must not exceed 5x the single-threaded baseline. No parse request may time out or fail due to resource contention.",
+      "category": "stress",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "concurrency_level", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "baseline_latencies", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "latency_results", "type": "json", "description": "Map of format ID to p50/p95/p99 latency under concurrency"},
+        {"name": "exceeded_threshold", "type": "json", "description": "Formats whose p95 latency exceeded 5x baseline"},
+        {"name": "failed_requests", "type": "json", "description": "Parse requests that timed out or failed under load"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "exceeded_threshold", "value": 0, "message": "No format may have p95 latency exceeding 5x its single-threaded baseline"},
+        {"type": "exact_count", "target": "failed_requests", "value": 0, "message": "No parse request may fail or time out under concurrent load"},
+        {"type": "all_valid", "target": "latency_results", "message": "All latency measurements must produce valid numeric values"}
+      ],
+      "metrics": ["formats_tested", "avg_p50_ms", "avg_p95_ms", "max_p99_ms", "total_requests"]
+    },
+    {
+      "id": "yole-stress-concurrent-parsing-fairness",
+      "name": "Concurrent Parsing Fairness Across Formats",
+      "description": "Verify that no single format parser starves other parsers under concurrent load. Submit equal numbers of parse requests for all 17 formats simultaneously and verify that completion times are within 3x of each other. A heavyweight format (LaTeX) should not block lightweight formats (plaintext) from completing promptly.",
+      "category": "stress",
+      "dependencies": ["yole-stress-concurrent-parsing-latency"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "requests_per_format", "source": "config", "required": true},
+        {"name": "fairness_ratio", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "completion_times", "type": "json", "description": "Map of format ID to average completion time"},
+        {"name": "starved_formats", "type": "json", "description": "Formats whose completion time was disproportionately delayed"},
+        {"name": "fairness_ratio_met", "type": "string", "description": "Whether the fairness ratio was met across all formats"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "starved_formats", "value": 0, "message": "No format parser may be starved by other concurrent parsers"},
+        {"type": "contains", "target": "fairness_ratio_met", "value": "true", "message": "Completion time fairness ratio must be within 3x across all formats"},
+        {"type": "all_valid", "target": "completion_times", "message": "All completion time measurements must be valid"}
+      ],
+      "metrics": ["fastest_format_ms", "slowest_format_ms", "actual_fairness_ratio"]
+    },
+    {
+      "id": "yole-stress-registry-init-contention",
+      "name": "FormatRegistry Initialization Under Contention",
+      "description": "Verify that FormatRegistry lazy initialization is thread-safe when 100 concurrent coroutines access the formats list simultaneously during first initialization. Only one initialization must occur (no duplicate work). All coroutines must receive the same fully-initialized format list. The lazy delegate must not deadlock or throw ConcurrentModificationException.",
+      "category": "stress",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "concurrency_level", "source": "config", "required": true},
+        {"name": "expected_format_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "init_results", "type": "json", "description": "Results of concurrent initialization attempts"},
+        {"name": "initialization_count", "type": "string", "description": "Number of times createFormats() was actually invoked"},
+        {"name": "all_received_same_list", "type": "string", "description": "Whether all coroutines received the identical format list"},
+        {"name": "exceptions_thrown", "type": "json", "description": "Any exceptions thrown during concurrent initialization"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "initialization_count", "value": 1, "message": "createFormats() must be invoked exactly once regardless of concurrent access"},
+        {"type": "contains", "target": "all_received_same_list", "value": "true", "message": "All coroutines must receive the same fully-initialized format list"},
+        {"type": "exact_count", "target": "exceptions_thrown", "value": 0, "message": "No exceptions may be thrown during concurrent lazy initialization"}
+      ],
+      "metrics": ["coroutines_tested", "init_duration_ms", "contention_wait_ms"]
+    },
+    {
+      "id": "yole-stress-cache-overflow-handling",
+      "name": "DocumentCache Overflow Under Rapid Insertion",
+      "description": "Verify that DocumentCache handles rapid insertion beyond its maximum capacity without data corruption, deadlocks, or memory leaks. Insert 10x the cache capacity in rapid succession from 20 concurrent coroutines. The cache size must never exceed the configured maximum. All cache operations must return valid results without throwing exceptions.",
+      "category": "stress",
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "cache_max_size", "source": "config", "required": true},
+        {"name": "insertion_multiplier", "source": "config", "required": true},
+        {"name": "concurrency_level", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "overflow_results", "type": "json", "description": "Cache state snapshots during overflow testing"},
+        {"name": "max_size_observed", "type": "string", "description": "Maximum cache size observed during the test"},
+        {"name": "corruption_detected", "type": "json", "description": "Cache entries that returned corrupted or incorrect data"},
+        {"name": "exceptions_thrown", "type": "json", "description": "Exceptions thrown during cache operations"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "corruption_detected", "value": 0, "message": "No cache entry may return corrupted or incorrect data during overflow"},
+        {"type": "exact_count", "target": "exceptions_thrown", "value": 0, "message": "No exceptions may be thrown during cache overflow handling"},
+        {"type": "all_valid", "target": "overflow_results", "message": "All cache operations must return valid results during overflow"}
+      ],
+      "metrics": ["total_insertions", "evictions_triggered", "max_size_observed", "concurrent_writers"]
+    },
+    {
+      "id": "yole-stress-cache-concurrent-read-write",
+      "name": "DocumentCache Concurrent Read-Write Consistency",
+      "description": "Verify that DocumentCache maintains read-write consistency when simultaneous reads and writes target the same cache keys. Launch 10 writer coroutines and 40 reader coroutines operating on overlapping key sets. Readers must never observe partially written entries or stale data after a write completes. No ConcurrentModificationException may occur.",
+      "category": "stress",
+      "dependencies": ["yole-stress-cache-overflow-handling"],
+      "estimated_duration": "35s",
+      "inputs": [
+        {"name": "writer_count", "source": "config", "required": true},
+        {"name": "reader_count", "source": "config", "required": true},
+        {"name": "operations_per_coroutine", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "consistency_results", "type": "json", "description": "Read-write consistency verification results"},
+        {"name": "partial_reads", "type": "json", "description": "Reads that returned partially written data"},
+        {"name": "stale_reads", "type": "json", "description": "Reads that returned stale data after confirmed write"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "partial_reads", "value": 0, "message": "No read may return partially written cache data"},
+        {"type": "exact_count", "target": "stale_reads", "value": 0, "message": "No read may return stale data after a write to the same key completes"},
+        {"type": "all_valid", "target": "consistency_results", "message": "All consistency checks must pass"}
+      ],
+      "metrics": ["total_reads", "total_writes", "consistency_violations"]
+    },
+    {
+      "id": "yole-stress-rate-limiter-saturation-recovery",
+      "name": "RateLimiter Saturation and Recovery",
+      "description": "Verify that RateLimiter recovers gracefully after saturation. Saturate the TokenBucket by sending requests at 10x the configured rate for 5 seconds, then reduce to normal rate and verify recovery within 2 seconds. During saturation, excess requests must be throttled (not dropped or errored). After recovery, throughput must return to the configured rate within tolerance.",
+      "category": "stress",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "configured_rate", "source": "config", "required": true},
+        {"name": "saturation_multiplier", "source": "config", "required": true},
+        {"name": "saturation_duration_sec", "source": "config", "required": true},
+        {"name": "recovery_threshold_sec", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "saturation_results", "type": "json", "description": "Request throughput during saturation and recovery phases"},
+        {"name": "recovery_time_ms", "type": "string", "description": "Time to recover to normal throughput after saturation"},
+        {"name": "dropped_requests", "type": "json", "description": "Requests that were dropped instead of throttled during saturation"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "dropped_requests", "value": 0, "message": "No requests may be dropped during rate limiter saturation"},
+        {"type": "max_latency", "target": "recovery_time_ms", "value": 2000, "message": "Rate limiter must recover to normal throughput within 2 seconds"},
+        {"type": "all_valid", "target": "saturation_results", "message": "All saturation and recovery metrics must be valid"}
+      ],
+      "metrics": ["requests_throttled", "recovery_time_ms", "peak_queue_depth"]
+    },
+    {
+      "id": "yole-stress-nonblocking-guarantees",
+      "name": "Non-Blocking Operation Guarantees",
+      "description": "Verify that all public API methods on FormatRegistry, DocumentCache, and StyleSheets complete without blocking the calling coroutine's thread. Measure wall-clock time vs suspend time for each operation. No operation may block a thread for more than 10ms (excluding actual computation). Verify that suspending operations properly yield to the dispatcher.",
+      "category": "stress",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "operations", "source": "config", "required": true},
+        {"name": "max_block_time_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "blocking_results", "type": "json", "description": "Map of operation to wall-clock time and thread-block time"},
+        {"name": "blocking_operations", "type": "json", "description": "Operations that blocked a thread beyond the threshold"},
+        {"name": "operations_tested", "type": "string", "description": "Number of operations tested for non-blocking behavior"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "blocking_operations", "value": 0, "message": "No operation may block a thread for more than 10ms"},
+        {"type": "min_count", "target": "operations_tested", "value": 10, "message": "At least 10 critical operations must be tested for non-blocking behavior"},
+        {"type": "all_valid", "target": "blocking_results", "message": "All non-blocking measurements must produce valid results"}
+      ],
+      "metrics": ["operations_tested", "max_block_time_ms", "avg_suspend_time_ms"]
+    },
+    {
+      "id": "yole-stress-nonblocking-dispatcher-yield",
+      "name": "Dispatcher Yield Verification Under Load",
+      "description": "Verify that long-running format parsing operations properly yield to the coroutine dispatcher. Parse a large document (100KB) on a single-threaded dispatcher while also scheduling 10 other lightweight coroutines. The lightweight coroutines must make progress (not starved) during the long parse. Cooperative cancellation via yield() must be verified.",
+      "category": "stress",
+      "dependencies": ["yole-stress-nonblocking-guarantees"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "large_document_size_kb", "source": "config", "required": true},
+        {"name": "lightweight_coroutines", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "yield_results", "type": "json", "description": "Progress tracking for lightweight coroutines during long parse"},
+        {"name": "starved_coroutines", "type": "json", "description": "Lightweight coroutines that made no progress during the long parse"},
+        {"name": "cancellation_responsive", "type": "string", "description": "Whether cancellation was responsive during long parse"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "starved_coroutines", "value": 0, "message": "No lightweight coroutine may be starved during a long parse operation"},
+        {"type": "contains", "target": "cancellation_responsive", "value": "true", "message": "Cooperative cancellation must be responsive during long-running parses"},
+        {"type": "all_valid", "target": "yield_results", "message": "All yield verification results must be valid"}
+      ],
+      "metrics": ["parse_duration_ms", "min_lightweight_progress_pct", "cancellation_delay_ms"]
+    },
+    {
+      "id": "yole-stress-connection-pool-exhaustion",
+      "name": "Connection Pool Exhaustion Handling",
+      "description": "Verify that protocol services handle connection pool exhaustion gracefully when ConnectionLimiter reaches its maximum. Exhaust all permits in the ConnectionLimiter and then issue 50 additional requests. The additional requests must queue and eventually complete (not fail with exceptions). Queue timeout must be configurable and requests exceeding the timeout must fail with a clear error message.",
+      "category": "stress",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "max_connections", "source": "config", "required": true},
+        {"name": "overflow_requests", "source": "config", "required": true},
+        {"name": "queue_timeout_ms", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "exhaustion_results", "type": "json", "description": "Results of connection pool exhaustion per protocol"},
+        {"name": "unhandled_exceptions", "type": "json", "description": "Requests that failed with unhandled exceptions"},
+        {"name": "queued_and_completed", "type": "string", "description": "Number of overflow requests that queued and eventually completed"},
+        {"name": "timed_out_with_message", "type": "string", "description": "Number of requests that timed out with a clear error message"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unhandled_exceptions", "value": 0, "message": "No request may fail with an unhandled exception during pool exhaustion"},
+        {"type": "all_valid", "target": "exhaustion_results", "message": "All pool exhaustion results must show either queued completion or clear timeout error"}
+      ],
+      "metrics": ["requests_queued", "requests_completed", "requests_timed_out", "max_wait_time_ms"]
+    },
+    {
+      "id": "yole-stress-rapid-reconnect-cycles",
+      "name": "Rapid Connect/Disconnect Cycle Stress",
+      "description": "Verify that protocol services handle 100 rapid connect/disconnect cycles without resource leaks, orphaned coroutines, or state corruption. After all cycles complete, verify that serviceScope is properly cancelled, no background coroutines are running, and the service can accept new connections normally. Memory usage must not grow unboundedly across cycles.",
+      "category": "stress",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "cycle_count", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cycle_results", "type": "json", "description": "Per-protocol results of rapid reconnection cycles"},
+        {"name": "resource_leaks", "type": "json", "description": "Resource leaks detected after all cycles completed"},
+        {"name": "orphaned_coroutines", "type": "json", "description": "Orphaned coroutines detected after all cycles completed"},
+        {"name": "post_cycle_functional", "type": "string", "description": "Whether services accept new connections normally after all cycles"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "resource_leaks", "value": 0, "message": "No resource leaks may occur across rapid connect/disconnect cycles"},
+        {"type": "exact_count", "target": "orphaned_coroutines", "value": 0, "message": "No orphaned coroutines may remain after rapid reconnection cycles"},
+        {"type": "contains", "target": "post_cycle_functional", "value": "true", "message": "Services must accept new connections normally after stress cycles"}
+      ],
+      "metrics": ["cycles_completed", "protocols_tested", "max_memory_growth_pct", "cleanup_time_ms"]
+    },
+    {
+      "id": "yole-stress-large-document-memory-pressure",
+      "name": "Large Document Parsing Under Memory Pressure",
+      "description": "Verify that parsing very large documents (1MB, 5MB, 10MB) does not cause OutOfMemoryError or excessive GC pauses. Parse large documents for each of the 17 formats and measure peak memory usage and GC pause times. Peak memory during parsing must not exceed 10x the document size. The parser must not hang or become unresponsive on any large input.",
+      "category": "stress",
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "document_sizes_mb", "source": "config", "required": true},
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "memory_multiplier_max", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "memory_results", "type": "json", "description": "Map of format ID and size to peak memory usage and GC metrics"},
+        {"name": "oom_errors", "type": "json", "description": "Formats that caused OutOfMemoryError at any document size"},
+        {"name": "hung_parsers", "type": "json", "description": "Parsers that became unresponsive on large input"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "oom_errors", "value": 0, "message": "No format parser may throw OutOfMemoryError on documents up to 10MB"},
+        {"type": "exact_count", "target": "hung_parsers", "value": 0, "message": "No parser may hang or become unresponsive on large input"},
+        {"type": "all_valid", "target": "memory_results", "message": "All memory measurements must show peak usage within acceptable bounds"}
+      ],
+      "metrics": ["formats_tested", "sizes_tested", "max_memory_multiplier", "max_gc_pause_ms"]
+    }
+  ]
+}

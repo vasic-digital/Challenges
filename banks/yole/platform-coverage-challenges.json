@@ -1,0 +1,268 @@
+{
+  "version": "1.0",
+  "name": "Yole Platform Coverage Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "platform-coverage",
+    "description": "Challenges validating platform-specific test coverage including desktop tests for SSH, SMB, and FTP clients, Wasm protocol stubs throwing NotImplementedError, iOS stubs with proper documentation and Result types, platform factory tests, expect/actual declaration completeness, and platform-specific source set organization"
+  },
+  "challenges": [
+    {
+      "id": "yole-platcov-desktop-ssh-tests",
+      "name": "Desktop SSH Client Test Coverage",
+      "description": "Verify that desktop-specific SFTP/SSH client tests exist in desktopTest source set. Tests must cover connection establishment, authentication (password and key-based), file upload/download, directory listing, path traversal prevention, connection timeout handling, and session cleanup. At least 15 test methods must exist for SSH client functionality.",
+      "category": "platform-coverage",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "desktop_test_path", "source": "config", "required": true},
+        {"name": "ssh_test_patterns", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "ssh_test_files", "type": "json", "description": "List of test files covering SSH/SFTP functionality in desktopTest"},
+        {"name": "test_method_count", "type": "string", "description": "Number of SSH-related test methods found"},
+        {"name": "coverage_gaps", "type": "json", "description": "Required SSH test scenarios that are not covered"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "ssh_test_files", "value": 1, "message": "At least one desktop test file must cover SSH/SFTP client functionality"},
+        {"type": "min_count", "target": "test_method_count", "value": 15, "message": "At least 15 SSH client test methods must exist in desktopTest"},
+        {"type": "exact_count", "target": "coverage_gaps", "value": 0, "message": "All required SSH test scenarios must be covered"}
+      ],
+      "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
+    },
+    {
+      "id": "yole-platcov-desktop-smb-tests",
+      "name": "Desktop SMB Client Test Coverage",
+      "description": "Verify that desktop-specific SMB client tests exist in desktopTest source set. Tests must cover share connection, NTLM and Kerberos authentication, file CRUD operations, directory traversal, connection guards on deleteFile and getFileInfo, large file handling, and reconnection behavior. At least 12 test methods must exist.",
+      "category": "platform-coverage",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "desktop_test_path", "source": "config", "required": true},
+        {"name": "smb_test_patterns", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "smb_test_files", "type": "json", "description": "List of test files covering SMB functionality in desktopTest"},
+        {"name": "test_method_count", "type": "string", "description": "Number of SMB-related test methods found"},
+        {"name": "coverage_gaps", "type": "json", "description": "Required SMB test scenarios that are not covered"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "smb_test_files", "value": 1, "message": "At least one desktop test file must cover SMB client functionality"},
+        {"type": "min_count", "target": "test_method_count", "value": 12, "message": "At least 12 SMB client test methods must exist in desktopTest"},
+        {"type": "exact_count", "target": "coverage_gaps", "value": 0, "message": "All required SMB test scenarios must be covered"}
+      ],
+      "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
+    },
+    {
+      "id": "yole-platcov-desktop-ftp-tests",
+      "name": "Desktop FTP Client Test Coverage",
+      "description": "Verify that desktop-specific FTP client tests exist in desktopTest source set. Tests must cover active and passive mode connections, anonymous and authenticated access, file transfer (binary and ASCII), directory navigation, FTP command injection prevention, timeout handling, and TLS/FTPS negotiation. At least 12 test methods must exist.",
+      "category": "platform-coverage",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "desktop_test_path", "source": "config", "required": true},
+        {"name": "ftp_test_patterns", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "ftp_test_files", "type": "json", "description": "List of test files covering FTP functionality in desktopTest"},
+        {"name": "test_method_count", "type": "string", "description": "Number of FTP-related test methods found"},
+        {"name": "coverage_gaps", "type": "json", "description": "Required FTP test scenarios that are not covered"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "ftp_test_files", "value": 1, "message": "At least one desktop test file must cover FTP client functionality"},
+        {"type": "min_count", "target": "test_method_count", "value": 12, "message": "At least 12 FTP client test methods must exist in desktopTest"},
+        {"type": "exact_count", "target": "coverage_gaps", "value": 0, "message": "All required FTP test scenarios must be covered"}
+      ],
+      "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
+    },
+    {
+      "id": "yole-platcov-wasm-protocol-stubs",
+      "name": "Wasm Protocol Stubs Throw NotImplementedError",
+      "description": "Verify that all protocol service implementations in wasmJsMain throw NotImplementedError (or UnsupportedOperationException) with descriptive messages. Wasm does not support native socket connections, so FTP, SFTP, SMB, WebDAV, and S3 stubs must fail explicitly rather than silently. Each stub method must include the protocol name and operation in its error message.",
+      "category": "platform-coverage",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "wasm_source_path", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "stub_results", "type": "json", "description": "Map of protocol to list of stub methods and their error behavior"},
+        {"name": "silent_stubs", "type": "json", "description": "Stub methods that silently succeed instead of throwing"},
+        {"name": "missing_message_stubs", "type": "json", "description": "Stubs that throw without descriptive error messages"},
+        {"name": "protocols_checked", "type": "string", "description": "Number of protocol stubs verified"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "silent_stubs", "value": 0, "message": "No Wasm protocol stub may silently succeed instead of throwing"},
+        {"type": "exact_count", "target": "missing_message_stubs", "value": 0, "message": "All Wasm stubs must include descriptive error messages with protocol and operation names"},
+        {"type": "min_count", "target": "protocols_checked", "value": 5, "message": "At least 5 protocol stubs must be verified (FTP, SFTP, SMB, WebDAV, S3)"}
+      ],
+      "metrics": ["protocols_checked", "stub_methods_verified", "silent_stubs_found"]
+    },
+    {
+      "id": "yole-platcov-wasm-stub-tests",
+      "name": "Wasm Protocol Stub Test Coverage",
+      "description": "Verify that wasmJsTest source set contains tests that invoke each protocol stub and assert the expected NotImplementedError is thrown. Each protocol must have at least one test verifying the stub behavior. Tests must verify both the exception type and the error message content.",
+      "category": "platform-coverage",
+      "dependencies": ["yole-platcov-wasm-protocol-stubs"],
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "wasm_test_path", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "stub_test_files", "type": "json", "description": "Test files in wasmJsTest that verify protocol stubs"},
+        {"name": "test_method_count", "type": "string", "description": "Number of stub verification test methods"},
+        {"name": "untested_protocols", "type": "json", "description": "Protocols whose stubs are not tested in wasmJsTest"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "stub_test_files", "value": 1, "message": "At least one wasmJsTest file must test protocol stub behavior"},
+        {"type": "exact_count", "target": "untested_protocols", "value": 0, "message": "All protocol stubs must have corresponding tests in wasmJsTest"},
+        {"type": "min_count", "target": "test_method_count", "value": 5, "message": "At least 5 stub verification tests must exist"}
+      ],
+      "metrics": ["test_files_found", "test_methods_found", "protocols_tested"]
+    },
+    {
+      "id": "yole-platcov-ios-stubs-documented",
+      "name": "iOS Stubs Documented with KDoc and TODOs",
+      "description": "Verify that all iOS platform stubs in iosMain include KDoc documentation explaining the expected iOS implementation, Result return types where applicable, and TODO comments referencing specific iOS frameworks (e.g., Network.framework for SFTP, FileProvider for cloud storage). Each stub file must have at least one KDoc block and at least one TODO comment.",
+      "category": "platform-coverage",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "ios_source_path", "source": "config", "required": true},
+        {"name": "expected_frameworks", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "documentation_results", "type": "json", "description": "Map of iOS stub file to documentation coverage metrics"},
+        {"name": "undocumented_stubs", "type": "json", "description": "iOS stub files missing KDoc documentation"},
+        {"name": "missing_todos", "type": "json", "description": "iOS stub files missing TODO comments for implementation guidance"},
+        {"name": "result_types_used", "type": "string", "description": "Whether Result return types are used in iOS stubs"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "undocumented_stubs", "value": 0, "message": "All iOS stub files must include KDoc documentation"},
+        {"type": "exact_count", "target": "missing_todos", "value": 0, "message": "All iOS stub files must include TODO comments referencing target iOS frameworks"},
+        {"type": "contains", "target": "result_types_used", "value": "true", "message": "iOS stubs must use Result return types where applicable"}
+      ],
+      "metrics": ["stub_files_checked", "kdoc_blocks_found", "todos_found", "frameworks_referenced"]
+    },
+    {
+      "id": "yole-platcov-ios-stubs-result-types",
+      "name": "iOS Stubs Use Result Return Types",
+      "description": "Verify that iOS platform stubs return Result<T> types instead of throwing exceptions or returning null for operations that may fail. Check all actual fun declarations in iosMain for network operations, authentication, and file I/O. Each must return Result<T> or a sealed class that models success/failure.",
+      "category": "platform-coverage",
+      "dependencies": ["yole-platcov-ios-stubs-documented"],
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "ios_source_path", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "return_type_results", "type": "json", "description": "Map of function signature to its return type analysis"},
+        {"name": "non_result_functions", "type": "json", "description": "Functions that return raw types instead of Result<T>"},
+        {"name": "functions_checked", "type": "string", "description": "Number of actual fun declarations analyzed"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "non_result_functions", "value": 0, "message": "All iOS stub functions for failable operations must return Result<T>"},
+        {"type": "min_count", "target": "functions_checked", "value": 5, "message": "At least 5 actual fun declarations must be analyzed in iosMain"},
+        {"type": "all_valid", "target": "return_type_results", "message": "All return type analyses must be valid"}
+      ],
+      "metrics": ["functions_checked", "result_type_count", "non_result_count"]
+    },
+    {
+      "id": "yole-platcov-platform-factory-tests",
+      "name": "Platform Factory Test Presence",
+      "description": "Verify that platform-specific factory functions (createHttpClient, createSecureStorage, createPlatformFileSystem, etc.) have tests in each platform's test source set. Each expect/actual pair must have at least one test verifying the factory produces a valid, functional instance. Check desktopTest, androidTest (androidUnitTest), wasmJsTest, and iosTest.",
+      "category": "platform-coverage",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "factory_functions", "source": "config", "required": true},
+        {"name": "platform_test_paths", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "factory_test_results", "type": "json", "description": "Map of platform to list of factory functions and their test status"},
+        {"name": "untested_factories", "type": "json", "description": "Factory functions without tests on any platform"},
+        {"name": "platforms_with_tests", "type": "string", "description": "Number of platforms that have factory tests"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "untested_factories", "value": 0, "message": "All platform factory functions must have tests on at least one platform"},
+        {"type": "min_count", "target": "platforms_with_tests", "value": 2, "message": "At least 2 platforms must have factory function tests"},
+        {"type": "all_valid", "target": "factory_test_results", "message": "All factory test status results must be valid"}
+      ],
+      "metrics": ["factories_checked", "platforms_checked", "untested_count"]
+    },
+    {
+      "id": "yole-platcov-expect-actual-completeness",
+      "name": "Expect/Actual Declaration Completeness",
+      "description": "Verify that every expect declaration in commonMain has a corresponding actual declaration in all four platform source sets (androidMain, desktopMain, iosMain, wasmJsMain). Scan for expect fun, expect class, and expect object declarations and verify each has matching actual declarations. Report any missing actual implementations per platform.",
+      "category": "platform-coverage",
+      "estimated_duration": "35s",
+      "inputs": [
+        {"name": "common_source_path", "source": "config", "required": true},
+        {"name": "platform_source_paths", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "expect_actual_map", "type": "json", "description": "Map of expect declarations to their actual implementations per platform"},
+        {"name": "missing_actuals", "type": "json", "description": "Expect declarations missing actual implementations on one or more platforms"},
+        {"name": "expect_declarations_found", "type": "string", "description": "Total number of expect declarations found in commonMain"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "missing_actuals", "value": 0, "message": "Every expect declaration must have matching actual declarations on all platforms"},
+        {"type": "min_count", "target": "expect_declarations_found", "value": 5, "message": "At least 5 expect declarations must be found in commonMain"},
+        {"type": "all_valid", "target": "expect_actual_map", "message": "All expect/actual mappings must be valid"}
+      ],
+      "metrics": ["expect_count", "actual_count_per_platform", "missing_count"]
+    },
+    {
+      "id": "yole-platcov-source-set-organization",
+      "name": "Platform Source Set Organization",
+      "description": "Verify that platform-specific source sets follow the expected directory structure. Each platform (android, desktop, ios, wasmJs) must have Main and Test directories. Platform-specific code must only exist in the correct source set (e.g., no Android-only imports in desktopMain). Verify no commonMain file imports platform-specific APIs directly.",
+      "category": "platform-coverage",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "shared_src_path", "source": "config", "required": true},
+        {"name": "platform_imports_blacklist", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "structure_results", "type": "json", "description": "Verification of expected directory structure per platform"},
+        {"name": "misplaced_imports", "type": "json", "description": "Platform-specific imports found in wrong source sets"},
+        {"name": "common_platform_leaks", "type": "json", "description": "CommonMain files that directly import platform-specific APIs"},
+        {"name": "source_sets_verified", "type": "string", "description": "Number of source sets verified"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "misplaced_imports", "value": 0, "message": "No platform-specific imports may exist in wrong source sets"},
+        {"type": "exact_count", "target": "common_platform_leaks", "value": 0, "message": "No commonMain file may directly import platform-specific APIs"},
+        {"type": "min_count", "target": "source_sets_verified", "value": 8, "message": "At least 8 source sets must be verified (4 Main + 4 Test)"}
+      ],
+      "metrics": ["source_sets_verified", "files_scanned", "misplaced_imports_found"]
+    },
+    {
+      "id": "yole-platcov-desktop-test-count",
+      "name": "Desktop Test Suite Minimum Count",
+      "description": "Verify that the desktopTest source set plus commonTest (which runs on desktop) together provide at least 6,695 passing tests. This is the established baseline from the last verification. The test count must not decrease, only increase. Run the full desktop test suite and verify the pass count meets or exceeds the baseline.",
+      "category": "platform-coverage",
+      "estimated_duration": "120s",
+      "inputs": [
+        {"name": "min_test_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "test_results", "type": "json", "description": "Desktop test suite execution results"},
+        {"name": "passing_count", "type": "string", "description": "Number of passing tests"},
+        {"name": "failing_count", "type": "string", "description": "Number of failing tests"},
+        {"name": "baseline_met", "type": "string", "description": "Whether the minimum test count baseline was met"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "passing_count", "value": 6695, "message": "Desktop test count must meet or exceed the 6,695 baseline"},
+        {"type": "exact_count", "target": "failing_count", "value": 0, "message": "No desktop tests may be failing"},
+        {"type": "contains", "target": "baseline_met", "value": "true", "message": "The minimum test count baseline must be met"}
+      ],
+      "metrics": ["passing_tests", "failing_tests", "skipped_tests", "total_duration_sec"]
+    }
+  ]
+}

@@ -1,0 +1,272 @@
+{
+  "version": "1.0",
+  "name": "Yole Documentation Completeness Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "documentation-completeness",
+    "description": "Challenges validating documentation completeness including CODE_OF_CONDUCT presence, format guide coverage for all 17 formats, video course script presence, website page functionality, CHANGELOG currency, architecture diagram accuracy, KMP module documentation, legacy migration guide, and challenge framework documentation"
+  },
+  "challenges": [
+    {
+      "id": "yole-doccmp-code-of-conduct-exists",
+      "name": "CODE_OF_CONDUCT.md Exists and Is Complete",
+      "description": "Verify that CODE_OF_CONDUCT.md exists in the project root, contains substantive content (not a placeholder), includes sections for expected behavior, unacceptable behavior, enforcement responsibilities, and contact information. The file must be at least 50 lines long and reference either the Contributor Covenant or a custom code of conduct.",
+      "category": "documentation",
+      "estimated_duration": "10s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "file_exists", "type": "string", "description": "Whether CODE_OF_CONDUCT.md exists in the project root"},
+        {"name": "line_count", "type": "string", "description": "Number of lines in CODE_OF_CONDUCT.md"},
+        {"name": "required_sections", "type": "json", "description": "Map of required section names to their presence status"},
+        {"name": "missing_sections", "type": "json", "description": "Required sections that are missing from the document"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "file_exists", "value": "true", "message": "CODE_OF_CONDUCT.md must exist in the project root"},
+        {"type": "min_count", "target": "line_count", "value": 50, "message": "CODE_OF_CONDUCT.md must be at least 50 lines long"},
+        {"type": "exact_count", "target": "missing_sections", "value": 0, "message": "All required sections must be present in CODE_OF_CONDUCT.md"}
+      ],
+      "metrics": ["line_count", "sections_found", "sections_missing"]
+    },
+    {
+      "id": "yole-doccmp-format-guides-present",
+      "name": "Format Guides Present for All 17 Formats",
+      "description": "Verify that documentation exists for each of the 17 supported text formats: Markdown, TodoTxt, CSV, LaTeX, OrgMode, Plaintext, Wikitext, AsciiDoc, reStructuredText, R Markdown, TaskPaper, Textile, Creole, TiddlyWiki, Jupyter, KeyValue, and Binary. Each format guide must describe the syntax supported, parsing behavior, known limitations, and example documents.",
+      "category": "documentation",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "docs_path", "source": "config", "required": true},
+        {"name": "format_names", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "format_guides", "type": "json", "description": "Map of format name to guide file path and content status"},
+        {"name": "missing_guides", "type": "json", "description": "Formats without documentation guides"},
+        {"name": "incomplete_guides", "type": "json", "description": "Guides missing required sections (syntax, parsing, limitations, examples)"},
+        {"name": "formats_documented", "type": "string", "description": "Number of formats with complete documentation"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "missing_guides", "value": 0, "message": "All 17 formats must have documentation guides"},
+        {"type": "exact_count", "target": "incomplete_guides", "value": 0, "message": "All format guides must include syntax, parsing, limitations, and examples sections"},
+        {"type": "min_count", "target": "formats_documented", "value": 17, "message": "All 17 formats must be fully documented"}
+      ],
+      "metrics": ["formats_documented", "guides_found", "incomplete_count"]
+    },
+    {
+      "id": "yole-doccmp-video-course-scripts",
+      "name": "Video Course Scripts Present",
+      "description": "Verify that all 19 video course scripts exist and contain up-to-date content. Scripts must reference correct test counts (9,400+), correct format counts (17), and correct module counts (10 extracted KMP modules). No script may reference non-existent formats or outdated architecture descriptions.",
+      "category": "documentation",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "scripts_path", "source": "config", "required": true},
+        {"name": "expected_script_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "script_files", "type": "json", "description": "List of video course script files found"},
+        {"name": "missing_scripts", "type": "json", "description": "Expected scripts that are missing"},
+        {"name": "stale_references", "type": "json", "description": "Scripts containing outdated counts or non-existent format references"},
+        {"name": "scripts_found", "type": "string", "description": "Number of script files found"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "scripts_found", "value": 19, "message": "All 19 video course scripts must be present"},
+        {"type": "exact_count", "target": "missing_scripts", "value": 0, "message": "No expected video course scripts may be missing"},
+        {"type": "exact_count", "target": "stale_references", "value": 0, "message": "No scripts may contain outdated references or stale counts"}
+      ],
+      "metrics": ["scripts_found", "stale_references_count", "total_script_lines"]
+    },
+    {
+      "id": "yole-doccmp-website-pages-present",
+      "name": "Website Pages Present and Functional",
+      "description": "Verify that all 11 website pages exist, contain valid HTML/Markdown, do not reference non-existent formats or features, and have consistent navigation links. Each page must be non-empty, have a title, and link back to the main index. Verify that metrics and feature lists on website pages match the current project state.",
+      "category": "documentation",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "website_path", "source": "config", "required": true},
+        {"name": "expected_page_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "page_files", "type": "json", "description": "List of website page files found with their validation status"},
+        {"name": "missing_pages", "type": "json", "description": "Expected website pages that are missing"},
+        {"name": "broken_links", "type": "json", "description": "Internal navigation links that point to non-existent pages"},
+        {"name": "stale_content", "type": "json", "description": "Pages with outdated metrics or non-existent feature references"},
+        {"name": "pages_found", "type": "string", "description": "Number of website pages found"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "pages_found", "value": 11, "message": "All 11 website pages must be present"},
+        {"type": "exact_count", "target": "missing_pages", "value": 0, "message": "No expected website pages may be missing"},
+        {"type": "exact_count", "target": "broken_links", "value": 0, "message": "No internal navigation links may be broken"},
+        {"type": "exact_count", "target": "stale_content", "value": 0, "message": "No pages may contain stale metrics or non-existent feature references"}
+      ],
+      "metrics": ["pages_found", "broken_links_count", "stale_content_count"]
+    },
+    {
+      "id": "yole-doccmp-changelog-current",
+      "name": "CHANGELOG Current with Recent Changes",
+      "description": "Verify that CHANGELOG.md (or equivalent) exists and includes entries for the most recent development session. The changelog must follow a consistent format (Keep a Changelog or similar), include dates, and cover major changes from the last 3 development sessions. The most recent entry must not be older than 30 days from the current date.",
+      "category": "documentation",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "max_staleness_days", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "changelog_exists", "type": "string", "description": "Whether CHANGELOG.md exists"},
+        {"name": "most_recent_date", "type": "string", "description": "Date of the most recent changelog entry"},
+        {"name": "staleness_days", "type": "string", "description": "Number of days since the most recent changelog entry"},
+        {"name": "entries_count", "type": "string", "description": "Total number of changelog entries"},
+        {"name": "format_consistent", "type": "string", "description": "Whether the changelog follows a consistent format"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "changelog_exists", "value": "true", "message": "CHANGELOG.md must exist in the project"},
+        {"type": "contains", "target": "format_consistent", "value": "true", "message": "CHANGELOG must follow a consistent format with dates"},
+        {"type": "all_valid", "target": "most_recent_date", "message": "Most recent changelog entry must have a valid date"}
+      ],
+      "metrics": ["entries_count", "staleness_days", "sections_per_entry"]
+    },
+    {
+      "id": "yole-doccmp-architecture-diagrams",
+      "name": "Architecture Diagrams Up to Date",
+      "description": "Verify that architecture diagrams exist and reflect the current system state. Diagrams must include the 10 extracted KMP modules, the shared module structure, platform source sets, the text parsing pipeline, the network protocol layer with resilience patterns, and the composite build topology. At least 8 architecture diagrams must be present.",
+      "category": "documentation",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "docs_path", "source": "config", "required": true},
+        {"name": "expected_diagram_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "diagram_files", "type": "json", "description": "List of architecture diagram files found"},
+        {"name": "missing_diagrams", "type": "json", "description": "Expected diagrams that are missing"},
+        {"name": "outdated_diagrams", "type": "json", "description": "Diagrams that reference outdated module counts or missing components"},
+        {"name": "diagrams_found", "type": "string", "description": "Number of architecture diagrams found"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "diagrams_found", "value": 8, "message": "At least 8 architecture diagrams must be present"},
+        {"type": "exact_count", "target": "missing_diagrams", "value": 0, "message": "No expected architecture diagrams may be missing"},
+        {"type": "exact_count", "target": "outdated_diagrams", "value": 0, "message": "No diagrams may reference outdated module counts or missing components"}
+      ],
+      "metrics": ["diagrams_found", "outdated_count", "diagram_formats"]
+    },
+    {
+      "id": "yole-doccmp-kmp-module-docs",
+      "name": "KMP Module Documentation Complete",
+      "description": "Verify that each of the 10 extracted KMP modules has CHANGELOG.md and CONTRIBUTING.md files. Each CHANGELOG must have at least one version entry. Each CONTRIBUTING must describe the build process, testing approach, and code style. Modules: RateLimiter-KMP, Concurrency-KMP, UI-Components-KMP, Auth-KMP, Security-KMP, Document-KMP, Config-KMP, Database-KMP, Storage-KMP, Formatters-KMP.",
+      "category": "documentation",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "module_paths", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "module_docs", "type": "json", "description": "Map of module name to documentation file presence and completeness"},
+        {"name": "missing_changelogs", "type": "json", "description": "Modules missing CHANGELOG.md"},
+        {"name": "missing_contributing", "type": "json", "description": "Modules missing CONTRIBUTING.md"},
+        {"name": "incomplete_docs", "type": "json", "description": "Modules with incomplete documentation (missing required sections)"},
+        {"name": "modules_checked", "type": "string", "description": "Number of KMP modules checked"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "modules_checked", "value": 10, "message": "All 10 KMP modules must be checked for documentation"},
+        {"type": "exact_count", "target": "missing_changelogs", "value": 0, "message": "All KMP modules must have CHANGELOG.md"},
+        {"type": "exact_count", "target": "missing_contributing", "value": 0, "message": "All KMP modules must have CONTRIBUTING.md"},
+        {"type": "exact_count", "target": "incomplete_docs", "value": 0, "message": "All module documentation must be complete with required sections"}
+      ],
+      "metrics": ["modules_checked", "changelogs_found", "contributing_found", "incomplete_count"]
+    },
+    {
+      "id": "yole-doccmp-legacy-migration-guide",
+      "name": "Legacy Migration Guide Present",
+      "description": "Verify that LEGACY_MIGRATION.md exists and documents the migration path from legacy Android-only modules (commons/, core/) to the KMP shared module architecture. The guide must include audit results, migration status per module, facade bridge documentation, and instructions for migrating remaining legacy code.",
+      "category": "documentation",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "file_exists", "type": "string", "description": "Whether LEGACY_MIGRATION.md exists"},
+        {"name": "required_sections", "type": "json", "description": "Map of required section names to their presence status"},
+        {"name": "missing_sections", "type": "json", "description": "Required sections missing from the migration guide"},
+        {"name": "line_count", "type": "string", "description": "Number of lines in the migration guide"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "file_exists", "value": "true", "message": "LEGACY_MIGRATION.md must exist in the project"},
+        {"type": "exact_count", "target": "missing_sections", "value": 0, "message": "All required sections must be present (audit results, migration status, facade bridges, instructions)"},
+        {"type": "min_count", "target": "line_count", "value": 30, "message": "LEGACY_MIGRATION.md must be at least 30 lines with substantive content"}
+      ],
+      "metrics": ["line_count", "sections_found", "modules_documented"]
+    },
+    {
+      "id": "yole-doccmp-challenge-framework-docs",
+      "name": "Challenge Framework Documentation Present",
+      "description": "Verify that CHALLENGE_FRAMEWORK.md exists and documents the challenge framework integration including the CI workflow (challenges.yml), Gradle task (runChallenges), challenge bank structure, how to add new challenge banks, and how to run challenges locally. The document must reference the three session-2 challenge banks plus any additional banks added in session-3.",
+      "category": "documentation",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "expected_bank_count", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "file_exists", "type": "string", "description": "Whether CHALLENGE_FRAMEWORK.md exists"},
+        {"name": "required_sections", "type": "json", "description": "Map of required section names to presence status"},
+        {"name": "missing_sections", "type": "json", "description": "Required sections that are missing"},
+        {"name": "banks_referenced", "type": "string", "description": "Number of challenge banks referenced in the document"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "file_exists", "value": "true", "message": "CHALLENGE_FRAMEWORK.md must exist in the project"},
+        {"type": "exact_count", "target": "missing_sections", "value": 0, "message": "All required sections must be present (CI workflow, Gradle task, bank structure, adding banks, local execution)"},
+        {"type": "min_count", "target": "banks_referenced", "value": 3, "message": "At least 3 challenge banks must be referenced in the documentation"}
+      ],
+      "metrics": ["line_count", "sections_found", "banks_referenced"]
+    },
+    {
+      "id": "yole-doccmp-claude-md-accuracy",
+      "name": "CLAUDE.md Accuracy and Currency",
+      "description": "Verify that CLAUDE.md in the project root accurately reflects the current project state. Check that the format count (17), KMP module count (10), test count (9,400+), platform list (Android, Desktop, iOS, Web), and key file paths all match the actual codebase. The document must not reference files that do not exist or features that have been removed.",
+      "category": "documentation",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "accuracy_results", "type": "json", "description": "Map of verified claims to their accuracy status"},
+        {"name": "inaccurate_claims", "type": "json", "description": "Claims in CLAUDE.md that do not match the actual codebase"},
+        {"name": "missing_file_refs", "type": "json", "description": "File paths referenced in CLAUDE.md that do not exist"},
+        {"name": "claims_verified", "type": "string", "description": "Total number of claims verified"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "inaccurate_claims", "value": 0, "message": "All claims in CLAUDE.md must accurately reflect the current codebase"},
+        {"type": "exact_count", "target": "missing_file_refs", "value": 0, "message": "All file paths in CLAUDE.md must reference existing files"},
+        {"type": "min_count", "target": "claims_verified", "value": 10, "message": "At least 10 factual claims must be verified against the codebase"}
+      ],
+      "metrics": ["claims_verified", "inaccurate_count", "missing_refs_count"]
+    },
+    {
+      "id": "yole-doccmp-license-headers",
+      "name": "SPDX License Headers Present in Source Files",
+      "description": "Verify that all Kotlin source files in shared/src contain SPDX license headers as specified in the code conventions (Apache-2.0, CC0-1.0, or Unlicense). Sample at least 50 source files across commonMain, androidMain, desktopMain, iosMain, and wasmJsMain. Each sampled file must have a license header in the first 5 lines.",
+      "category": "documentation",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "source_path", "source": "config", "required": true},
+        {"name": "sample_size", "source": "config", "required": true},
+        {"name": "valid_licenses", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "header_results", "type": "json", "description": "Map of sampled file to license header status"},
+        {"name": "missing_headers", "type": "json", "description": "Files missing SPDX license headers"},
+        {"name": "invalid_licenses", "type": "json", "description": "Files with license identifiers not in the approved list"},
+        {"name": "files_sampled", "type": "string", "description": "Number of files sampled"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "missing_headers", "value": 0, "message": "All source files must have SPDX license headers"},
+        {"type": "exact_count", "target": "invalid_licenses", "value": 0, "message": "All license identifiers must be from the approved list (Apache-2.0, CC0-1.0, Unlicense)"},
+        {"type": "min_count", "target": "files_sampled", "value": 50, "message": "At least 50 source files must be sampled across all source sets"}
+      ],
+      "metrics": ["files_sampled", "missing_count", "invalid_count", "license_distribution"]
+    }
+  ]
+}

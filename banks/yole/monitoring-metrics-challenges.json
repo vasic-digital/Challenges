@@ -1,0 +1,291 @@
+{
+  "version": "1.0",
+  "name": "Yole Monitoring Metrics Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "monitoring-metrics",
+    "description": "Challenges validating metrics collection infrastructure including parsing throughput baselines, cache hit ratio thresholds, circuit breaker state metrics, connection limiter utilization tracking, rate limiter saturation detection, and health check endpoint correctness across all protocol services and format parsers"
+  },
+  "challenges": [
+    {
+      "id": "yole-monmet-parsing-throughput-baseline",
+      "name": "Parsing Throughput Baseline Metrics",
+      "description": "Verify that parsing throughput baselines are collected for all 17 format parsers. Each parser must report documents-per-second and bytes-per-second metrics when parsing representative documents. Baseline values must be recorded and available for regression detection. Throughput must exceed minimum thresholds: at least 100 docs/sec for lightweight formats (plaintext, key-value) and at least 10 docs/sec for heavyweight formats (LaTeX, Jupyter).",
+      "category": "monitoring",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "format_ids", "source": "config", "required": true},
+        {"name": "sample_documents", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "throughput_results", "type": "json", "description": "Map of format ID to docs/sec and bytes/sec metrics"},
+        {"name": "formats_below_threshold", "type": "json", "description": "Formats whose throughput fell below minimum baseline"},
+        {"name": "formats_measured", "type": "string", "description": "Number of formats with throughput metrics"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "formats_measured", "value": 17, "message": "All 17 format parsers must have throughput baselines"},
+        {"type": "exact_count", "target": "formats_below_threshold", "value": 0, "message": "No format parser may fall below its minimum throughput baseline"},
+        {"type": "all_valid", "target": "throughput_results", "message": "All throughput measurements must produce valid numeric values"}
+      ],
+      "metrics": ["formats_measured", "avg_docs_per_sec", "avg_bytes_per_sec", "min_throughput_format"]
+    },
+    {
+      "id": "yole-monmet-parsing-throughput-regression",
+      "name": "Parsing Throughput Regression Detection",
+      "description": "Verify that parsing throughput does not regress by more than 20% compared to established baselines. Run each parser against its baseline document set three times and compare median throughput to the stored baseline. Any regression exceeding the 20% threshold must be flagged with the format ID, baseline value, measured value, and percentage degradation.",
+      "category": "monitoring",
+      "dependencies": ["yole-monmet-parsing-throughput-baseline"],
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "baseline_values", "source": "config", "required": true},
+        {"name": "regression_threshold_pct", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "regression_results", "type": "json", "description": "Map of format ID to baseline vs measured throughput comparison"},
+        {"name": "regressed_formats", "type": "json", "description": "Formats that regressed beyond the threshold"},
+        {"name": "measurement_iterations", "type": "string", "description": "Number of iterations per format for median calculation"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "regressed_formats", "value": 0, "message": "No format parser may regress more than 20% below its throughput baseline"},
+        {"type": "min_count", "target": "measurement_iterations", "value": 3, "message": "At least 3 iterations required for median calculation"},
+        {"type": "all_valid", "target": "regression_results", "message": "All regression comparison results must be valid"}
+      ],
+      "metrics": ["formats_compared", "max_regression_pct", "formats_improved"]
+    },
+    {
+      "id": "yole-monmet-cache-hit-ratio",
+      "name": "DocumentCache Hit Ratio Threshold Metrics",
+      "description": "Verify that DocumentCache reports cache hit ratio metrics and that the ratio meets minimum thresholds under normal usage patterns. Simulate a workload of 1000 parse requests with 70% repeat documents and verify the cache hit ratio exceeds 60%. Verify that hit count, miss count, and total request count are all tracked and available.",
+      "category": "monitoring",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "workload_size", "source": "config", "required": true},
+        {"name": "repeat_ratio", "source": "config", "required": true},
+        {"name": "min_hit_ratio", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_metrics", "type": "json", "description": "Cache hit count, miss count, total requests, and hit ratio"},
+        {"name": "hit_ratio_met", "type": "string", "description": "Whether the minimum hit ratio threshold was met"},
+        {"name": "metrics_available", "type": "json", "description": "List of cache metrics that are tracked"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "hit_ratio_met", "value": "true", "message": "Cache hit ratio must meet the minimum threshold of 60%"},
+        {"type": "min_count", "target": "metrics_available", "value": 3, "message": "At least 3 cache metrics must be tracked (hits, misses, total)"},
+        {"type": "all_valid", "target": "cache_metrics", "message": "All cache metrics must be valid numeric values"}
+      ],
+      "metrics": ["hit_count", "miss_count", "hit_ratio", "total_requests"]
+    },
+    {
+      "id": "yole-monmet-cache-eviction-tracking",
+      "name": "DocumentCache Eviction Metrics",
+      "description": "Verify that DocumentCache tracks LRU eviction events with metrics including eviction count, evicted document IDs, and cache size at eviction time. Fill the cache beyond its maximum capacity and verify that eviction metrics accurately reflect the number of documents evicted and that the cache size never exceeds the configured maximum.",
+      "category": "monitoring",
+      "dependencies": ["yole-monmet-cache-hit-ratio"],
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "cache_max_size", "source": "config", "required": true},
+        {"name": "overflow_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "eviction_metrics", "type": "json", "description": "Eviction count, max cache size observed, and eviction timestamps"},
+        {"name": "cache_exceeded_max", "type": "string", "description": "Whether cache size ever exceeded the configured maximum"},
+        {"name": "evictions_recorded", "type": "string", "description": "Number of eviction events recorded"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "cache_exceeded_max", "value": "false", "message": "Cache size must never exceed the configured maximum"},
+        {"type": "min_count", "target": "evictions_recorded", "value": 1, "message": "At least one eviction event must be recorded when cache overflows"},
+        {"type": "all_valid", "target": "eviction_metrics", "message": "All eviction metrics must be accurately recorded"}
+      ],
+      "metrics": ["eviction_count", "max_cache_size_observed", "overflow_documents"]
+    },
+    {
+      "id": "yole-monmet-circuit-breaker-state-metrics",
+      "name": "CircuitBreaker State Transition Metrics",
+      "description": "Verify that CircuitBreaker reports metrics for state transitions across CLOSED, OPEN, and HALF_OPEN states. Track transition counts, time spent in each state, failure counts that triggered OPEN, and successful probes that triggered CLOSED. Simulate failure sequences across all 8 protocol services and verify that state metrics are collected for each.",
+      "category": "monitoring",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "failure_threshold", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "state_metrics", "type": "json", "description": "Map of protocol to circuit breaker state transition metrics"},
+        {"name": "services_without_metrics", "type": "json", "description": "Services that do not report circuit breaker metrics"},
+        {"name": "transitions_recorded", "type": "string", "description": "Total state transitions recorded across all services"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "services_without_metrics", "value": 0, "message": "All protocol services must report circuit breaker state metrics"},
+        {"type": "min_count", "target": "transitions_recorded", "value": 16, "message": "At least 16 state transitions must be recorded (2 per service minimum)"},
+        {"type": "all_valid", "target": "state_metrics", "message": "All circuit breaker state metrics must contain valid state names and counts"}
+      ],
+      "metrics": ["services_tracked", "total_transitions", "time_in_open", "time_in_half_open"]
+    },
+    {
+      "id": "yole-monmet-circuit-breaker-failure-rate",
+      "name": "CircuitBreaker Failure Rate Monitoring",
+      "description": "Verify that CircuitBreaker tracks rolling failure rate metrics with a configurable window. The failure rate should be calculated over the last N operations (default 100) and must accurately reflect the proportion of failed operations. When the failure rate exceeds the configured threshold, the circuit must open and the rate must be reported in the metrics.",
+      "category": "monitoring",
+      "dependencies": ["yole-monmet-circuit-breaker-state-metrics"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "window_size", "source": "config", "required": true},
+        {"name": "failure_rate_threshold", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "failure_rate_results", "type": "json", "description": "Failure rate calculations and threshold breach events"},
+        {"name": "rate_accuracy", "type": "string", "description": "Whether calculated failure rate matches actual failure proportion"},
+        {"name": "threshold_breach_detected", "type": "string", "description": "Whether threshold breach triggered circuit open"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "rate_accuracy", "value": "true", "message": "Failure rate calculation must match actual failure proportion within 1% tolerance"},
+        {"type": "contains", "target": "threshold_breach_detected", "value": "true", "message": "Failure rate threshold breach must be detected and trigger circuit open"},
+        {"type": "all_valid", "target": "failure_rate_results", "message": "All failure rate metrics must be valid"}
+      ],
+      "metrics": ["failure_rate_pct", "window_operations", "breach_count"]
+    },
+    {
+      "id": "yole-monmet-connection-limiter-utilization",
+      "name": "ConnectionLimiter Utilization Metrics",
+      "description": "Verify that ConnectionLimiter reports utilization metrics including current active connections, maximum concurrent connections observed, permits available, permits waiting, and utilization percentage. Simulate varying connection loads (25%, 50%, 75%, 100% of max) and verify utilization metrics accurately reflect the load at each level.",
+      "category": "monitoring",
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "max_connections", "source": "config", "required": true},
+        {"name": "load_levels", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "utilization_metrics", "type": "json", "description": "Map of load level to utilization metrics snapshot"},
+        {"name": "inaccurate_readings", "type": "json", "description": "Utilization readings that do not match expected load level"},
+        {"name": "load_levels_tested", "type": "string", "description": "Number of load levels tested"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "load_levels_tested", "value": 4, "message": "At least 4 load levels must be tested (25%, 50%, 75%, 100%)"},
+        {"type": "exact_count", "target": "inaccurate_readings", "value": 0, "message": "All utilization readings must accurately reflect the actual connection load"},
+        {"type": "all_valid", "target": "utilization_metrics", "message": "All utilization metrics must contain valid numeric values"}
+      ],
+      "metrics": ["load_levels_tested", "max_utilization_pct", "avg_permits_waiting"]
+    },
+    {
+      "id": "yole-monmet-connection-limiter-queue-depth",
+      "name": "ConnectionLimiter Queue Depth Monitoring",
+      "description": "Verify that ConnectionLimiter tracks queue depth metrics when connection requests exceed available permits. Saturate the limiter and enqueue additional requests, then verify that queue depth, max queue depth, and average wait time metrics are collected. Queue depth must return to zero once all pending requests are serviced.",
+      "category": "monitoring",
+      "dependencies": ["yole-monmet-connection-limiter-utilization"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "max_connections", "source": "config", "required": true},
+        {"name": "overflow_requests", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "queue_metrics", "type": "json", "description": "Queue depth, max depth, and average wait time metrics"},
+        {"name": "queue_drained", "type": "string", "description": "Whether queue depth returned to zero after requests completed"},
+        {"name": "wait_times_recorded", "type": "string", "description": "Whether per-request wait times were recorded"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "queue_drained", "value": "true", "message": "Queue depth must return to zero after all pending requests are serviced"},
+        {"type": "contains", "target": "wait_times_recorded", "value": "true", "message": "Per-request wait times must be recorded when queuing occurs"},
+        {"type": "all_valid", "target": "queue_metrics", "message": "All queue depth metrics must be valid"}
+      ],
+      "metrics": ["max_queue_depth", "avg_wait_time_ms", "total_queued_requests"]
+    },
+    {
+      "id": "yole-monmet-rate-limiter-saturation",
+      "name": "RateLimiter Saturation Metrics",
+      "description": "Verify that RateLimiter (TokenBucket and AdaptiveRateLimiter) report saturation metrics including tokens available, tokens consumed per second, requests throttled, and saturation percentage. Generate request bursts that exceed the rate limit and verify that throttling events are counted and the saturation metric approaches 100%.",
+      "category": "monitoring",
+      "estimated_duration": "35s",
+      "inputs": [
+        {"name": "rate_limit_config", "source": "config", "required": true},
+        {"name": "burst_size", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "saturation_metrics", "type": "json", "description": "Token bucket saturation metrics during burst"},
+        {"name": "throttle_events", "type": "json", "description": "List of throttle events with timestamps"},
+        {"name": "saturation_detected", "type": "string", "description": "Whether saturation was detected during the burst"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "saturation_detected", "value": "true", "message": "Rate limiter saturation must be detected when burst exceeds rate limit"},
+        {"type": "min_count", "target": "throttle_events", "value": 1, "message": "At least one throttle event must be recorded during saturation"},
+        {"type": "all_valid", "target": "saturation_metrics", "message": "All saturation metrics must be valid"}
+      ],
+      "metrics": ["tokens_consumed", "requests_throttled", "saturation_pct", "peak_request_rate"]
+    },
+    {
+      "id": "yole-monmet-format-registry-init-timing",
+      "name": "FormatRegistry Initialization Timing Metrics",
+      "description": "Verify that FormatRegistry reports initialization timing metrics including total init duration, per-format registration time, lazy init trigger point, and whether initialization was triggered by first access. The lazy initialization must complete within 500ms and the timing data must be available for monitoring after initialization completes.",
+      "category": "monitoring",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "max_init_duration_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "init_timing", "type": "json", "description": "Initialization timing breakdown: total duration, per-format times"},
+        {"name": "init_within_threshold", "type": "string", "description": "Whether initialization completed within the threshold"},
+        {"name": "lazy_init_confirmed", "type": "string", "description": "Whether lazy initialization pattern was confirmed"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "init_within_threshold", "value": "true", "message": "FormatRegistry initialization must complete within 500ms"},
+        {"type": "contains", "target": "lazy_init_confirmed", "value": "true", "message": "FormatRegistry must use lazy initialization triggered on first access"},
+        {"type": "all_valid", "target": "init_timing", "message": "All initialization timing metrics must be valid"}
+      ],
+      "metrics": ["total_init_ms", "slowest_format_ms", "fastest_format_ms", "formats_registered"]
+    },
+    {
+      "id": "yole-monmet-stylesheet-cache-efficiency",
+      "name": "StyleSheets Cache Efficiency Metrics",
+      "description": "Verify that StyleSheets reports cache efficiency metrics including cache size, generation time saved by caching, and cache invalidation events via clearCache(). Generate stylesheets for both light and dark themes, measure time for initial generation vs cached retrieval, and verify the cached path is at least 10x faster than initial generation.",
+      "category": "monitoring",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "themes", "source": "config", "required": true},
+        {"name": "speedup_threshold", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_efficiency", "type": "json", "description": "Initial generation time vs cached retrieval time per theme"},
+        {"name": "speedup_met", "type": "string", "description": "Whether cached retrieval achieved the minimum speedup threshold"},
+        {"name": "invalidation_works", "type": "string", "description": "Whether clearCache() properly invalidates and triggers regeneration"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "speedup_met", "value": "true", "message": "Cached stylesheet retrieval must be at least 10x faster than initial generation"},
+        {"type": "contains", "target": "invalidation_works", "value": "true", "message": "clearCache() must properly invalidate cached stylesheets"},
+        {"type": "all_valid", "target": "cache_efficiency", "message": "All cache efficiency metrics must be valid"}
+      ],
+      "metrics": ["initial_gen_ms", "cached_retrieval_ms", "speedup_factor", "invalidation_events"]
+    },
+    {
+      "id": "yole-monmet-health-check-aggregation",
+      "name": "Health Check Aggregation Metrics",
+      "description": "Verify that a health check can aggregate the status of all critical subsystems: FormatRegistry (initialized), DocumentCache (operational), CircuitBreaker per protocol (state), ConnectionLimiter (permits available), and RateLimiter (not saturated). The aggregated health status must be 'healthy' when all subsystems are operational and 'degraded' or 'unhealthy' when any subsystem reports a problem.",
+      "category": "monitoring",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "subsystems", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "health_status", "type": "json", "description": "Per-subsystem health status and aggregated overall status"},
+        {"name": "all_subsystems_reported", "type": "string", "description": "Whether all configured subsystems reported their status"},
+        {"name": "degraded_detection_works", "type": "string", "description": "Whether degraded state is correctly detected when a subsystem fails"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "all_subsystems_reported", "value": "true", "message": "All critical subsystems must report health status"},
+        {"type": "contains", "target": "degraded_detection_works", "value": "true", "message": "Degraded state must be detected when any subsystem is unhealthy"},
+        {"type": "all_valid", "target": "health_status", "message": "All health check results must contain valid status values"}
+      ],
+      "metrics": ["subsystems_checked", "healthy_count", "degraded_count", "aggregation_time_ms"]
+    }
+  ]
+}
