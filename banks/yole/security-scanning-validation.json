@@ -1,0 +1,162 @@
+{
+  "version": "1.0",
+  "name": "Yole Security Scanning Validation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "security-scanning-validation",
+    "description": "Challenges validating security scanning infrastructure: Detekt zero-issues policy, OWASP CVSS threshold, Gitleaks custom rules, path traversal prevention via normalizePath(), SBOM generation capability, and CodeQL configuration"
+  },
+  "challenges": [
+    {
+      "id": "yole-ssv-detekt-zero-issues",
+      "name": "Detekt Zero-Issues Policy Enforcement",
+      "description": "Verify that the Detekt static analysis configuration enforces maxIssues: 0 across all rule sets. Run './gradlew detekt' and verify that the build fails on any new issue. Check detekt.yml configuration for maxIssues setting, verify that no rule sets are disabled, and confirm that the failOnSeverity threshold is set to 'warning' or lower so that warnings also break the build.",
+      "category": "security",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "detekt_config_path", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "max_issues_setting", "type": "string", "description": "The maxIssues value configured in detekt.yml"},
+        {"name": "disabled_rule_sets", "type": "json", "description": "Rule sets that are disabled in configuration"},
+        {"name": "fail_on_severity", "type": "string", "description": "The failOnSeverity threshold configured"},
+        {"name": "detekt_exit_code", "type": "string", "description": "Exit code from running ./gradlew detekt"},
+        {"name": "total_issues_found", "type": "string", "description": "Number of issues found by Detekt"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "max_issues_setting", "value": 0, "message": "Detekt maxIssues must be set to 0 for zero-tolerance policy"},
+        {"type": "exact_count", "target": "disabled_rule_sets", "value": 0, "message": "No Detekt rule sets may be disabled"},
+        {"type": "exact_count", "target": "total_issues_found", "value": 0, "message": "Detekt must report zero issues on the current codebase"}
+      ],
+      "metrics": ["max_issues_setting", "disabled_rule_sets_count", "total_issues_found", "detekt_execution_time_ms"]
+    },
+    {
+      "id": "yole-ssv-owasp-cvss-threshold",
+      "name": "OWASP Dependency Check CVSS 7.0 Threshold",
+      "description": "Verify that the OWASP Dependency Check is configured with a CVSS threshold of 7.0 (High severity) so that any dependency with a known vulnerability scoring 7.0 or above causes the build to fail. Check the CI configuration and Gradle plugin settings for failBuildOnCVSS, verify the NVD data feed is configured, and confirm that suppression files only suppress false positives with documented justification.",
+      "category": "security",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "ci_config_path", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "cvss_threshold", "type": "string", "description": "The failBuildOnCVSS threshold value configured"},
+        {"name": "nvd_feed_configured", "type": "string", "description": "Whether the NVD data feed URL is configured"},
+        {"name": "suppression_file_exists", "type": "string", "description": "Whether a suppression file exists"},
+        {"name": "suppressed_cves", "type": "json", "description": "List of suppressed CVEs with justifications"},
+        {"name": "unjustified_suppressions", "type": "json", "description": "Suppressed CVEs without documented justification"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "cvss_threshold", "value": 7.0, "message": "OWASP failBuildOnCVSS must be set to 7.0 or lower (High severity threshold)"},
+        {"type": "contains", "target": "nvd_feed_configured", "value": "true", "message": "NVD data feed must be configured for OWASP Dependency Check"},
+        {"type": "exact_count", "target": "unjustified_suppressions", "value": 0, "message": "All CVE suppressions must have documented justification"}
+      ],
+      "metrics": ["cvss_threshold", "total_dependencies_scanned", "suppressed_cve_count", "unjustified_suppression_count"]
+    },
+    {
+      "id": "yole-ssv-gitleaks-custom-rules",
+      "name": "Gitleaks Custom Rules Configuration (8 Rules)",
+      "description": "Verify that the Gitleaks configuration includes all 8 custom rules for detecting secrets in the Yole codebase: (1) OAuth client secrets, (2) API keys for cloud storage providers, (3) SFTP/FTP passwords, (4) Firebase config tokens, (5) base64-encoded credentials, (6) JWT signing keys, (7) database connection strings with embedded passwords, (8) private key file contents. Run Gitleaks against test fixtures containing each secret type and verify all 8 are detected.",
+      "category": "security",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "gitleaks_config_path", "source": "config", "required": true},
+        {"name": "test_fixtures_path", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "rules_configured", "type": "string", "description": "Number of custom rules in Gitleaks configuration"},
+        {"name": "rules_detected", "type": "json", "description": "Map of rule ID to whether it detected its target secret in test fixtures"},
+        {"name": "false_negatives", "type": "json", "description": "Rules that failed to detect their target secret"},
+        {"name": "false_positives_in_tests", "type": "json", "description": "Legitimate test strings incorrectly flagged as secrets"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "rules_configured", "value": 8, "message": "At least 8 custom Gitleaks rules must be configured"},
+        {"type": "exact_count", "target": "false_negatives", "value": 0, "message": "All 8 Gitleaks rules must detect their target secret types"},
+        {"type": "all_valid", "target": "rules_detected", "message": "Every custom rule must successfully detect its target secret in test fixtures"}
+      ],
+      "metrics": ["rules_configured", "rules_passing", "false_negative_count", "false_positive_count", "scan_time_ms"]
+    },
+    {
+      "id": "yole-ssv-path-traversal-prevention",
+      "name": "Path Traversal Prevention via normalizePath() in All Services",
+      "description": "Verify that normalizePath() from PathUtils.kt is called in all 8 protocol services for every file operation (listFiles, readFile, writeFile, deleteFile, getFileInfo, createDirectory). Statically verify that no file operation method accepts a raw path without normalization. Dynamically test with 20 traversal payloads including '../', '..\\', URL-encoded variants, double-encoded variants, null-byte injection, and Unicode normalization attacks. All must resolve to safe paths within the service root.",
+      "category": "security",
+      "dependencies": ["yole-ssv-detekt-zero-issues"],
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "traversal_payloads", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "file_operations", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "static_analysis_results", "type": "json", "description": "Map of service to file operations verified to call normalizePath()"},
+        {"name": "operations_without_normalization", "type": "json", "description": "File operations that do not call normalizePath()"},
+        {"name": "dynamic_test_results", "type": "json", "description": "Results of traversal payload testing per service"},
+        {"name": "traversals_escaped_root", "type": "json", "description": "Payloads that escaped the service root boundary"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "operations_without_normalization", "value": 0, "message": "All file operations in all services must call normalizePath()"},
+        {"type": "exact_count", "target": "traversals_escaped_root", "value": 0, "message": "No traversal payload may escape the service root boundary"},
+        {"type": "all_valid", "target": "static_analysis_results", "message": "Static analysis must confirm normalizePath() usage in all file operations"},
+        {"type": "all_pass", "target": "dynamic_test_results", "message": "All dynamic traversal tests must pass"}
+      ],
+      "metrics": ["services_tested", "operations_verified", "payloads_tested", "escaped_count"]
+    },
+    {
+      "id": "yole-ssv-sbom-generation",
+      "name": "SBOM Generation Capability",
+      "description": "Verify that the project can generate a Software Bill of Materials (SBOM) in CycloneDX or SPDX format. Check that the Gradle plugin is configured, that the generated SBOM includes all direct and transitive dependencies with version numbers, that license information is present for each dependency, and that the SBOM includes the project's own version metadata.",
+      "category": "security",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "sbom_format", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "sbom_generated", "type": "string", "description": "Whether SBOM was generated successfully"},
+        {"name": "sbom_format_valid", "type": "string", "description": "Whether the SBOM conforms to the specified format schema"},
+        {"name": "total_components", "type": "string", "description": "Total number of components listed in the SBOM"},
+        {"name": "components_with_version", "type": "string", "description": "Number of components with version information"},
+        {"name": "components_with_license", "type": "string", "description": "Number of components with license information"},
+        {"name": "project_metadata_present", "type": "string", "description": "Whether the SBOM includes project version metadata"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "sbom_generated", "value": "true", "message": "SBOM must be generated successfully"},
+        {"type": "contains", "target": "sbom_format_valid", "value": "true", "message": "SBOM must conform to the specified format schema (CycloneDX or SPDX)"},
+        {"type": "min_count", "target": "total_components", "value": 20, "message": "SBOM must list at least 20 components (direct + transitive dependencies)"},
+        {"type": "contains", "target": "project_metadata_present", "value": "true", "message": "SBOM must include project version metadata"}
+      ],
+      "metrics": ["total_components", "components_with_version", "components_with_license", "sbom_generation_time_ms"]
+    },
+    {
+      "id": "yole-ssv-codeql-configuration",
+      "name": "CodeQL Configuration and Query Coverage",
+      "description": "Verify that CodeQL is configured in the CI pipeline with appropriate query suites for Kotlin/Java analysis. Check that the codeql-config.yml or GitHub Actions workflow includes: (1) 'security-and-quality' query suite, (2) Kotlin and Java language targets, (3) autobuild or custom build step, (4) SARIF upload to GitHub Security tab, (5) scheduled scan frequency (at least weekly), and (6) paths-ignore for generated code and test fixtures.",
+      "category": "security",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true},
+        {"name": "ci_workflow_path", "source": "config", "required": true}
+      ],
+      "outputs": [
+        {"name": "codeql_configured", "type": "string", "description": "Whether CodeQL is configured in CI"},
+        {"name": "query_suite", "type": "string", "description": "The CodeQL query suite configured"},
+        {"name": "languages_configured", "type": "json", "description": "Programming languages configured for CodeQL analysis"},
+        {"name": "sarif_upload_configured", "type": "string", "description": "Whether SARIF results are uploaded to GitHub Security"},
+        {"name": "schedule_configured", "type": "string", "description": "Whether scheduled scans are configured"},
+        {"name": "paths_ignore_configured", "type": "string", "description": "Whether paths-ignore is set for generated code"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "codeql_configured", "value": "true", "message": "CodeQL must be configured in the CI pipeline"},
+        {"type": "contains", "target": "query_suite", "value": "security-and-quality", "message": "CodeQL must use the security-and-quality query suite"},
+        {"type": "contains", "target": "sarif_upload_configured", "value": "true", "message": "CodeQL SARIF results must be uploaded to GitHub Security tab"},
+        {"type": "contains", "target": "schedule_configured", "value": "true", "message": "CodeQL must have scheduled scans configured (at least weekly)"}
+      ],
+      "metrics": ["languages_count", "query_suite"]
+    }
+  ]
+}

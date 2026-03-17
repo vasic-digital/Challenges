@@ -1,0 +1,165 @@
+{
+  "version": "1.0",
+  "name": "Yole Performance Optimization Validation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "performance-optimization-validation",
+    "description": "Challenges validating performance optimizations introduced in the comprehensive audit: FormatRegistry lazy initialization, StyleSheets cache effectiveness, DocumentCache hit rates, Semaphore-controlled concurrent parsing, non-blocking I/O verification, and parse time budgets per format"
+  },
+  "challenges": [
+    {
+      "id": "yole-pov-format-registry-lazy-init",
+      "name": "FormatRegistry Lazy Initialization Verification",
+      "description": "Verify that FormatRegistry.formats uses lazy { createFormats() } and does not initialize until first access. Check that isFormatsInitialized returns false before any format lookup, true after the first lookup. Measure the time from application startup to first format access and verify that no format parsing objects are created during static initialization.",
+      "category": "performance",
+      "estimated_duration": "20s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "is_lazy_initialized", "type": "string", "description": "Whether FormatRegistry.formats uses lazy {} delegate"},
+        {"name": "initialized_before_access", "type": "string", "description": "Whether isFormatsInitialized was true before first access"},
+        {"name": "initialized_after_access", "type": "string", "description": "Whether isFormatsInitialized was true after first access"},
+        {"name": "lazy_init_time_ms", "type": "string", "description": "Time to initialize formats on first access"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "is_lazy_initialized", "value": "true", "message": "FormatRegistry.formats must use lazy {} delegate"},
+        {"type": "contains", "target": "initialized_before_access", "value": "false", "message": "isFormatsInitialized must be false before first format access"},
+        {"type": "contains", "target": "initialized_after_access", "value": "true", "message": "isFormatsInitialized must be true after first format access"},
+        {"type": "max_latency", "target": "lazy_init_time_ms", "value": 500, "message": "Lazy format initialization must complete within 500ms"}
+      ],
+      "metrics": ["lazy_init_time_ms", "formats_loaded_count"]
+    },
+    {
+      "id": "yole-pov-stylesheets-cache-effectiveness",
+      "name": "StyleSheets Cache Effectiveness",
+      "description": "Verify that StyleSheets.styleSheetCache returns cached CSS on repeated calls with the same theme parameters. Measure first-call vs cached-call latency for both light and dark themes. Verify that clearCache() invalidates all entries and that subsequent calls regenerate CSS. Target: at least 50x speedup on cached calls.",
+      "category": "performance",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "theme_variants", "source": "config", "required": true},
+        {"name": "calls_per_theme", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "first_call_avg_ms", "type": "string", "description": "Average time for first CSS generation call per theme"},
+        {"name": "cached_call_avg_ms", "type": "string", "description": "Average time for cached CSS retrieval per theme"},
+        {"name": "cache_speedup_factor", "type": "string", "description": "Speedup ratio of cached vs first call"},
+        {"name": "clear_cache_works", "type": "string", "description": "Whether clearCache() properly invalidates all entries"},
+        {"name": "css_content_identical", "type": "string", "description": "Whether cached CSS is byte-identical to first generation"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "cache_speedup_factor", "value": 50.0, "message": "StyleSheets cache must provide at least 50x speedup on cached calls"},
+        {"type": "contains", "target": "clear_cache_works", "value": "true", "message": "clearCache() must invalidate all cached stylesheets"},
+        {"type": "contains", "target": "css_content_identical", "value": "true", "message": "Cached CSS must be byte-identical to originally generated CSS"}
+      ],
+      "metrics": ["first_call_avg_ms", "cached_call_avg_ms", "cache_speedup_factor", "themes_tested"]
+    },
+    {
+      "id": "yole-pov-document-cache-hit-rates",
+      "name": "DocumentCache Hit Rate Under Realistic Workload",
+      "description": "Simulate a realistic editing workload against DocumentCache: parse 20 unique documents, then re-parse them in a Zipf-distributed access pattern (some documents accessed far more often than others) for 1000 total operations. Verify hit rate exceeds 80%, that LRU eviction works correctly when cache is full, and that hit/miss counters are accurate.",
+      "category": "performance",
+      "dependencies": ["yole-pov-format-registry-lazy-init"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "unique_documents", "source": "config", "required": true},
+        {"name": "total_operations", "source": "config", "required": true},
+        {"name": "cache_max_size", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cache_hit_rate", "type": "string", "description": "Cache hit rate as a percentage (0-100)"},
+        {"name": "total_hits", "type": "string", "description": "Total cache hits"},
+        {"name": "total_misses", "type": "string", "description": "Total cache misses"},
+        {"name": "lru_evictions", "type": "string", "description": "Number of LRU evictions that occurred"},
+        {"name": "counter_consistent", "type": "string", "description": "Whether hits + misses equals total operations"}
+      ],
+      "assertions": [
+        {"type": "min_score", "target": "cache_hit_rate", "value": 80.0, "message": "DocumentCache hit rate must exceed 80% under Zipf-distributed workload"},
+        {"type": "contains", "target": "counter_consistent", "value": "true", "message": "Cache hit + miss counters must equal total operations"},
+        {"type": "min_count", "target": "lru_evictions", "value": 1, "message": "At least one LRU eviction must occur to verify eviction logic"}
+      ],
+      "metrics": ["cache_hit_rate", "total_hits", "total_misses", "lru_evictions", "avg_hit_latency_ns", "avg_miss_latency_ns"]
+    },
+    {
+      "id": "yole-pov-semaphore-concurrent-parsing",
+      "name": "Semaphore-Controlled Concurrent Parsing (parseWithCacheConcurrent)",
+      "description": "Verify that parseWithCacheConcurrent uses a Semaphore to limit concurrent parse operations and prevent resource exhaustion. Launch 50 concurrent parse requests and verify that at most N (the Semaphore permit count) are executing simultaneously. Measure throughput and verify no OOM or thread pool exhaustion occurs. Verify that requests beyond the Semaphore limit are queued, not rejected.",
+      "category": "performance",
+      "dependencies": ["yole-pov-document-cache-hit-rates"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "concurrent_requests", "source": "config", "required": true},
+        {"name": "semaphore_permits", "source": "config", "required": true},
+        {"name": "document_sizes_kb", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "max_concurrent_observed", "type": "string", "description": "Maximum number of parse operations running simultaneously"},
+        {"name": "all_completed", "type": "string", "description": "Whether all 50 parse requests completed successfully"},
+        {"name": "oom_occurred", "type": "string", "description": "Whether an OutOfMemoryError occurred"},
+        {"name": "queued_requests", "type": "string", "description": "Number of requests that waited for a Semaphore permit"},
+        {"name": "total_throughput_docs_per_sec", "type": "string", "description": "Documents parsed per second"}
+      ],
+      "assertions": [
+        {"type": "max_latency", "target": "max_concurrent_observed", "value": 10, "message": "Maximum concurrent parses must not exceed Semaphore permit count"},
+        {"type": "contains", "target": "all_completed", "value": "true", "message": "All concurrent parse requests must complete successfully"},
+        {"type": "contains", "target": "oom_occurred", "value": "false", "message": "No OutOfMemoryError allowed under Semaphore-controlled parsing"},
+        {"type": "min_count", "target": "queued_requests", "value": 1, "message": "At least one request must be queued to verify Semaphore backpressure"}
+      ],
+      "metrics": ["max_concurrent_observed", "total_time_ms", "throughput_docs_per_sec", "queued_requests", "avg_wait_time_ms"]
+    },
+    {
+      "id": "yole-pov-nonblocking-io-verification",
+      "name": "Non-Blocking I/O Verification for Protocol Services",
+      "description": "Verify that file read/write operations in all 8 protocol services use non-blocking I/O (withContext(Dispatchers.IO) or equivalent) and do not block the main/calling coroutine dispatcher. Launch file operations on the Default dispatcher and verify that the dispatcher thread pool is not starved by measuring concurrent non-I/O task latency during file operations.",
+      "category": "performance",
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "concurrent_io_operations", "source": "config", "required": true},
+        {"name": "non_io_task_count", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "non_io_task_latency_ms", "type": "string", "description": "Average latency of non-I/O tasks running concurrently with file operations"},
+        {"name": "dispatcher_starved", "type": "string", "description": "Whether the Default dispatcher was starved by I/O operations"},
+        {"name": "services_using_io_dispatcher", "type": "json", "description": "Map of service to whether it uses Dispatchers.IO for file operations"},
+        {"name": "services_tested", "type": "string", "description": "Number of protocol services tested"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "dispatcher_starved", "value": "false", "message": "Default dispatcher must not be starved by file I/O operations"},
+        {"type": "max_latency", "target": "non_io_task_latency_ms", "value": 100, "message": "Non-I/O task latency must stay under 100ms during concurrent file operations"},
+        {"type": "min_count", "target": "services_tested", "value": 8, "message": "All 8 protocol services must be tested for non-blocking I/O"},
+        {"type": "all_valid", "target": "services_using_io_dispatcher", "message": "All services must use Dispatchers.IO for file operations"}
+      ],
+      "metrics": ["non_io_task_latency_ms", "services_tested", "io_operations_completed"]
+    },
+    {
+      "id": "yole-pov-parse-time-budgets",
+      "name": "Parse Time Budgets Per Format",
+      "description": "Verify that each of the 17 format parsers meets its parse time budget for standard-size documents. Budgets: Markdown 200ms (10KB), CSV 300ms (5000 rows), LaTeX 250ms (10KB), TodoTxt 100ms (500 items), OrgMode 200ms (10KB), WikiText 200ms (10KB), AsciiDoc 250ms (10KB), RST 200ms (10KB), Textile 150ms (5KB), Creole 150ms (5KB), BibTeX 200ms (5KB), JSON 100ms (50KB), XML 150ms (50KB), YAML 150ms (10KB), Properties 50ms (1000 lines), INI 50ms (500 sections), TOML 150ms (10KB). Run each parser 10 times and report p50 and p99.",
+      "category": "performance",
+      "dependencies": ["yole-pov-format-registry-lazy-init"],
+      "estimated_duration": "90s",
+      "inputs": [
+        {"name": "format_budgets", "source": "config", "required": true},
+        {"name": "iterations_per_format", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "format_results", "type": "json", "description": "Map of format ID to p50/p99 parse times and pass/fail status"},
+        {"name": "formats_within_budget", "type": "string", "description": "Number of formats within their parse time budget at p99"},
+        {"name": "formats_over_budget", "type": "json", "description": "Formats that exceeded their parse time budget at p99"},
+        {"name": "total_formats_tested", "type": "string", "description": "Total number of formats tested"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "formats_over_budget", "value": 0, "message": "No format may exceed its parse time budget at p99"},
+        {"type": "min_count", "target": "total_formats_tested", "value": 17, "message": "All 17 format parsers must be tested"},
+        {"type": "all_valid", "target": "format_results", "message": "All format parse time results must be valid"}
+      ],
+      "metrics": ["formats_tested", "formats_within_budget", "fastest_format_ms", "slowest_format_ms", "total_parse_time_ms"]
+    }
+  ]
+}

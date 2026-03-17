@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "name": "Yole Concurrency Safety Validation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "concurrency-safety-validation",
+    "description": "Challenges validating concurrency safety patterns introduced in the comprehensive audit: AtomicBoolean/Volatile for connection state, Mutex-based helpers, StateFlow atomic emissions, Flow cancellation safety, lazy httpClient initialization, and synchronized cache access"
+  },
+  "challenges": [
+    {
+      "id": "yole-csv-atomic-isconnected",
+      "name": "AtomicBoolean/Volatile _isConnected in Protocol Services",
+      "description": "Verify that _isConnected in all 8 protocol services (Dropbox, GoogleDrive, OneDrive, FTP, SFTP, SMB, WebDAV, S3) uses AtomicBoolean or @Volatile annotation to prevent torn reads under concurrent access. Simulate 100 coroutines reading isConnected while another coroutine toggles connect/disconnect, and verify no stale or inconsistent values are observed.",
+      "category": "concurrency",
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "reader_coroutines", "source": "config", "required": true},
+        {"name": "toggle_cycles", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "services_tested", "type": "string", "description": "Number of protocol services tested for atomic _isConnected"},
+        {"name": "torn_reads_detected", "type": "json", "description": "Services where torn reads of _isConnected were observed"},
+        {"name": "volatile_annotation_present", "type": "json", "description": "Map of service to whether @Volatile or AtomicBoolean is used for _isConnected"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "services_tested", "value": 8, "message": "All 8 protocol services must be tested for atomic _isConnected"},
+        {"type": "exact_count", "target": "torn_reads_detected", "value": 0, "message": "No torn reads of _isConnected may be observed under concurrent access"},
+        {"type": "all_valid", "target": "volatile_annotation_present", "message": "All services must use @Volatile or AtomicBoolean for _isConnected"}
+      ],
+      "metrics": ["services_tested", "reader_coroutines", "toggle_cycles", "torn_read_count"]
+    },
+    {
+      "id": "yole-csv-mutex-isconnected-helper",
+      "name": "Mutex-Based isConnected() Helper Consistency",
+      "description": "Verify that the Mutex-guarded isConnected() helper method in protocol services returns a consistent snapshot of connection state even when connect() and disconnect() are called concurrently. Run 50 coroutines calling isConnected() in a tight loop while 10 coroutines call connect() and disconnect() randomly, and verify that isConnected() never returns true after a successful disconnect() completes.",
+      "category": "concurrency",
+      "dependencies": ["yole-csv-atomic-isconnected"],
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "reader_coroutines", "source": "config", "required": true},
+        {"name": "writer_coroutines", "source": "config", "required": true},
+        {"name": "iterations_per_coroutine", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "inconsistencies_found", "type": "string", "description": "Number of times isConnected() returned stale state after disconnect()"},
+        {"name": "total_reads", "type": "string", "description": "Total isConnected() reads performed across all coroutines"},
+        {"name": "total_transitions", "type": "string", "description": "Total connect/disconnect transitions performed"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "inconsistencies_found", "value": 0, "message": "isConnected() must never return stale state after disconnect() completes"},
+        {"type": "min_count", "target": "total_reads", "value": 5000, "message": "At least 5000 isConnected() reads must be performed"},
+        {"type": "min_count", "target": "total_transitions", "value": 100, "message": "At least 100 connect/disconnect transitions must be performed"}
+      ],
+      "metrics": ["total_reads", "total_transitions", "inconsistency_count", "avg_read_latency_ns"]
+    },
+    {
+      "id": "yole-csv-stateflow-atomic-update",
+      "name": "StateFlow.update{} Atomic Emission Safety",
+      "description": "Verify that StateFlow emissions in protocol services use the update{} operator for atomic read-modify-write instead of direct .value assignment. Simulate 200 coroutines concurrently incrementing a counter via StateFlow and verify no lost updates. Additionally, statically verify that source code uses StateFlow.update{} rather than StateFlow.value = pattern for state mutations.",
+      "category": "concurrency",
+      "estimated_duration": "35s",
+      "inputs": [
+        {"name": "coroutine_count", "source": "config", "required": true},
+        {"name": "increments_per_coroutine", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "expected_final_value", "type": "string", "description": "Expected counter value after all increments"},
+        {"name": "actual_final_value", "type": "string", "description": "Actual counter value observed in StateFlow"},
+        {"name": "lost_updates", "type": "string", "description": "Number of lost updates (expected - actual)"},
+        {"name": "unsafe_value_assignments", "type": "json", "description": "Source locations using StateFlow.value = instead of update{}"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "lost_updates", "value": 0, "message": "No updates may be lost when using StateFlow.update{} atomically"},
+        {"type": "exact_count", "target": "unsafe_value_assignments", "value": 0, "message": "No direct StateFlow.value = assignments allowed for state mutations"}
+      ],
+      "metrics": ["coroutines_run", "total_increments", "lost_update_count", "total_time_ms"]
+    },
+    {
+      "id": "yole-csv-flow-cancellation-safety",
+      "name": "Flow Cancellation Safety with ensureActive()",
+      "description": "Verify that all Flow producers in protocol services call ensureActive() or check isActive before emit() to handle structured concurrency cancellation correctly. Cancel a Flow collector mid-stream in Dropbox getRecentChanges(), GoogleDrive getRecentChanges(), and OneDrive getRecentChanges(), and verify that CancellationException propagates cleanly without being swallowed by catch blocks.",
+      "category": "concurrency",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "cloud_services", "source": "config", "required": true},
+        {"name": "items_before_cancel", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cancellation_results", "type": "json", "description": "Per-service results of Flow cancellation test"},
+        {"name": "cancellation_swallowed", "type": "json", "description": "Services where CancellationException was caught and swallowed"},
+        {"name": "clean_shutdown_achieved", "type": "string", "description": "Whether all Flows shut down cleanly on cancellation"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "cancellation_swallowed", "value": 0, "message": "No service may swallow CancellationException in Flow producers"},
+        {"type": "contains", "target": "clean_shutdown_achieved", "value": "true", "message": "All Flows must shut down cleanly when the collector is cancelled"},
+        {"type": "all_pass", "target": "cancellation_results", "message": "All Flow cancellation tests must pass"}
+      ],
+      "metrics": ["services_tested", "items_emitted_before_cancel", "cancellation_propagation_time_ms"]
+    },
+    {
+      "id": "yole-csv-lazy-httpclient-init",
+      "name": "Lazy httpClient Initialization with isInitialized()",
+      "description": "Verify that httpClient in protocol services uses lazy {} initialization and checks ::httpClient.isInitialized() before close() to avoid UninitializedPropertyAccessException. Simulate calling disconnect() on a service that was never connected (httpClient never initialized) and verify no exception is thrown. Also verify that httpClient is initialized only on first connect(), not at construction time.",
+      "category": "concurrency",
+      "estimated_duration": "25s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "services_tested", "type": "string", "description": "Number of services tested for lazy httpClient"},
+        {"name": "uninitialized_access_exceptions", "type": "json", "description": "Services that threw UninitializedPropertyAccessException on disconnect without connect"},
+        {"name": "eager_initialization_detected", "type": "json", "description": "Services where httpClient was initialized at construction time"},
+        {"name": "isinitialized_guard_present", "type": "json", "description": "Map of service to whether isInitialized() guard is present before close()"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "uninitialized_access_exceptions", "value": 0, "message": "disconnect() without connect() must not throw UninitializedPropertyAccessException"},
+        {"type": "exact_count", "target": "eager_initialization_detected", "value": 0, "message": "httpClient must not be initialized at construction time"},
+        {"type": "all_valid", "target": "isinitialized_guard_present", "message": "All services must guard httpClient.close() with isInitialized() check"}
+      ],
+      "metrics": ["services_tested", "exceptions_thrown", "lazy_init_confirmed"]
+    },
+    {
+      "id": "yole-csv-synchronized-cache-access",
+      "name": "Synchronized Cache Access in DocumentCache and StyleSheets",
+      "description": "Verify that concurrent access to DocumentCache and StyleSheets.styleSheetCache is thread-safe. Run 100 coroutines simultaneously performing get/put on DocumentCache and 100 coroutines calling getStyleSheet() on StyleSheets with varying theme parameters. Verify no ConcurrentModificationException, no corrupted entries, and that cache hit/miss counts are consistent.",
+      "category": "concurrency",
+      "dependencies": ["yole-csv-atomic-isconnected"],
+      "estimated_duration": "50s",
+      "inputs": [
+        {"name": "cache_reader_coroutines", "source": "config", "required": true},
+        {"name": "cache_writer_coroutines", "source": "config", "required": true},
+        {"name": "operations_per_coroutine", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "concurrent_modification_exceptions", "type": "string", "description": "Number of ConcurrentModificationException thrown"},
+        {"name": "corrupted_entries", "type": "string", "description": "Number of corrupted cache entries detected"},
+        {"name": "cache_hit_miss_consistent", "type": "string", "description": "Whether hit + miss counts equal total operations"},
+        {"name": "stylesheet_cache_safe", "type": "string", "description": "Whether StyleSheets cache survived concurrent access without corruption"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "concurrent_modification_exceptions", "value": 0, "message": "No ConcurrentModificationException allowed under concurrent cache access"},
+        {"type": "exact_count", "target": "corrupted_entries", "value": 0, "message": "No cache entries may be corrupted by concurrent access"},
+        {"type": "contains", "target": "cache_hit_miss_consistent", "value": "true", "message": "Cache hit + miss counts must equal total operations"},
+        {"type": "contains", "target": "stylesheet_cache_safe", "value": "true", "message": "StyleSheets cache must survive concurrent access without corruption"}
+      ],
+      "metrics": ["total_operations", "cache_hits", "cache_misses", "concurrent_modification_count", "corrupted_count"]
+    }
+  ]
+}
