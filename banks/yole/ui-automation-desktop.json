@@ -1,0 +1,496 @@
+{
+  "version": "1.0",
+  "name": "Yole Desktop UI Automation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "ui-automation-desktop",
+    "description": "Desktop Compose app UI automation flows with recording at three speed modes (slow, normal, fast)"
+  },
+  "challenges": [
+    {
+      "id": "yole-ui-desktop-cold-start",
+      "name": "Desktop: App Cold Start and Initial Render",
+      "description": "Launch the Compose Desktop app from a cold state, verify the main window renders with the file browser panel, editor area, and toolbar within acceptable time bounds at each speed mode.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-build-desktop-jar"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "launch", "target": "desktopApp", "value": "jar_path"},
+        {"action": "wait_for_render", "target": "main_window", "value": "visible"},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_visible", "target": "toolbar", "value": "true"},
+        {"action": "measure", "target": "cold_start_time_ms", "value": "elapsed"}
+      ],
+      "outputs": [
+        {"name": "app_launched", "type": "string", "description": "Whether the app window appeared"},
+        {"name": "main_window_rendered", "type": "string", "description": "Whether all main UI panels rendered"},
+        {"name": "cold_start_time_ms", "type": "string", "description": "Time from launch to full render"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "app_launched", "value": "true", "message": "Desktop app must launch successfully"},
+        {"type": "equals", "target": "main_window_rendered", "value": "true", "message": "Main window must render all panels"},
+        {"type": "max_latency", "target": "cold_start_time_ms", "value": 8000, "message": "Cold start must complete within 8 seconds"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["cold_start_time_ms", "window_render_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-file-browser-navigation",
+      "name": "Desktop: File Browser Navigation",
+      "description": "Create a new folder in the file browser, navigate into it, navigate back out, and verify the breadcrumb trail and folder listing update correctly at each speed mode.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "folder_name", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "click", "target": "file_browser_panel", "value": ""},
+        {"action": "right_click", "target": "file_browser_panel", "value": "context_menu"},
+        {"action": "click", "target": "context_menu_new_folder", "value": ""},
+        {"action": "type", "target": "folder_name_input", "value": "{{folder_name}}"},
+        {"action": "press_key", "target": "folder_name_input", "value": "Enter"},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"},
+        {"action": "double_click", "target": "folder_{{folder_name}}", "value": ""},
+        {"action": "assert_text", "target": "breadcrumb_trail", "value": "{{folder_name}}"},
+        {"action": "click", "target": "breadcrumb_parent", "value": ""},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "folder_created", "type": "string", "description": "Whether the new folder appeared in the listing"},
+        {"name": "navigation_in", "type": "string", "description": "Whether navigating into the folder succeeded"},
+        {"name": "navigation_out", "type": "string", "description": "Whether navigating back to parent succeeded"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "folder_created", "value": "true", "message": "New folder must appear in file browser"},
+        {"type": "equals", "target": "navigation_in", "value": "true", "message": "Must navigate into folder and update breadcrumb"},
+        {"type": "equals", "target": "navigation_out", "value": "true", "message": "Must navigate back to parent directory"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["folder_create_time_ms", "navigation_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-create-markdown",
+      "name": "Desktop: Create Markdown Document",
+      "description": "Create a new Markdown document, type real content including headings, bold text, a list, and a code block. Save the file and verify the content persists across a reload.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "4m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "file_name", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "keyboard_shortcut", "target": "Ctrl+N", "value": "new_file"},
+        {"action": "type", "target": "file_name_dialog", "value": "{{file_name}}.md"},
+        {"action": "press_key", "target": "file_name_dialog", "value": "Enter"},
+        {"action": "type", "target": "editor_area", "value": "# Test Document\n\nThis is a **bold** test.\n\n- Item one\n- Item two\n- Item three\n\n```kotlin\nfun main() {\n    println(\"Hello, Yole!\")\n}\n```"},
+        {"action": "keyboard_shortcut", "target": "Ctrl+S", "value": "save"},
+        {"action": "wait", "target": "save_indicator", "value": "saved"},
+        {"action": "close_tab", "target": "editor_tab", "value": ""},
+        {"action": "open_file", "target": "file_browser", "value": "{{file_name}}.md"},
+        {"action": "assert_contains", "target": "editor_area", "value": "# Test Document"}
+      ],
+      "outputs": [
+        {"name": "file_created", "type": "string", "description": "Whether the new Markdown file was created"},
+        {"name": "content_saved", "type": "string", "description": "Whether the content was saved successfully"},
+        {"name": "content_persisted", "type": "string", "description": "Whether content survived close and reopen"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_created", "value": "true", "message": "New Markdown file must be created"},
+        {"type": "equals", "target": "content_saved", "value": "true", "message": "Content must be saved to disk"},
+        {"type": "equals", "target": "content_persisted", "value": "true", "message": "Content must persist after close and reopen"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_create_time_ms", "save_time_ms", "reopen_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-create-todotxt",
+      "name": "Desktop: Create Todo.txt Document",
+      "description": "Create a new todo.txt file, enter tasks with priorities, projects, and contexts. Verify task parsing, priority highlighting, and sort order.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "keyboard_shortcut", "target": "Ctrl+N", "value": "new_file"},
+        {"action": "type", "target": "file_name_dialog", "value": "tasks.todo"},
+        {"action": "press_key", "target": "file_name_dialog", "value": "Enter"},
+        {"action": "type", "target": "editor_area", "value": "(A) Write UI automation tests +yole @dev due:2026-03-20\n(B) Review pull request +yole @review\n(C) Update documentation +yole @docs\nx 2026-03-15 Complete challenge banks +yole @dev"},
+        {"action": "keyboard_shortcut", "target": "Ctrl+S", "value": "save"},
+        {"action": "assert_visible", "target": "priority_highlight_A", "value": "true"},
+        {"action": "assert_visible", "target": "project_tag_yole", "value": "true"},
+        {"action": "assert_visible", "target": "context_tag_dev", "value": "true"},
+        {"action": "assert_visible", "target": "completed_task_indicator", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "file_created", "type": "string", "description": "Whether the todo.txt file was created"},
+        {"name": "tasks_parsed", "type": "string", "description": "Whether tasks were parsed with priorities and tags"},
+        {"name": "completion_tracked", "type": "string", "description": "Whether completed task was marked correctly"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_created", "value": "true", "message": "Todo.txt file must be created"},
+        {"type": "equals", "target": "tasks_parsed", "value": "true", "message": "Tasks must be parsed with priorities, projects, and contexts"},
+        {"type": "equals", "target": "completion_tracked", "value": "true", "message": "Completed task must show completion indicator"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_create_time_ms", "parse_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-edit-existing",
+      "name": "Desktop: Edit Existing Document",
+      "description": "Open an existing document from the file browser, modify content by adding and removing lines, save changes, and verify modifications persist.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "double_click", "target": "file_browser_item", "value": "{{test_file}}"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "click", "target": "editor_line_3", "value": ""},
+        {"action": "select_all_line", "target": "editor_line_3", "value": ""},
+        {"action": "type", "target": "editor_area", "value": "This line was modified by the automation test."},
+        {"action": "press_key", "target": "editor_area", "value": "Enter"},
+        {"action": "type", "target": "editor_area", "value": "This is a newly inserted line."},
+        {"action": "keyboard_shortcut", "target": "Ctrl+S", "value": "save"},
+        {"action": "wait", "target": "save_indicator", "value": "saved"},
+        {"action": "assert_contains", "target": "editor_area", "value": "modified by the automation test"}
+      ],
+      "outputs": [
+        {"name": "file_opened", "type": "string", "description": "Whether the file opened in the editor"},
+        {"name": "content_modified", "type": "string", "description": "Whether content was successfully modified"},
+        {"name": "changes_saved", "type": "string", "description": "Whether changes were saved to disk"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_opened", "value": "true", "message": "Existing file must open in the editor"},
+        {"type": "equals", "target": "content_modified", "value": "true", "message": "Content must be editable"},
+        {"type": "equals", "target": "changes_saved", "value": "true", "message": "Changes must persist after save"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_open_time_ms", "save_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-theme-switching",
+      "name": "Desktop: Theme Switching (Light, Dark, System)",
+      "description": "Switch between Light, Dark, and System themes via the settings panel. Verify background color, text color, and syntax highlighting colors change at each switch.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "click", "target": "nav_settings", "value": ""},
+        {"action": "assert_visible", "target": "settings_panel", "value": "true"},
+        {"action": "click", "target": "theme_selector", "value": ""},
+        {"action": "click", "target": "theme_option_light", "value": ""},
+        {"action": "screenshot", "target": "main_window", "value": "theme_light.png"},
+        {"action": "assert_style", "target": "editor_background", "value": "light"},
+        {"action": "click", "target": "theme_selector", "value": ""},
+        {"action": "click", "target": "theme_option_dark", "value": ""},
+        {"action": "screenshot", "target": "main_window", "value": "theme_dark.png"},
+        {"action": "assert_style", "target": "editor_background", "value": "dark"},
+        {"action": "click", "target": "theme_selector", "value": ""},
+        {"action": "click", "target": "theme_option_system", "value": ""},
+        {"action": "assert_style", "target": "editor_background", "value": "system"}
+      ],
+      "outputs": [
+        {"name": "light_theme_applied", "type": "string", "description": "Whether light theme was applied correctly"},
+        {"name": "dark_theme_applied", "type": "string", "description": "Whether dark theme was applied correctly"},
+        {"name": "system_theme_applied", "type": "string", "description": "Whether system theme was applied correctly"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "light_theme_applied", "value": "true", "message": "Light theme must apply correct colors"},
+        {"type": "equals", "target": "dark_theme_applied", "value": "true", "message": "Dark theme must apply correct colors"},
+        {"type": "equals", "target": "system_theme_applied", "value": "true", "message": "System theme must follow OS preference"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["theme_switch_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-settings-toggles",
+      "name": "Desktop: Settings Toggles (Line Numbers, Auto-Save, Animations)",
+      "description": "Toggle line numbers, auto-save, and animations settings. Verify each toggle takes immediate effect in the editor UI.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "click", "target": "nav_settings", "value": ""},
+        {"action": "click", "target": "toggle_line_numbers", "value": "off"},
+        {"action": "assert_not_visible", "target": "editor_line_numbers", "value": "true"},
+        {"action": "click", "target": "toggle_line_numbers", "value": "on"},
+        {"action": "assert_visible", "target": "editor_line_numbers", "value": "true"},
+        {"action": "click", "target": "toggle_auto_save", "value": "on"},
+        {"action": "assert_text", "target": "auto_save_status", "value": "enabled"},
+        {"action": "click", "target": "toggle_auto_save", "value": "off"},
+        {"action": "assert_text", "target": "auto_save_status", "value": "disabled"},
+        {"action": "click", "target": "toggle_animations", "value": "off"},
+        {"action": "assert_style", "target": "animation_state", "value": "disabled"},
+        {"action": "click", "target": "toggle_animations", "value": "on"},
+        {"action": "assert_style", "target": "animation_state", "value": "enabled"}
+      ],
+      "outputs": [
+        {"name": "line_numbers_toggled", "type": "string", "description": "Whether line numbers toggle took effect"},
+        {"name": "auto_save_toggled", "type": "string", "description": "Whether auto-save toggle took effect"},
+        {"name": "animations_toggled", "type": "string", "description": "Whether animations toggle took effect"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "line_numbers_toggled", "value": "true", "message": "Line numbers must toggle on and off"},
+        {"type": "equals", "target": "auto_save_toggled", "value": "true", "message": "Auto-save must toggle on and off"},
+        {"type": "equals", "target": "animations_toggled", "value": "true", "message": "Animations must toggle on and off"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["toggle_response_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-preview-mode",
+      "name": "Desktop: Preview Mode Toggle",
+      "description": "Open a Markdown document, switch from editor to preview mode, verify rendered HTML output, switch back to editor, and verify content is intact.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "open_file", "target": "file_browser", "value": "{{test_file}}"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_contains", "target": "editor_area", "value": "#"},
+        {"action": "click", "target": "preview_button", "value": ""},
+        {"action": "wait_for_render", "target": "preview_area", "value": "visible"},
+        {"action": "assert_visible", "target": "preview_area", "value": "true"},
+        {"action": "assert_contains", "target": "preview_area_html", "value": "<h1>"},
+        {"action": "assert_contains", "target": "preview_area_html", "value": "<strong>"},
+        {"action": "click", "target": "editor_button", "value": ""},
+        {"action": "wait_for_render", "target": "editor_area", "value": "visible"},
+        {"action": "assert_contains", "target": "editor_area", "value": "#"}
+      ],
+      "outputs": [
+        {"name": "preview_rendered", "type": "string", "description": "Whether preview mode rendered HTML correctly"},
+        {"name": "html_structure_valid", "type": "string", "description": "Whether HTML contains expected tags"},
+        {"name": "editor_restored", "type": "string", "description": "Whether switching back to editor preserved content"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "preview_rendered", "value": "true", "message": "Preview mode must render formatted HTML"},
+        {"type": "equals", "target": "html_structure_valid", "value": "true", "message": "HTML must contain correct structural tags"},
+        {"type": "equals", "target": "editor_restored", "value": "true", "message": "Editor content must be intact after preview round-trip"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["preview_render_time_ms", "mode_switch_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-keyboard-shortcuts",
+      "name": "Desktop: Keyboard Shortcuts",
+      "description": "Test all primary keyboard shortcuts: Ctrl+N (new file), Ctrl+O (open file), Ctrl+S (save), and Ctrl+Z (undo). Verify each shortcut triggers the correct action.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "keyboard_shortcut", "target": "Ctrl+N", "value": "new_file"},
+        {"action": "assert_visible", "target": "new_file_dialog", "value": "true"},
+        {"action": "press_key", "target": "new_file_dialog", "value": "Escape"},
+        {"action": "keyboard_shortcut", "target": "Ctrl+O", "value": "open_file"},
+        {"action": "assert_visible", "target": "open_file_dialog", "value": "true"},
+        {"action": "press_key", "target": "open_file_dialog", "value": "Escape"},
+        {"action": "type", "target": "editor_area", "value": "Undo test content"},
+        {"action": "keyboard_shortcut", "target": "Ctrl+Z", "value": "undo"},
+        {"action": "assert_not_contains", "target": "editor_area", "value": "Undo test content"},
+        {"action": "type", "target": "editor_area", "value": "Save test content"},
+        {"action": "keyboard_shortcut", "target": "Ctrl+S", "value": "save"},
+        {"action": "wait", "target": "save_indicator", "value": "saved"}
+      ],
+      "outputs": [
+        {"name": "ctrl_n_works", "type": "string", "description": "Whether Ctrl+N opened new file dialog"},
+        {"name": "ctrl_o_works", "type": "string", "description": "Whether Ctrl+O opened file open dialog"},
+        {"name": "ctrl_z_works", "type": "string", "description": "Whether Ctrl+Z undid the last action"},
+        {"name": "ctrl_s_works", "type": "string", "description": "Whether Ctrl+S saved the file"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "ctrl_n_works", "value": "true", "message": "Ctrl+N must open new file dialog"},
+        {"type": "equals", "target": "ctrl_o_works", "value": "true", "message": "Ctrl+O must open file open dialog"},
+        {"type": "equals", "target": "ctrl_z_works", "value": "true", "message": "Ctrl+Z must undo the last action"},
+        {"type": "equals", "target": "ctrl_s_works", "value": "true", "message": "Ctrl+S must save the current file"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["shortcut_response_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-navigation-paths",
+      "name": "Desktop: All Navigation Paths",
+      "description": "Navigate through all top-level navigation destinations: Files, Todo, QuickNote, and Settings. Verify each view renders its expected content.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "click", "target": "nav_files", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "click", "target": "nav_todo", "value": ""},
+        {"action": "assert_visible", "target": "todo_list_panel", "value": "true"},
+        {"action": "click", "target": "nav_quicknote", "value": ""},
+        {"action": "assert_visible", "target": "quicknote_editor", "value": "true"},
+        {"action": "click", "target": "nav_settings", "value": ""},
+        {"action": "assert_visible", "target": "settings_panel", "value": "true"},
+        {"action": "click", "target": "nav_files", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "files_view", "type": "string", "description": "Whether Files view rendered correctly"},
+        {"name": "todo_view", "type": "string", "description": "Whether Todo view rendered correctly"},
+        {"name": "quicknote_view", "type": "string", "description": "Whether QuickNote view rendered correctly"},
+        {"name": "settings_view", "type": "string", "description": "Whether Settings view rendered correctly"},
+        {"name": "return_to_files", "type": "string", "description": "Whether returning to Files view worked"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "files_view", "value": "true", "message": "Files view must render file browser and editor"},
+        {"type": "equals", "target": "todo_view", "value": "true", "message": "Todo view must render task list"},
+        {"type": "equals", "target": "quicknote_view", "value": "true", "message": "QuickNote view must render editor"},
+        {"type": "equals", "target": "settings_view", "value": "true", "message": "Settings view must render settings panel"},
+        {"type": "equals", "target": "return_to_files", "value": "true", "message": "Must return to Files view cleanly"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["nav_transition_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-format-info-dialog",
+      "name": "Desktop: Format Info Dialog",
+      "description": "Open a file in a recognized format, open the format info dialog, and verify it displays the correct format name, supported extensions, and feature list.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "open_file", "target": "file_browser", "value": "{{test_file}}"},
+        {"action": "click", "target": "format_info_button", "value": ""},
+        {"action": "assert_visible", "target": "format_info_dialog", "value": "true"},
+        {"action": "assert_contains", "target": "format_name_label", "value": "Markdown"},
+        {"action": "assert_contains", "target": "format_extensions_label", "value": ".md"},
+        {"action": "assert_visible", "target": "format_features_list", "value": "true"},
+        {"action": "click", "target": "format_info_close_button", "value": ""},
+        {"action": "assert_not_visible", "target": "format_info_dialog", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "dialog_opened", "type": "string", "description": "Whether the format info dialog opened"},
+        {"name": "format_info_correct", "type": "string", "description": "Whether the format info was accurate"},
+        {"name": "dialog_closed", "type": "string", "description": "Whether the dialog closed cleanly"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "dialog_opened", "value": "true", "message": "Format info dialog must open"},
+        {"type": "equals", "target": "format_info_correct", "value": "true", "message": "Format info must show correct name and extensions"},
+        {"type": "equals", "target": "dialog_closed", "value": "true", "message": "Dialog must close when dismiss button is clicked"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["dialog_open_time_ms"]
+    },
+    {
+      "id": "yole-ui-desktop-window-resize",
+      "name": "Desktop: Window Resize and Layout Adaptation",
+      "description": "Resize the application window to small, medium, and large sizes. Verify that the layout adapts correctly, the file browser collapses on small widths, and all content remains accessible.",
+      "category": "ui-automation",
+      "platform": "desktop",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-desktop-cold-start"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "resize_window", "target": "main_window", "value": "1920x1080"},
+        {"action": "screenshot", "target": "main_window", "value": "layout_large.png"},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "resize_window", "target": "main_window", "value": "1024x768"},
+        {"action": "screenshot", "target": "main_window", "value": "layout_medium.png"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "resize_window", "target": "main_window", "value": "640x480"},
+        {"action": "screenshot", "target": "main_window", "value": "layout_small.png"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "resize_window", "target": "main_window", "value": "1920x1080"},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "large_layout_ok", "type": "string", "description": "Whether full layout rendered at 1920x1080"},
+        {"name": "medium_layout_ok", "type": "string", "description": "Whether layout adapted at 1024x768"},
+        {"name": "small_layout_ok", "type": "string", "description": "Whether layout adapted at 640x480"},
+        {"name": "resize_recovery", "type": "string", "description": "Whether restoring to full size recovered full layout"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "large_layout_ok", "value": "true", "message": "Full layout must render at 1920x1080"},
+        {"type": "equals", "target": "medium_layout_ok", "value": "true", "message": "Layout must adapt at 1024x768"},
+        {"type": "equals", "target": "small_layout_ok", "value": "true", "message": "Layout must adapt at 640x480 with accessible editor"},
+        {"type": "equals", "target": "resize_recovery", "value": "true", "message": "Restoring window size must recover full layout"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["resize_response_time_ms"]
+    }
+  ]
+}

@@ -1,0 +1,493 @@
+{
+  "version": "1.0",
+  "name": "Yole Web UI Automation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "ui-automation-web",
+    "description": "Web/Wasm PWA UI automation flows via Playwright with recording at three speed modes (slow, normal, fast)"
+  },
+  "challenges": [
+    {
+      "id": "yole-ui-web-pwa-launch",
+      "name": "Web: PWA Launch in Chrome",
+      "description": "Navigate to the Yole Wasm PWA URL in Chrome, verify the Wasm module initializes, the app shell renders, and the main UI becomes interactive within acceptable time bounds at each speed mode.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-build-web-wasm"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_visible", "target": "toolbar", "value": "true"},
+        {"action": "measure", "target": "pwa_load_time_ms", "value": "elapsed"},
+        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-wasm-ready]') !== null"}
+      ],
+      "outputs": [
+        {"name": "pwa_loaded", "type": "string", "description": "Whether the PWA loaded in the browser"},
+        {"name": "wasm_initialized", "type": "string", "description": "Whether the Wasm module initialized"},
+        {"name": "ui_interactive", "type": "string", "description": "Whether the UI became interactive"},
+        {"name": "pwa_load_time_ms", "type": "string", "description": "Time from navigation to interactive"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "pwa_loaded", "value": "true", "message": "PWA must load in Chrome"},
+        {"type": "equals", "target": "wasm_initialized", "value": "true", "message": "Wasm module must initialize"},
+        {"type": "equals", "target": "ui_interactive", "value": "true", "message": "UI must become interactive"},
+        {"type": "max_latency", "target": "pwa_load_time_ms", "value": 15000, "message": "PWA must load within 15 seconds"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["pwa_load_time_ms", "wasm_init_time_ms", "first_paint_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-file-browser",
+      "name": "Web: File Browser Navigation",
+      "description": "Navigate the file browser in the Web app: create a folder, enter it, go back, and verify the browser-based IndexedDB storage reflects the folder structure.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "folder_name", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "file_browser_panel", "value": ""},
+        {"action": "click", "target": "new_folder_button", "value": ""},
+        {"action": "fill", "target": "folder_name_input", "value": "{{folder_name}}"},
+        {"action": "press_key", "target": "folder_name_input", "value": "Enter"},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"},
+        {"action": "click", "target": "folder_{{folder_name}}", "value": ""},
+        {"action": "assert_url_contains", "target": "browser", "value": "{{folder_name}}"},
+        {"action": "click", "target": "breadcrumb_parent", "value": ""},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "folder_created", "type": "string", "description": "Whether the folder was created in IndexedDB"},
+        {"name": "navigation_in", "type": "string", "description": "Whether navigating into the folder worked"},
+        {"name": "navigation_out", "type": "string", "description": "Whether navigating back worked"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "folder_created", "value": "true", "message": "Folder must be created in browser storage"},
+        {"type": "equals", "target": "navigation_in", "value": "true", "message": "Must navigate into folder"},
+        {"type": "equals", "target": "navigation_out", "value": "true", "message": "Must navigate back to parent"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["folder_create_time_ms", "navigation_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-create-markdown",
+      "name": "Web: Create Markdown Document",
+      "description": "Create a new Markdown document in the browser, type content with headings, lists, and code blocks. Save to IndexedDB and verify persistence by refreshing the page.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "4m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "file_name", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "new_file_button", "value": ""},
+        {"action": "fill", "target": "file_name_input", "value": "{{file_name}}.md"},
+        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
+        {"action": "fill", "target": "editor_area", "value": "# Web Document\n\nCreated in the **Wasm PWA**.\n\n- Task one\n- Task two\n\n```js\nconsole.log('Hello from Yole Web!');\n```"},
+        {"action": "click", "target": "save_button", "value": ""},
+        {"action": "wait", "target": "save_indicator", "value": "saved"},
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "file_{{file_name}}.md", "value": ""},
+        {"action": "assert_contains", "target": "editor_area", "value": "# Web Document"}
+      ],
+      "outputs": [
+        {"name": "file_created", "type": "string", "description": "Whether the file was created"},
+        {"name": "content_saved", "type": "string", "description": "Whether content was saved to IndexedDB"},
+        {"name": "content_persisted", "type": "string", "description": "Whether content survived page refresh"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_created", "value": "true", "message": "File must be created in browser"},
+        {"type": "equals", "target": "content_saved", "value": "true", "message": "Content must be saved to IndexedDB"},
+        {"type": "equals", "target": "content_persisted", "value": "true", "message": "Content must persist after page refresh"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_create_time_ms", "save_time_ms", "reload_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-create-todotxt",
+      "name": "Web: Create Todo.txt Document",
+      "description": "Create a todo.txt file in the Web app, enter prioritized tasks with projects and contexts, and verify parsing and rendering in the browser.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "new_file_button", "value": ""},
+        {"action": "fill", "target": "file_name_input", "value": "web-tasks.todo"},
+        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
+        {"action": "fill", "target": "editor_area", "value": "(A) Deploy web app +yole @ops due:2026-03-25\n(B) Fix responsive layout +yole @frontend\nx 2026-03-14 Set up PWA manifest +yole @web"},
+        {"action": "click", "target": "save_button", "value": ""},
+        {"action": "assert_visible", "target": "priority_highlight_A", "value": "true"},
+        {"action": "assert_visible", "target": "project_tag_yole", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "file_created", "type": "string", "description": "Whether the todo.txt file was created"},
+        {"name": "tasks_parsed", "type": "string", "description": "Whether tasks were parsed correctly"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_created", "value": "true", "message": "Todo.txt file must be created"},
+        {"type": "equals", "target": "tasks_parsed", "value": "true", "message": "Tasks must be parsed with priorities and tags"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_create_time_ms", "parse_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-edit-document",
+      "name": "Web: Edit Existing Document",
+      "description": "Open an existing document in the Web app, modify content, save, and verify modifications are reflected in IndexedDB storage.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-create-markdown"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "file_{{test_file}}", "value": ""},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "click", "target": "editor_area", "value": ""},
+        {"action": "press_key", "target": "editor_area", "value": "End"},
+        {"action": "press_key", "target": "editor_area", "value": "Enter"},
+        {"action": "fill", "target": "editor_area_cursor", "value": "\n## Added by Web Automation\n\nThis section was appended by the Playwright test."},
+        {"action": "click", "target": "save_button", "value": ""},
+        {"action": "wait", "target": "save_indicator", "value": "saved"},
+        {"action": "assert_contains", "target": "editor_area", "value": "Added by Web Automation"}
+      ],
+      "outputs": [
+        {"name": "file_opened", "type": "string", "description": "Whether the file opened in editor"},
+        {"name": "content_modified", "type": "string", "description": "Whether content was modified"},
+        {"name": "changes_saved", "type": "string", "description": "Whether changes were saved"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_opened", "value": "true", "message": "File must open in editor"},
+        {"type": "equals", "target": "content_modified", "value": "true", "message": "Content must be editable"},
+        {"type": "equals", "target": "changes_saved", "value": "true", "message": "Changes must persist in IndexedDB"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_open_time_ms", "save_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-theme-settings",
+      "name": "Web: Theme and Settings Changes",
+      "description": "Switch themes (Light, Dark, System) and toggle settings in the Web app. Verify CSS custom properties change and settings persist via localStorage.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "nav_settings", "value": ""},
+        {"action": "click", "target": "theme_selector", "value": ""},
+        {"action": "click", "target": "theme_option_dark", "value": ""},
+        {"action": "evaluate_js", "target": "browser", "value": "getComputedStyle(document.documentElement).getPropertyValue('--color-bg')"},
+        {"action": "screenshot", "target": "page", "value": "web_theme_dark.png"},
+        {"action": "click", "target": "theme_selector", "value": ""},
+        {"action": "click", "target": "theme_option_light", "value": ""},
+        {"action": "evaluate_js", "target": "browser", "value": "getComputedStyle(document.documentElement).getPropertyValue('--color-bg')"},
+        {"action": "screenshot", "target": "page", "value": "web_theme_light.png"},
+        {"action": "evaluate_js", "target": "browser", "value": "localStorage.getItem('yole-theme')"}
+      ],
+      "outputs": [
+        {"name": "dark_theme_applied", "type": "string", "description": "Whether dark theme changed CSS variables"},
+        {"name": "light_theme_applied", "type": "string", "description": "Whether light theme changed CSS variables"},
+        {"name": "theme_persisted", "type": "string", "description": "Whether theme choice was saved to localStorage"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "dark_theme_applied", "value": "true", "message": "Dark theme must change CSS custom properties"},
+        {"type": "equals", "target": "light_theme_applied", "value": "true", "message": "Light theme must change CSS custom properties"},
+        {"type": "equals", "target": "theme_persisted", "value": "true", "message": "Theme choice must persist in localStorage"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["theme_switch_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-navigation-routes",
+      "name": "Web: Navigation Through All Routes",
+      "description": "Navigate to all top-level routes in the Web app (Files, Todo, QuickNote, Settings) and verify each view renders correctly with proper URL routing.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "nav_files", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_url_contains", "target": "browser", "value": "/files"},
+        {"action": "click", "target": "nav_todo", "value": ""},
+        {"action": "assert_visible", "target": "todo_list_panel", "value": "true"},
+        {"action": "assert_url_contains", "target": "browser", "value": "/todo"},
+        {"action": "click", "target": "nav_quicknote", "value": ""},
+        {"action": "assert_visible", "target": "quicknote_editor", "value": "true"},
+        {"action": "assert_url_contains", "target": "browser", "value": "/quicknote"},
+        {"action": "click", "target": "nav_settings", "value": ""},
+        {"action": "assert_visible", "target": "settings_panel", "value": "true"},
+        {"action": "assert_url_contains", "target": "browser", "value": "/settings"}
+      ],
+      "outputs": [
+        {"name": "files_route", "type": "string", "description": "Whether Files route rendered correctly"},
+        {"name": "todo_route", "type": "string", "description": "Whether Todo route rendered correctly"},
+        {"name": "quicknote_route", "type": "string", "description": "Whether QuickNote route rendered correctly"},
+        {"name": "settings_route", "type": "string", "description": "Whether Settings route rendered correctly"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "files_route", "value": "true", "message": "Files route must render and update URL"},
+        {"type": "equals", "target": "todo_route", "value": "true", "message": "Todo route must render and update URL"},
+        {"type": "equals", "target": "quicknote_route", "value": "true", "message": "QuickNote route must render and update URL"},
+        {"type": "equals", "target": "settings_route", "value": "true", "message": "Settings route must render and update URL"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["route_transition_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-responsive-mobile",
+      "name": "Web: Responsive Layout - Mobile Viewport",
+      "description": "Set the browser viewport to mobile dimensions (375x667), verify the layout adapts with a hamburger menu, stacked panels, and touch-friendly button sizes.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "set_viewport", "target": "browser", "value": "375x667"},
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "screenshot", "target": "page", "value": "responsive_mobile.png"},
+        {"action": "assert_visible", "target": "hamburger_menu", "value": "true"},
+        {"action": "assert_not_visible", "target": "sidebar_panel", "value": "true"},
+        {"action": "click", "target": "hamburger_menu", "value": ""},
+        {"action": "assert_visible", "target": "mobile_nav_drawer", "value": "true"},
+        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"editor\"]').offsetWidth <= 375"}
+      ],
+      "outputs": [
+        {"name": "mobile_layout_active", "type": "string", "description": "Whether mobile layout activated"},
+        {"name": "hamburger_visible", "type": "string", "description": "Whether hamburger menu appeared"},
+        {"name": "sidebar_hidden", "type": "string", "description": "Whether sidebar collapsed"},
+        {"name": "nav_drawer_works", "type": "string", "description": "Whether mobile nav drawer opened"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "mobile_layout_active", "value": "true", "message": "Mobile layout must activate at 375px width"},
+        {"type": "equals", "target": "hamburger_visible", "value": "true", "message": "Hamburger menu must be visible"},
+        {"type": "equals", "target": "sidebar_hidden", "value": "true", "message": "Sidebar must collapse on mobile"},
+        {"type": "equals", "target": "nav_drawer_works", "value": "true", "message": "Mobile nav drawer must open on tap"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["layout_adapt_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-responsive-tablet",
+      "name": "Web: Responsive Layout - Tablet Viewport",
+      "description": "Set the browser viewport to tablet dimensions (768x1024), verify the layout adapts with a collapsible sidebar and appropriate panel sizing.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "set_viewport", "target": "browser", "value": "768x1024"},
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "screenshot", "target": "page", "value": "responsive_tablet.png"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"editor\"]').offsetWidth >= 400"},
+        {"action": "click", "target": "sidebar_toggle", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "tablet_layout_active", "type": "string", "description": "Whether tablet layout rendered correctly"},
+        {"name": "editor_sized_correctly", "type": "string", "description": "Whether editor area used sufficient width"},
+        {"name": "sidebar_toggleable", "type": "string", "description": "Whether sidebar can be toggled"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "tablet_layout_active", "value": "true", "message": "Tablet layout must render at 768px width"},
+        {"type": "equals", "target": "editor_sized_correctly", "value": "true", "message": "Editor must have at least 400px width on tablet"},
+        {"type": "equals", "target": "sidebar_toggleable", "value": "true", "message": "Sidebar must be toggleable on tablet"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["layout_adapt_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-responsive-desktop",
+      "name": "Web: Responsive Layout - Desktop Viewport",
+      "description": "Set the browser viewport to desktop dimensions (1920x1080), verify the full two-panel layout with sidebar and editor renders at full width.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "set_viewport", "target": "browser", "value": "1920x1080"},
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "screenshot", "target": "page", "value": "responsive_desktop.png"},
+        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_visible", "target": "toolbar", "value": "true"},
+        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"file-browser\"]').offsetWidth >= 200"}
+      ],
+      "outputs": [
+        {"name": "desktop_layout_active", "type": "string", "description": "Whether full desktop layout rendered"},
+        {"name": "sidebar_visible", "type": "string", "description": "Whether sidebar is permanently visible"},
+        {"name": "editor_full_width", "type": "string", "description": "Whether editor uses remaining width"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "desktop_layout_active", "value": "true", "message": "Full desktop layout must render at 1920px"},
+        {"type": "equals", "target": "sidebar_visible", "value": "true", "message": "Sidebar must be permanently visible on desktop"},
+        {"type": "equals", "target": "editor_full_width", "value": "true", "message": "Editor must use remaining viewport width"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["layout_render_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-offline-mode",
+      "name": "Web: Offline Mode (Service Worker)",
+      "description": "Load the PWA, go offline by disabling network via Playwright, verify the app continues to function for local file operations, then re-enable network and verify sync.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-pwa-launch"],
+      "estimated_duration": "4m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "evaluate_js", "target": "browser", "value": "navigator.serviceWorker.ready"},
+        {"action": "set_offline", "target": "browser", "value": "true"},
+        {"action": "click", "target": "new_file_button", "value": ""},
+        {"action": "fill", "target": "file_name_input", "value": "offline-note.md"},
+        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
+        {"action": "fill", "target": "editor_area", "value": "# Offline Note\n\nCreated while offline."},
+        {"action": "click", "target": "save_button", "value": ""},
+        {"action": "assert_visible", "target": "offline_indicator", "value": "true"},
+        {"action": "set_offline", "target": "browser", "value": "false"},
+        {"action": "wait", "target": "online_indicator", "value": "visible"}
+      ],
+      "outputs": [
+        {"name": "service_worker_ready", "type": "string", "description": "Whether service worker was registered"},
+        {"name": "offline_create_works", "type": "string", "description": "Whether file creation works offline"},
+        {"name": "offline_save_works", "type": "string", "description": "Whether saving works offline"},
+        {"name": "online_recovery", "type": "string", "description": "Whether app recovered when network restored"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "service_worker_ready", "value": "true", "message": "Service worker must be registered"},
+        {"type": "equals", "target": "offline_create_works", "value": "true", "message": "File creation must work offline"},
+        {"type": "equals", "target": "offline_save_works", "value": "true", "message": "Saving must work offline via IndexedDB"},
+        {"type": "equals", "target": "online_recovery", "value": "true", "message": "App must recover when network is restored"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["offline_save_time_ms", "online_recovery_time_ms"]
+    },
+    {
+      "id": "yole-ui-web-preview-mode",
+      "name": "Web: Preview Mode Toggle",
+      "description": "Open a Markdown document in the Web app, switch between editor and preview modes. Verify HTML rendering in preview and content integrity when switching back.",
+      "category": "ui-automation",
+      "platform": "web",
+      "type": "RecordedBrowserFlowChallenge",
+      "dependencies": ["yole-ui-web-create-markdown"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "web_app_url", "source": "config", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
+        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
+        {"action": "click", "target": "file_{{test_file}}", "value": ""},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "click", "target": "preview_button", "value": ""},
+        {"action": "wait_for_render", "target": "preview_area", "value": "visible"},
+        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"preview\"]').innerHTML.includes('<h1>')"},
+        {"action": "screenshot", "target": "page", "value": "web_preview.png"},
+        {"action": "click", "target": "editor_button", "value": ""},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_contains", "target": "editor_area", "value": "#"}
+      ],
+      "outputs": [
+        {"name": "preview_rendered", "type": "string", "description": "Whether preview rendered HTML"},
+        {"name": "html_correct", "type": "string", "description": "Whether HTML structure is correct"},
+        {"name": "editor_restored", "type": "string", "description": "Whether editor content survived round-trip"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "preview_rendered", "value": "true", "message": "Preview must render formatted HTML"},
+        {"type": "equals", "target": "html_correct", "value": "true", "message": "HTML must contain expected structural tags"},
+        {"type": "equals", "target": "editor_restored", "value": "true", "message": "Editor content must be intact after preview round-trip"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["preview_render_time_ms", "mode_switch_time_ms"]
+    }
+  ]
+}

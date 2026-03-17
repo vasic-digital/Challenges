@@ -1,0 +1,508 @@
+{
+  "version": "1.0",
+  "name": "Yole Android UI Automation Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "ui-automation-android",
+    "description": "Android app UI automation flows via ADB with recording at three speed modes (slow, normal, fast)"
+  },
+  "challenges": [
+    {
+      "id": "yole-ui-android-app-launch",
+      "name": "Android: App Launch from Launcher",
+      "description": "Launch the Yole Android app from the device launcher, verify the splash screen displays, the main activity starts, and the bottom navigation bar renders within acceptable time bounds at each speed mode.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileLaunchChallenge",
+      "dependencies": ["yole-build-android-debug"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "apk_path", "source": "dependency:yole-build-android-debug", "required": true},
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "adb_install", "target": "device", "value": "{{apk_path}}"},
+        {"action": "adb_launch", "target": "device", "value": "digital.vasic.yole/.MainActivity"},
+        {"action": "wait_for_activity", "target": "device", "value": "MainActivity"},
+        {"action": "assert_visible", "target": "bottom_navigation", "value": "true"},
+        {"action": "assert_visible", "target": "files_tab", "value": "true"},
+        {"action": "assert_visible", "target": "todo_tab", "value": "true"},
+        {"action": "assert_visible", "target": "quicknote_tab", "value": "true"},
+        {"action": "assert_visible", "target": "more_tab", "value": "true"},
+        {"action": "measure", "target": "launch_time_ms", "value": "elapsed"}
+      ],
+      "outputs": [
+        {"name": "app_installed", "type": "string", "description": "Whether the APK was installed"},
+        {"name": "app_launched", "type": "string", "description": "Whether the main activity started"},
+        {"name": "bottom_nav_rendered", "type": "string", "description": "Whether the bottom navigation rendered"},
+        {"name": "launch_time_ms", "type": "string", "description": "Time from intent to interactive"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "app_installed", "value": "true", "message": "APK must install on device"},
+        {"type": "equals", "target": "app_launched", "value": "true", "message": "Main activity must start"},
+        {"type": "equals", "target": "bottom_nav_rendered", "value": "true", "message": "Bottom navigation must render with all tabs"},
+        {"type": "max_latency", "target": "launch_time_ms", "value": 5000, "message": "App must launch within 5 seconds"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["launch_time_ms", "first_frame_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-bottom-navigation",
+      "name": "Android: Bottom Navigation (Files, Todo, QuickNote, More)",
+      "description": "Tap each bottom navigation tab in sequence and verify each screen renders its expected content. Verify the selected tab indicator updates.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_list", "value": "true"},
+        {"action": "assert_selected", "target": "files_tab", "value": "true"},
+        {"action": "tap", "target": "todo_tab", "value": ""},
+        {"action": "assert_visible", "target": "todo_task_list", "value": "true"},
+        {"action": "assert_selected", "target": "todo_tab", "value": "true"},
+        {"action": "tap", "target": "quicknote_tab", "value": ""},
+        {"action": "assert_visible", "target": "quicknote_editor", "value": "true"},
+        {"action": "assert_selected", "target": "quicknote_tab", "value": "true"},
+        {"action": "tap", "target": "more_tab", "value": ""},
+        {"action": "assert_visible", "target": "more_menu", "value": "true"},
+        {"action": "assert_selected", "target": "more_tab", "value": "true"},
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_list", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "files_tab_works", "type": "string", "description": "Whether Files tab rendered correctly"},
+        {"name": "todo_tab_works", "type": "string", "description": "Whether Todo tab rendered correctly"},
+        {"name": "quicknote_tab_works", "type": "string", "description": "Whether QuickNote tab rendered correctly"},
+        {"name": "more_tab_works", "type": "string", "description": "Whether More tab rendered correctly"},
+        {"name": "return_to_files", "type": "string", "description": "Whether returning to Files worked"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "files_tab_works", "value": "true", "message": "Files tab must render file browser"},
+        {"type": "equals", "target": "todo_tab_works", "value": "true", "message": "Todo tab must render task list"},
+        {"type": "equals", "target": "quicknote_tab_works", "value": "true", "message": "QuickNote tab must render editor"},
+        {"type": "equals", "target": "more_tab_works", "value": "true", "message": "More tab must render menu"},
+        {"type": "equals", "target": "return_to_files", "value": "true", "message": "Must return to Files tab cleanly"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["tab_switch_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-fab-actions",
+      "name": "Android: FAB Actions (New File, Quick Note)",
+      "description": "Tap the floating action button (FAB) to create a new file and a quick note. Verify the FAB menu expands, each action navigates to the correct editor, and the file is persisted.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "tap", "target": "fab_button", "value": ""},
+        {"action": "assert_visible", "target": "fab_menu", "value": "true"},
+        {"action": "tap", "target": "fab_new_file", "value": ""},
+        {"action": "assert_visible", "target": "new_file_dialog", "value": "true"},
+        {"action": "input_text", "target": "file_name_field", "value": "fab-test.md"},
+        {"action": "tap", "target": "dialog_create_button", "value": ""},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "tap", "target": "fab_button", "value": ""},
+        {"action": "tap", "target": "fab_quick_note", "value": ""},
+        {"action": "assert_visible", "target": "quicknote_editor", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "fab_expanded", "type": "string", "description": "Whether the FAB menu expanded"},
+        {"name": "new_file_created", "type": "string", "description": "Whether new file action worked"},
+        {"name": "quick_note_opened", "type": "string", "description": "Whether quick note action worked"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "fab_expanded", "value": "true", "message": "FAB menu must expand on tap"},
+        {"type": "equals", "target": "new_file_created", "value": "true", "message": "New file action must create file and open editor"},
+        {"type": "equals", "target": "quick_note_opened", "value": "true", "message": "Quick note action must open QuickNote editor"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["fab_animation_time_ms", "file_create_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-create-document-keyboard",
+      "name": "Android: Document Creation with On-Screen Keyboard",
+      "description": "Create a new Markdown document and type content using the on-screen keyboard. Verify keyboard appears, text is entered correctly, and the content is saved.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "4m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "tap", "target": "fab_button", "value": ""},
+        {"action": "tap", "target": "fab_new_file", "value": ""},
+        {"action": "input_text", "target": "file_name_field", "value": "mobile-doc.md"},
+        {"action": "tap", "target": "dialog_create_button", "value": ""},
+        {"action": "tap", "target": "editor_area", "value": ""},
+        {"action": "assert_visible", "target": "soft_keyboard", "value": "true"},
+        {"action": "input_text", "target": "editor_area", "value": "# Mobile Document\n\nTyped on **Android** with the on-screen keyboard.\n\n- Buy groceries\n- Walk the dog"},
+        {"action": "tap", "target": "save_button", "value": ""},
+        {"action": "wait", "target": "save_indicator", "value": "saved"},
+        {"action": "assert_contains", "target": "editor_area", "value": "# Mobile Document"},
+        {"action": "adb_hide_keyboard", "target": "device", "value": ""}
+      ],
+      "outputs": [
+        {"name": "keyboard_shown", "type": "string", "description": "Whether the on-screen keyboard appeared"},
+        {"name": "text_entered", "type": "string", "description": "Whether text was entered correctly"},
+        {"name": "content_saved", "type": "string", "description": "Whether the content was saved"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "keyboard_shown", "value": "true", "message": "On-screen keyboard must appear when editor is tapped"},
+        {"type": "equals", "target": "text_entered", "value": "true", "message": "Text must be entered correctly via keyboard"},
+        {"type": "equals", "target": "content_saved", "value": "true", "message": "Content must be saved to storage"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["keyboard_show_time_ms", "typing_input_time_ms", "save_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-swipe-scroll",
+      "name": "Android: Swipe Gestures and Scroll",
+      "description": "Open a long document, verify smooth scrolling via swipe gestures. Test fling scrolling, precise scrolling, and scroll-to-top/bottom.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "long_document", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "open_file", "target": "file_browser", "value": "{{long_document}}"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "swipe_up", "target": "editor_area", "value": "fast"},
+        {"action": "assert_scrolled", "target": "editor_area", "value": "down"},
+        {"action": "swipe_up", "target": "editor_area", "value": "slow"},
+        {"action": "assert_scrolled", "target": "editor_area", "value": "down"},
+        {"action": "swipe_down", "target": "editor_area", "value": "fast"},
+        {"action": "assert_scrolled", "target": "editor_area", "value": "up"},
+        {"action": "fling", "target": "editor_area", "value": "down"},
+        {"action": "wait", "target": "scroll_animation", "value": "complete"},
+        {"action": "assert_scrolled", "target": "editor_area", "value": "near_bottom"}
+      ],
+      "outputs": [
+        {"name": "scroll_down_works", "type": "string", "description": "Whether scrolling down worked"},
+        {"name": "scroll_up_works", "type": "string", "description": "Whether scrolling up worked"},
+        {"name": "fling_works", "type": "string", "description": "Whether fling scrolling worked"},
+        {"name": "scroll_smooth", "type": "string", "description": "Whether scrolling was smooth (no jank)"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "scroll_down_works", "value": "true", "message": "Swipe up must scroll content down"},
+        {"type": "equals", "target": "scroll_up_works", "value": "true", "message": "Swipe down must scroll content up"},
+        {"type": "equals", "target": "fling_works", "value": "true", "message": "Fling gesture must scroll with momentum"},
+        {"type": "equals", "target": "scroll_smooth", "value": "true", "message": "Scrolling must be smooth without jank"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["scroll_fps", "fling_distance_px"]
+    },
+    {
+      "id": "yole-ui-android-settings-navigation",
+      "name": "Android: Settings Screen Navigation",
+      "description": "Navigate to the Settings screen via the More tab, verify all setting categories render, toggle theme and editor settings, and verify changes take effect.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "more_tab", "value": ""},
+        {"action": "tap", "target": "settings_menu_item", "value": ""},
+        {"action": "assert_visible", "target": "settings_screen", "value": "true"},
+        {"action": "assert_visible", "target": "settings_appearance", "value": "true"},
+        {"action": "assert_visible", "target": "settings_editor", "value": "true"},
+        {"action": "assert_visible", "target": "settings_storage", "value": "true"},
+        {"action": "tap", "target": "settings_appearance", "value": ""},
+        {"action": "tap", "target": "theme_option_dark", "value": ""},
+        {"action": "assert_style", "target": "settings_background", "value": "dark"},
+        {"action": "tap", "target": "theme_option_light", "value": ""},
+        {"action": "assert_style", "target": "settings_background", "value": "light"},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "tap", "target": "settings_editor", "value": ""},
+        {"action": "tap", "target": "toggle_line_numbers", "value": ""},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "press_back", "target": "device", "value": ""}
+      ],
+      "outputs": [
+        {"name": "settings_rendered", "type": "string", "description": "Whether settings screen rendered all categories"},
+        {"name": "theme_changed", "type": "string", "description": "Whether theme changes took effect"},
+        {"name": "editor_setting_changed", "type": "string", "description": "Whether editor setting was toggled"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "settings_rendered", "value": "true", "message": "Settings screen must render all categories"},
+        {"type": "equals", "target": "theme_changed", "value": "true", "message": "Theme changes must take immediate effect"},
+        {"type": "equals", "target": "editor_setting_changed", "value": "true", "message": "Editor settings must toggle correctly"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["settings_load_time_ms", "theme_switch_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-back-button",
+      "name": "Android: Back Button Behavior",
+      "description": "Test Android system back button behavior across navigation depth: from editor back to file list, from settings back to more menu, and from root activity to home.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "tap", "target": "fab_button", "value": ""},
+        {"action": "tap", "target": "fab_new_file", "value": ""},
+        {"action": "input_text", "target": "file_name_field", "value": "back-test.md"},
+        {"action": "tap", "target": "dialog_create_button", "value": ""},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "assert_visible", "target": "file_browser_list", "value": "true"},
+        {"action": "tap", "target": "more_tab", "value": ""},
+        {"action": "tap", "target": "settings_menu_item", "value": ""},
+        {"action": "assert_visible", "target": "settings_screen", "value": "true"},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "assert_visible", "target": "more_menu", "value": "true"},
+        {"action": "press_back", "target": "device", "value": ""},
+        {"action": "assert_activity", "target": "device", "value": "launcher"}
+      ],
+      "outputs": [
+        {"name": "back_from_editor", "type": "string", "description": "Whether back from editor returned to file list"},
+        {"name": "back_from_settings", "type": "string", "description": "Whether back from settings returned to more menu"},
+        {"name": "back_to_home", "type": "string", "description": "Whether back from root returned to launcher"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "back_from_editor", "value": "true", "message": "Back from editor must return to file browser"},
+        {"type": "equals", "target": "back_from_settings", "value": "true", "message": "Back from settings must return to more menu"},
+        {"type": "equals", "target": "back_to_home", "value": "true", "message": "Back from root must return to launcher"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["back_navigation_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-rotation",
+      "name": "Android: Rotation Handling (Portrait/Landscape)",
+      "description": "Open a document, rotate the device from portrait to landscape and back. Verify content is preserved, scroll position is maintained, and layout adapts correctly.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "open_file", "target": "file_browser", "value": "{{test_file}}"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "adb_screenshot", "target": "device", "value": "portrait_before.png"},
+        {"action": "adb_rotate", "target": "device", "value": "landscape"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "visible"},
+        {"action": "adb_screenshot", "target": "device", "value": "landscape.png"},
+        {"action": "assert_contains", "target": "editor_area", "value": "content_preserved"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "adb_rotate", "target": "device", "value": "portrait"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "visible"},
+        {"action": "adb_screenshot", "target": "device", "value": "portrait_after.png"},
+        {"action": "assert_contains", "target": "editor_area", "value": "content_preserved"}
+      ],
+      "outputs": [
+        {"name": "landscape_rendered", "type": "string", "description": "Whether landscape layout rendered correctly"},
+        {"name": "content_preserved_landscape", "type": "string", "description": "Whether content survived rotation to landscape"},
+        {"name": "content_preserved_portrait", "type": "string", "description": "Whether content survived rotation back to portrait"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "landscape_rendered", "value": "true", "message": "Layout must adapt to landscape orientation"},
+        {"type": "equals", "target": "content_preserved_landscape", "value": "true", "message": "Content must survive rotation to landscape"},
+        {"type": "equals", "target": "content_preserved_portrait", "value": "true", "message": "Content must survive rotation back to portrait"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["rotation_time_ms", "layout_adapt_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-share-intent",
+      "name": "Android: Share Intent Handling",
+      "description": "Send a share intent with text content to the Yole app via ADB. Verify the app opens, receives the shared text, and displays it in the editor.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "2m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "shared_text", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "adb_broadcast", "target": "device", "value": "am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT '{{shared_text}}' digital.vasic.yole/.MainActivity"},
+        {"action": "wait_for_activity", "target": "device", "value": "MainActivity"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_contains", "target": "editor_area", "value": "{{shared_text}}"},
+        {"action": "tap", "target": "save_button", "value": ""},
+        {"action": "wait", "target": "save_indicator", "value": "saved"}
+      ],
+      "outputs": [
+        {"name": "intent_received", "type": "string", "description": "Whether the share intent was received"},
+        {"name": "text_displayed", "type": "string", "description": "Whether shared text appeared in editor"},
+        {"name": "content_saveable", "type": "string", "description": "Whether shared content could be saved"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "intent_received", "value": "true", "message": "Share intent must be received by the app"},
+        {"type": "equals", "target": "text_displayed", "value": "true", "message": "Shared text must appear in the editor"},
+        {"type": "equals", "target": "content_saveable", "value": "true", "message": "Shared content must be saveable"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["intent_handle_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-file-browser-nav",
+      "name": "Android: File Browser Navigation",
+      "description": "Navigate the file browser on Android: create a folder, enter it, navigate back using the toolbar up button, and verify the file listing updates correctly.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "folder_name", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "long_press", "target": "file_browser_area", "value": ""},
+        {"action": "tap", "target": "context_new_folder", "value": ""},
+        {"action": "input_text", "target": "folder_name_field", "value": "{{folder_name}}"},
+        {"action": "tap", "target": "dialog_create_button", "value": ""},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"},
+        {"action": "tap", "target": "folder_{{folder_name}}", "value": ""},
+        {"action": "assert_text", "target": "toolbar_title", "value": "{{folder_name}}"},
+        {"action": "tap", "target": "toolbar_up_button", "value": ""},
+        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "folder_created", "type": "string", "description": "Whether the folder was created"},
+        {"name": "navigation_in", "type": "string", "description": "Whether navigating into folder worked"},
+        {"name": "navigation_out", "type": "string", "description": "Whether navigating back worked"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "folder_created", "value": "true", "message": "Folder must be created in file browser"},
+        {"type": "equals", "target": "navigation_in", "value": "true", "message": "Must navigate into folder"},
+        {"type": "equals", "target": "navigation_out", "value": "true", "message": "Must navigate back via toolbar up button"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["folder_create_time_ms", "navigation_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-create-todotxt",
+      "name": "Android: Create Todo.txt Document",
+      "description": "Create a todo.txt file on Android, enter tasks with priorities and projects using the on-screen keyboard. Verify task parsing and priority highlighting.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-app-launch"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "tap", "target": "files_tab", "value": ""},
+        {"action": "tap", "target": "fab_button", "value": ""},
+        {"action": "tap", "target": "fab_new_file", "value": ""},
+        {"action": "input_text", "target": "file_name_field", "value": "android-tasks.todo"},
+        {"action": "tap", "target": "dialog_create_button", "value": ""},
+        {"action": "tap", "target": "editor_area", "value": ""},
+        {"action": "input_text", "target": "editor_area", "value": "(A) Fix Android layout bug +yole @mobile due:2026-03-22\n(B) Add swipe gesture support +yole @ux\nx 2026-03-16 Implement bottom nav +yole @mobile"},
+        {"action": "tap", "target": "save_button", "value": ""},
+        {"action": "assert_visible", "target": "priority_highlight_A", "value": "true"},
+        {"action": "assert_visible", "target": "project_tag_yole", "value": "true"}
+      ],
+      "outputs": [
+        {"name": "file_created", "type": "string", "description": "Whether the todo.txt file was created"},
+        {"name": "tasks_parsed", "type": "string", "description": "Whether tasks were parsed correctly"},
+        {"name": "priorities_highlighted", "type": "string", "description": "Whether priority highlighting is visible"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "file_created", "value": "true", "message": "Todo.txt file must be created"},
+        {"type": "equals", "target": "tasks_parsed", "value": "true", "message": "Tasks must be parsed with priorities and tags"},
+        {"type": "equals", "target": "priorities_highlighted", "value": "true", "message": "Priority levels must be highlighted"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["file_create_time_ms", "parse_time_ms"]
+    },
+    {
+      "id": "yole-ui-android-preview-mode",
+      "name": "Android: Preview Mode Toggle",
+      "description": "Open a Markdown document, switch to preview mode via the toolbar, verify HTML rendering, then switch back to editor mode and verify content integrity.",
+      "category": "ui-automation",
+      "platform": "android",
+      "type": "RecordedMobileFlowChallenge",
+      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "estimated_duration": "3m",
+      "speed_modes": ["slow", "normal", "fast"],
+      "inputs": [
+        {"name": "test_device", "source": "env", "required": true},
+        {"name": "speed_mode", "source": "config", "required": true},
+        {"name": "test_file", "source": "config", "required": true}
+      ],
+      "steps": [
+        {"action": "open_file", "target": "file_browser", "value": "{{test_file}}"},
+        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
+        {"action": "tap", "target": "toolbar_preview_button", "value": ""},
+        {"action": "wait_for_render", "target": "preview_webview", "value": "visible"},
+        {"action": "assert_visible", "target": "preview_webview", "value": "true"},
+        {"action": "adb_screenshot", "target": "device", "value": "android_preview.png"},
+        {"action": "tap", "target": "toolbar_editor_button", "value": ""},
+        {"action": "wait_for_render", "target": "editor_area", "value": "visible"},
+        {"action": "assert_visible", "target": "editor_area", "value": "true"},
+        {"action": "assert_contains", "target": "editor_area", "value": "#"}
+      ],
+      "outputs": [
+        {"name": "preview_rendered", "type": "string", "description": "Whether preview mode showed rendered HTML"},
+        {"name": "editor_restored", "type": "string", "description": "Whether editor content survived the round-trip"}
+      ],
+      "assertions": [
+        {"type": "equals", "target": "preview_rendered", "value": "true", "message": "Preview must render formatted HTML in WebView"},
+        {"type": "equals", "target": "editor_restored", "value": "true", "message": "Editor content must be intact after preview round-trip"}
+      ],
+      "recording": {"enabled": true, "validate": true},
+      "metrics": ["preview_render_time_ms", "mode_switch_time_ms"]
+    }
+  ]
+}
