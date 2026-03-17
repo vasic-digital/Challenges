@@ -22,13 +22,16 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
-        {"action": "assert_visible", "target": "editor_area", "value": "true"},
-        {"action": "assert_visible", "target": "toolbar", "value": "true"},
-        {"action": "measure", "target": "pwa_load_time_ms", "value": "elapsed"},
-        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-wasm-ready]') !== null"}
+        {"action": "launch", "target": "playwright.chromium.launch({ headless: false })", "value": "browser_instance", "description": "Launch a Chromium browser instance via Playwright for the PWA test"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole Wasm PWA URL and begin loading"},
+        {"action": "wait", "target": "page.waitForSelector('[data-wasm-ready]', { timeout: 15000 })", "value": "wasm_ready", "description": "Wait up to 15 seconds for the Wasm module to initialize and set the data-wasm-ready attribute"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Verify the Compose app shell container is visible on the page"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser panel is rendered inside the app shell"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]')", "value": "visible", "description": "Verify the main editor area is rendered and ready for input"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"toolbar\"]')", "value": "visible", "description": "Verify the toolbar with action buttons is rendered at the top"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'pwa_launch.png', fullPage: true })", "value": "pwa_launch.png", "description": "Capture a full-page screenshot of the PWA after initial load"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-wasm-ready]') !== null)", "value": "true", "description": "Confirm the Wasm runtime is fully initialized via DOM query"},
+        {"action": "verify", "target": "performance.timing.loadEventEnd - performance.timing.navigationStart", "value": "<15000", "description": "Verify the total page load time is under 15 seconds"}
       ],
       "outputs": [
         {"name": "pwa_loaded", "type": "string", "description": "Whether the PWA loaded in the browser"},
@@ -61,17 +64,19 @@
         {"name": "folder_name", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "file_browser_panel", "value": ""},
-        {"action": "click", "target": "new_folder_button", "value": ""},
-        {"action": "fill", "target": "folder_name_input", "value": "{{folder_name}}"},
-        {"action": "press_key", "target": "folder_name_input", "value": "Enter"},
-        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"},
-        {"action": "click", "target": "folder_{{folder_name}}", "value": ""},
-        {"action": "assert_url_contains", "target": "browser", "value": "{{folder_name}}"},
-        {"action": "click", "target": "breadcrumb_parent", "value": ""},
-        {"action": "assert_visible", "target": "folder_{{folder_name}}", "value": "true"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render after Wasm initialization"},
+        {"action": "click", "target": "page.locator('[data-testid=\"file-browser\"]').click()", "value": "focus", "description": "Click the file browser panel to give it focus"},
+        {"action": "click", "target": "page.locator('[data-testid=\"new-folder-btn\"]').click()", "value": "new_folder", "description": "Click the 'New Folder' button to start folder creation"},
+        {"action": "type", "target": "page.locator('[data-testid=\"folder-name-input\"]').fill('{{folder_name}}')", "value": "{{folder_name}}", "description": "Type the folder name into the folder creation input field"},
+        {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to confirm the new folder creation"},
+        {"action": "wait", "target": "page.waitForSelector('text={{folder_name}}')", "value": "folder_visible", "description": "Wait for the new folder to appear in the file browser listing"},
+        {"action": "verify", "target": "page.locator('text={{folder_name}}')", "value": "visible", "description": "Verify the newly created folder is visible in the file listing"},
+        {"action": "click", "target": "page.locator('text={{folder_name}}').click()", "value": "navigate_in", "description": "Click the new folder to navigate into it"},
+        {"action": "verify", "target": "page.url()", "value": "contains {{folder_name}}", "description": "Verify the URL updated to include the folder name for deep linking"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_folder_inside.png' })", "value": "web_folder_inside.png", "description": "Capture a screenshot while inside the newly created folder"},
+        {"action": "click", "target": "page.locator('[data-testid=\"breadcrumb-parent\"]').click()", "value": "navigate_out", "description": "Click the parent breadcrumb to navigate back to the parent directory"},
+        {"action": "verify", "target": "page.locator('text={{folder_name}}')", "value": "visible", "description": "Verify the folder is still listed in the parent directory after navigation"}
       ],
       "outputs": [
         {"name": "folder_created", "type": "string", "description": "Whether the folder was created in IndexedDB"},
@@ -102,18 +107,20 @@
         {"name": "file_name", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "new_file_button", "value": ""},
-        {"action": "fill", "target": "file_name_input", "value": "{{file_name}}.md"},
-        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
-        {"action": "fill", "target": "editor_area", "value": "# Web Document\n\nCreated in the **Wasm PWA**.\n\n- Task one\n- Task two\n\n```js\nconsole.log('Hello from Yole Web!');\n```"},
-        {"action": "click", "target": "save_button", "value": ""},
-        {"action": "wait", "target": "save_indicator", "value": "saved"},
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "file_{{file_name}}.md", "value": ""},
-        {"action": "assert_contains", "target": "editor_area", "value": "# Web Document"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with all UI panels"},
+        {"action": "click", "target": "page.locator('[data-testid=\"new-file-btn\"]').click()", "value": "new_file", "description": "Click the 'New File' button to open the file creation dialog"},
+        {"action": "type", "target": "page.locator('[data-testid=\"file-name-input\"]').fill('{{file_name}}.md')", "value": "{{file_name}}.md", "description": "Type the filename with .md extension into the file creation input"},
+        {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to confirm file creation and open the empty editor"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "editor_ready", "description": "Wait for the editor to become active with the new empty document"},
+        {"action": "type", "target": "page.locator('[data-testid=\"editor\"]').fill('# Web Document\\n\\nCreated in the **Wasm PWA**.\\n\\n- Task one\\n- Task two\\n\\n```js\\nconsole.log(\"Hello from Yole Web!\");\\n```')", "value": "markdown_content", "description": "Type the full Markdown content including heading, bold text, list, and code block"},
+        {"action": "click", "target": "page.locator('[data-testid=\"save-btn\"]').click()", "value": "save", "description": "Click the Save button to persist the document to IndexedDB"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"save-indicator\"][data-state=\"saved\"]')", "value": "saved", "description": "Wait for the save indicator to confirm the document was written to IndexedDB"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_markdown_created.png' })", "value": "web_markdown_created.png", "description": "Capture a screenshot of the editor with the new Markdown content"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Refresh the page by navigating to the app URL again to test persistence"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render after the refresh"},
+        {"action": "click", "target": "page.locator('text={{file_name}}.md').click()", "value": "reopen_file", "description": "Click the file in the file browser to reopen it after refresh"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]').textContent()", "value": "# Web Document", "description": "Verify the persisted content contains the heading after page refresh"}
       ],
       "outputs": [
         {"name": "file_created", "type": "string", "description": "Whether the file was created"},
@@ -143,15 +150,20 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "new_file_button", "value": ""},
-        {"action": "fill", "target": "file_name_input", "value": "web-tasks.todo"},
-        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
-        {"action": "fill", "target": "editor_area", "value": "(A) Deploy web app +yole @ops due:2026-03-25\n(B) Fix responsive layout +yole @frontend\nx 2026-03-14 Set up PWA manifest +yole @web"},
-        {"action": "click", "target": "save_button", "value": ""},
-        {"action": "assert_visible", "target": "priority_highlight_A", "value": "true"},
-        {"action": "assert_visible", "target": "project_tag_yole", "value": "true"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to fully render"},
+        {"action": "click", "target": "page.locator('[data-testid=\"new-file-btn\"]').click()", "value": "new_file", "description": "Click the 'New File' button to open the file creation dialog"},
+        {"action": "type", "target": "page.locator('[data-testid=\"file-name-input\"]').fill('web-tasks.todo')", "value": "web-tasks.todo", "description": "Type the filename 'web-tasks.todo' into the creation input"},
+        {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to create the file and open the editor with todo.txt format"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "editor_ready", "description": "Wait for the editor to become active for the new todo.txt file"},
+        {"action": "type", "target": "page.locator('[data-testid=\"editor\"]').fill('(A) Deploy web app +yole @ops due:2026-03-25\\n(B) Fix responsive layout +yole @frontend\\nx 2026-03-14 Set up PWA manifest +yole @web')", "value": "todo_content", "description": "Type three todo.txt tasks with priorities, projects, contexts, and a completed task"},
+        {"action": "click", "target": "page.locator('[data-testid=\"save-btn\"]').click()", "value": "save", "description": "Click the Save button to persist the todo.txt to IndexedDB"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"save-indicator\"][data-state=\"saved\"]')", "value": "saved", "description": "Wait for the save indicator to confirm successful persistence"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"priority-A\"]')", "value": "visible", "description": "Verify priority (A) task is highlighted with the highest-priority styling"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"priority-B\"]')", "value": "visible", "description": "Verify priority (B) task is highlighted with medium-priority styling"},
+        {"action": "verify", "target": "page.locator('.project-tag')", "value": "+yole highlighted", "description": "Verify the +yole project tags are syntax-highlighted in the editor"},
+        {"action": "verify", "target": "page.locator('.completed-task')", "value": "strikethrough", "description": "Verify the completed task has strikethrough or dimmed styling"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_todotxt.png' })", "value": "web_todotxt.png", "description": "Capture a screenshot of the todo.txt editor with parsed and highlighted tasks"}
       ],
       "outputs": [
         {"name": "file_created", "type": "string", "description": "Whether the todo.txt file was created"},
@@ -180,17 +192,20 @@
         {"name": "test_file", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "file_{{test_file}}", "value": ""},
-        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
-        {"action": "click", "target": "editor_area", "value": ""},
-        {"action": "press_key", "target": "editor_area", "value": "End"},
-        {"action": "press_key", "target": "editor_area", "value": "Enter"},
-        {"action": "fill", "target": "editor_area_cursor", "value": "\n## Added by Web Automation\n\nThis section was appended by the Playwright test."},
-        {"action": "click", "target": "save_button", "value": ""},
-        {"action": "wait", "target": "save_indicator", "value": "saved"},
-        {"action": "assert_contains", "target": "editor_area", "value": "Added by Web Automation"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render after Wasm initialization"},
+        {"action": "click", "target": "page.locator('text={{test_file}}').click()", "value": "{{test_file}}", "description": "Click the test file in the file browser to open it in the editor"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "content_loaded", "description": "Wait for the file content to fully load in the editor area"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]').textContent()", "value": "non_empty", "description": "Verify the editor contains the pre-existing document content"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_edit_before.png' })", "value": "web_edit_before.png", "description": "Capture a screenshot of the document before editing"},
+        {"action": "click", "target": "page.locator('[data-testid=\"editor\"]').click()", "value": "focus", "description": "Click the editor area to position the cursor for editing"},
+        {"action": "keyboard", "target": "page.keyboard.press('End')", "value": "End", "description": "Press End to move cursor to the end of the current line"},
+        {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to start a new line at the cursor position"},
+        {"action": "type", "target": "page.keyboard.type('\\n## Added by Web Automation\\n\\nThis section was appended by the Playwright test.')", "value": "appended_content", "description": "Type the new section content including a heading and paragraph"},
+        {"action": "click", "target": "page.locator('[data-testid=\"save-btn\"]').click()", "value": "save", "description": "Click the Save button to persist the modifications to IndexedDB"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"save-indicator\"][data-state=\"saved\"]')", "value": "saved", "description": "Wait for the save indicator to confirm changes were written"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]').textContent()", "value": "Added by Web Automation", "description": "Verify the editor contains the appended content after saving"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_edit_after.png' })", "value": "web_edit_after.png", "description": "Capture a screenshot of the document after editing"}
       ],
       "outputs": [
         {"name": "file_opened", "type": "string", "description": "Whether the file opened in editor"},
@@ -220,18 +235,21 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "nav_settings", "value": ""},
-        {"action": "click", "target": "theme_selector", "value": ""},
-        {"action": "click", "target": "theme_option_dark", "value": ""},
-        {"action": "evaluate_js", "target": "browser", "value": "getComputedStyle(document.documentElement).getPropertyValue('--color-bg')"},
-        {"action": "screenshot", "target": "page", "value": "web_theme_dark.png"},
-        {"action": "click", "target": "theme_selector", "value": ""},
-        {"action": "click", "target": "theme_option_light", "value": ""},
-        {"action": "evaluate_js", "target": "browser", "value": "getComputedStyle(document.documentElement).getPropertyValue('--color-bg')"},
-        {"action": "screenshot", "target": "page", "value": "web_theme_light.png"},
-        {"action": "evaluate_js", "target": "browser", "value": "localStorage.getItem('yole-theme')"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with all navigation elements"},
+        {"action": "click", "target": "page.locator('[data-testid=\"nav-settings\"]').click()", "value": "Settings", "description": "Click the Settings navigation button to open the settings panel"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"settings-panel\"]')", "value": "visible", "description": "Verify the settings panel with theme options is visible"},
+        {"action": "click", "target": "page.locator('[data-testid=\"theme-selector\"]').click()", "value": "dropdown", "description": "Click the theme selector dropdown to expand theme options"},
+        {"action": "click", "target": "page.locator('[data-testid=\"theme-dark\"]').click()", "value": "Dark", "description": "Select the Dark theme from the dropdown options"},
+        {"action": "wait", "target": "page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() !== '')", "value": "css_updated", "description": "Wait for the CSS custom property --color-bg to update to the dark theme value"},
+        {"action": "verify", "target": "page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg'))", "value": "dark_color", "description": "Verify the --color-bg CSS variable reflects the dark theme color"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_theme_dark.png' })", "value": "web_theme_dark.png", "description": "Capture a screenshot of the app with Dark theme applied"},
+        {"action": "click", "target": "page.locator('[data-testid=\"theme-selector\"]').click()", "value": "dropdown", "description": "Click the theme selector dropdown again to switch themes"},
+        {"action": "click", "target": "page.locator('[data-testid=\"theme-light\"]').click()", "value": "Light", "description": "Select the Light theme from the dropdown options"},
+        {"action": "wait", "target": "page.waitForTimeout(300)", "value": "transition_complete", "description": "Wait 300ms for the CSS theme transition to complete"},
+        {"action": "verify", "target": "page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg'))", "value": "light_color", "description": "Verify the --color-bg CSS variable reflects the light theme color"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_theme_light.png' })", "value": "web_theme_light.png", "description": "Capture a screenshot of the app with Light theme applied"},
+        {"action": "verify", "target": "page.evaluate(() => localStorage.getItem('yole-theme'))", "value": "light", "description": "Verify the selected theme was persisted to localStorage as 'light'"}
       ],
       "outputs": [
         {"name": "dark_theme_applied", "type": "string", "description": "Whether dark theme changed CSS variables"},
@@ -261,20 +279,24 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "nav_files", "value": ""},
-        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
-        {"action": "assert_url_contains", "target": "browser", "value": "/files"},
-        {"action": "click", "target": "nav_todo", "value": ""},
-        {"action": "assert_visible", "target": "todo_list_panel", "value": "true"},
-        {"action": "assert_url_contains", "target": "browser", "value": "/todo"},
-        {"action": "click", "target": "nav_quicknote", "value": ""},
-        {"action": "assert_visible", "target": "quicknote_editor", "value": "true"},
-        {"action": "assert_url_contains", "target": "browser", "value": "/quicknote"},
-        {"action": "click", "target": "nav_settings", "value": ""},
-        {"action": "assert_visible", "target": "settings_panel", "value": "true"},
-        {"action": "assert_url_contains", "target": "browser", "value": "/settings"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with navigation elements"},
+        {"action": "click", "target": "page.locator('[data-testid=\"nav-files\"]').click()", "value": "Files", "description": "Click the 'Files' navigation link to navigate to the files route"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser panel is displayed on the Files route"},
+        {"action": "verify", "target": "page.url()", "value": "contains /files", "description": "Verify the browser URL contains the /files path segment"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_nav_files.png' })", "value": "web_nav_files.png", "description": "Capture a screenshot of the Files route view"},
+        {"action": "click", "target": "page.locator('[data-testid=\"nav-todo\"]').click()", "value": "Todo", "description": "Click the 'Todo' navigation link to navigate to the todo route"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"todo-list\"]')", "value": "visible", "description": "Wait for the Todo list panel to render"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"todo-list\"]')", "value": "visible", "description": "Verify the Todo task list is displayed"},
+        {"action": "verify", "target": "page.url()", "value": "contains /todo", "description": "Verify the browser URL contains the /todo path segment"},
+        {"action": "click", "target": "page.locator('[data-testid=\"nav-quicknote\"]').click()", "value": "QuickNote", "description": "Click the 'QuickNote' navigation link to navigate to the quicknote route"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"quicknote-editor\"]')", "value": "visible", "description": "Wait for the QuickNote editor to render"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"quicknote-editor\"]')", "value": "visible", "description": "Verify the QuickNote editor is displayed"},
+        {"action": "verify", "target": "page.url()", "value": "contains /quicknote", "description": "Verify the browser URL contains the /quicknote path segment"},
+        {"action": "click", "target": "page.locator('[data-testid=\"nav-settings\"]').click()", "value": "Settings", "description": "Click the 'Settings' navigation link to navigate to the settings route"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"settings-panel\"]')", "value": "visible", "description": "Wait for the Settings panel to render"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"settings-panel\"]')", "value": "visible", "description": "Verify the Settings panel is displayed with configuration options"},
+        {"action": "verify", "target": "page.url()", "value": "contains /settings", "description": "Verify the browser URL contains the /settings path segment"}
       ],
       "outputs": [
         {"name": "files_route", "type": "string", "description": "Whether Files route rendered correctly"},
@@ -306,15 +328,17 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "set_viewport", "target": "browser", "value": "375x667"},
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "screenshot", "target": "page", "value": "responsive_mobile.png"},
-        {"action": "assert_visible", "target": "hamburger_menu", "value": "true"},
-        {"action": "assert_not_visible", "target": "sidebar_panel", "value": "true"},
-        {"action": "click", "target": "hamburger_menu", "value": ""},
-        {"action": "assert_visible", "target": "mobile_nav_drawer", "value": "true"},
-        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"editor\"]').offsetWidth <= 375"}
+        {"action": "viewport", "target": "page.setViewportSize({ width: 375, height: 667 })", "value": "375x667", "description": "Set the Playwright viewport to iPhone SE mobile dimensions (375x667)"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the mobile viewport size"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in mobile layout mode"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_mobile.png', fullPage: true })", "value": "responsive_mobile.png", "description": "Capture a full-page screenshot showing the mobile responsive layout"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"hamburger-menu\"]')", "value": "visible", "description": "Verify the hamburger menu icon appeared (replacing the full sidebar)"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"sidebar\"]')", "value": "hidden", "description": "Verify the sidebar panel is hidden/collapsed in mobile layout"},
+        {"action": "click", "target": "page.locator('[data-testid=\"hamburger-menu\"]').click()", "value": "open_drawer", "description": "Tap the hamburger menu to open the mobile navigation drawer"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"mobile-nav-drawer\"]')", "value": "visible", "description": "Wait for the mobile navigation drawer to slide into view"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"mobile-nav-drawer\"]')", "value": "visible", "description": "Verify the mobile navigation drawer is visible with navigation links"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_mobile_drawer.png' })", "value": "responsive_mobile_drawer.png", "description": "Capture a screenshot with the mobile navigation drawer open"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"editor\"]').offsetWidth <= 375)", "value": "true", "description": "Verify the editor width does not exceed the mobile viewport width of 375px"}
       ],
       "outputs": [
         {"name": "mobile_layout_active", "type": "string", "description": "Whether mobile layout activated"},
@@ -346,14 +370,16 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "set_viewport", "target": "browser", "value": "768x1024"},
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "screenshot", "target": "page", "value": "responsive_tablet.png"},
-        {"action": "assert_visible", "target": "editor_area", "value": "true"},
-        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"editor\"]').offsetWidth >= 400"},
-        {"action": "click", "target": "sidebar_toggle", "value": ""},
-        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"}
+        {"action": "viewport", "target": "page.setViewportSize({ width: 768, height: 1024 })", "value": "768x1024", "description": "Set the Playwright viewport to iPad portrait dimensions (768x1024)"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the tablet viewport size"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in tablet layout mode"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_tablet.png', fullPage: true })", "value": "responsive_tablet.png", "description": "Capture a full-page screenshot showing the tablet responsive layout"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]')", "value": "visible", "description": "Verify the editor area is visible and occupies the main content area"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"editor\"]').offsetWidth >= 400)", "value": "true", "description": "Verify the editor area has at least 400px of width on tablet layout"},
+        {"action": "click", "target": "page.locator('[data-testid=\"sidebar-toggle\"]').click()", "value": "toggle_sidebar", "description": "Click the sidebar toggle button to expand the collapsible sidebar"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Wait for the file browser sidebar to expand into view"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser panel is visible after toggling the sidebar"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_tablet_sidebar.png' })", "value": "responsive_tablet_sidebar.png", "description": "Capture a screenshot of the tablet layout with sidebar expanded"}
       ],
       "outputs": [
         {"name": "tablet_layout_active", "type": "string", "description": "Whether tablet layout rendered correctly"},
@@ -383,14 +409,15 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "set_viewport", "target": "browser", "value": "1920x1080"},
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "screenshot", "target": "page", "value": "responsive_desktop.png"},
-        {"action": "assert_visible", "target": "file_browser_panel", "value": "true"},
-        {"action": "assert_visible", "target": "editor_area", "value": "true"},
-        {"action": "assert_visible", "target": "toolbar", "value": "true"},
-        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"file-browser\"]').offsetWidth >= 200"}
+        {"action": "viewport", "target": "page.setViewportSize({ width: 1920, height: 1080 })", "value": "1920x1080", "description": "Set the Playwright viewport to full HD desktop dimensions (1920x1080)"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the desktop viewport size"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in full desktop layout mode"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_desktop.png', fullPage: true })", "value": "responsive_desktop.png", "description": "Capture a full-page screenshot showing the full desktop layout"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser sidebar is permanently visible at desktop width"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]')", "value": "visible", "description": "Verify the editor area is visible alongside the sidebar"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"toolbar\"]')", "value": "visible", "description": "Verify the toolbar is visible at the top of the editor area"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"file-browser\"]').offsetWidth >= 200)", "value": "true", "description": "Verify the file browser sidebar has at least 200px of width"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"editor\"]').offsetWidth >= 800)", "value": "true", "description": "Verify the editor area uses the remaining viewport width (at least 800px)"}
       ],
       "outputs": [
         {"name": "desktop_layout_active", "type": "string", "description": "Whether full desktop layout rendered"},
@@ -420,18 +447,20 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "evaluate_js", "target": "browser", "value": "navigator.serviceWorker.ready"},
-        {"action": "set_offline", "target": "browser", "value": "true"},
-        {"action": "click", "target": "new_file_button", "value": ""},
-        {"action": "fill", "target": "file_name_input", "value": "offline-note.md"},
-        {"action": "press_key", "target": "file_name_input", "value": "Enter"},
-        {"action": "fill", "target": "editor_area", "value": "# Offline Note\n\nCreated while offline."},
-        {"action": "click", "target": "save_button", "value": ""},
-        {"action": "assert_visible", "target": "offline_indicator", "value": "true"},
-        {"action": "set_offline", "target": "browser", "value": "false"},
-        {"action": "wait", "target": "online_indicator", "value": "visible"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole PWA and wait for full initial load"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render and the service worker to register"},
+        {"action": "verify", "target": "page.evaluate(() => navigator.serviceWorker.ready.then(() => true))", "value": "true", "description": "Verify the service worker is registered and in the 'ready' state"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_online_state.png' })", "value": "web_online_state.png", "description": "Capture a screenshot of the app in online state before going offline"},
+        {"action": "keyboard", "target": "page.context().setOffline(true)", "value": "offline", "description": "Disable network via Playwright's browser context to simulate offline mode"},
+        {"action": "click", "target": "page.locator('[data-testid=\"new-file-btn\"]').click()", "value": "new_file", "description": "Click 'New File' to test file creation while offline"},
+        {"action": "type", "target": "page.locator('[data-testid=\"file-name-input\"]').fill('offline-note.md')", "value": "offline-note.md", "description": "Type the filename for the offline-created document"},
+        {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to create the file while in offline mode"},
+        {"action": "type", "target": "page.locator('[data-testid=\"editor\"]').fill('# Offline Note\\n\\nCreated while offline.')", "value": "offline_content", "description": "Type content into the editor while the network is disabled"},
+        {"action": "click", "target": "page.locator('[data-testid=\"save-btn\"]').click()", "value": "save", "description": "Click Save to persist the content to IndexedDB while offline"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"offline-indicator\"]')", "value": "visible", "description": "Verify the offline indicator is displayed in the app UI"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_offline_state.png' })", "value": "web_offline_state.png", "description": "Capture a screenshot showing the app functioning in offline mode"},
+        {"action": "keyboard", "target": "page.context().setOffline(false)", "value": "online", "description": "Re-enable network via Playwright to bring the app back online"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"online-indicator\"]')", "value": "visible", "description": "Wait for the online indicator to appear, confirming network recovery"}
       ],
       "outputs": [
         {"name": "service_worker_ready", "type": "string", "description": "Whether service worker was registered"},
@@ -464,17 +493,20 @@
         {"name": "test_file", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "browser", "value": "{{web_app_url}}"},
-        {"action": "wait_for_render", "target": "app_shell", "value": "visible"},
-        {"action": "click", "target": "file_{{test_file}}", "value": ""},
-        {"action": "wait_for_render", "target": "editor_area", "value": "content_loaded"},
-        {"action": "click", "target": "preview_button", "value": ""},
-        {"action": "wait_for_render", "target": "preview_area", "value": "visible"},
-        {"action": "evaluate_js", "target": "browser", "value": "document.querySelector('[data-testid=\"preview\"]').innerHTML.includes('<h1>')"},
-        {"action": "screenshot", "target": "page", "value": "web_preview.png"},
-        {"action": "click", "target": "editor_button", "value": ""},
-        {"action": "assert_visible", "target": "editor_area", "value": "true"},
-        {"action": "assert_contains", "target": "editor_area", "value": "#"}
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render"},
+        {"action": "click", "target": "page.locator('text={{test_file}}').click()", "value": "{{test_file}}", "description": "Click the test Markdown file in the file browser to open it"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "content_loaded", "description": "Wait for the file content to fully load in the editor area"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]').textContent()", "value": "contains #", "description": "Verify the editor shows raw Markdown source text with # symbols"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_editor_mode.png' })", "value": "web_editor_mode.png", "description": "Capture a screenshot of the editor mode showing raw Markdown source"},
+        {"action": "click", "target": "page.locator('[data-testid=\"preview-btn\"]').click()", "value": "Preview", "description": "Click the Preview button to switch to the rendered HTML view"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"preview\"]')", "value": "visible", "description": "Wait for the preview area to render the Markdown as HTML"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"preview\"]').innerHTML.includes('<h1>'))", "value": "true", "description": "Verify the preview HTML output contains an <h1> tag for the heading"},
+        {"action": "verify", "target": "page.evaluate(() => document.querySelector('[data-testid=\"preview\"]').innerHTML.includes('<strong>'))", "value": "true", "description": "Verify the preview HTML contains <strong> tags for bold text"},
+        {"action": "screenshot", "target": "page.screenshot({ path: 'web_preview_mode.png' })", "value": "web_preview_mode.png", "description": "Capture a screenshot of the preview mode showing rendered HTML"},
+        {"action": "click", "target": "page.locator('[data-testid=\"editor-btn\"]').click()", "value": "Editor", "description": "Click the Editor button to switch back to raw Markdown editing mode"},
+        {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "visible", "description": "Wait for the editor area to reappear with the source content"},
+        {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]').textContent()", "value": "contains #", "description": "Verify the editor content is intact with the original Markdown after the round-trip"}
       ],
       "outputs": [
         {"name": "preview_rendered", "type": "string", "description": "Whether preview rendered HTML"},
