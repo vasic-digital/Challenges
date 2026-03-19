@@ -3,6 +3,7 @@ package userflow
 import (
 	"context"
 	"fmt"
+	"time"
 
 	containers_compose "digital.vasic.containers/pkg/compose"
 	containers_event "digital.vasic.containers/pkg/event"
@@ -79,7 +80,12 @@ func WithLogger(
 func NewTestEnvironment(
 	opts ...TestEnvironmentOption,
 ) (*TestEnvironment, error) {
-	ctx := context.Background()
+	// Use a 10-second timeout to avoid hanging when no container
+	// runtime is available (e.g., podman/docker exec blocks).
+	ctx, cancel := context.WithTimeout(
+		context.Background(), 10*time.Second,
+	)
+	defer cancel()
 
 	// 1. Auto-detect container runtime (Podman-first).
 	rt, err := containers_runtime.AutoDetect(ctx)
