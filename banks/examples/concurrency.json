@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Concurrency Challenges",
+  "name": "Example Concurrency Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "concurrency",
     "description": "Challenges validating concurrent access patterns across format parsers, protocol connections, and shared resources"
   },
   "challenges": [
     {
-      "id": "yole-conc-parallel-format-parsing",
+      "id": "example-conc-parallel-format-parsing",
       "name": "Concurrent Format Parsing (10 Threads)",
       "description": "Verify that 10 threads can simultaneously parse different text formats without data corruption, race conditions, or crashes. Each thread parses a distinct format (Markdown, CSV, LaTeX, Org Mode, TodoTxt, WikiText, AsciiDoc, RST, Textile, Creole).",
       "category": "concurrency",
@@ -31,7 +31,7 @@
       "metrics": ["total_time_ms", "max_thread_time_ms", "min_thread_time_ms", "avg_thread_time_ms"]
     },
     {
-      "id": "yole-conc-protocol-connections",
+      "id": "example-conc-protocol-connections",
       "name": "Concurrent Protocol Connections",
       "description": "Verify that multiple protocol services (Dropbox, Google Drive, OneDrive, FTP, WebDAV) can be connected and disconnected concurrently without deadlocks or state corruption. Tests stateMutex-protected state transitions under contention.",
       "category": "concurrency",
@@ -54,7 +54,7 @@
       "metrics": ["total_time_ms", "connections_per_second", "max_contention_wait_ms"]
     },
     {
-      "id": "yole-conc-deadlock-detection",
+      "id": "example-conc-deadlock-detection",
       "name": "Deadlock Detection Under High Contention",
       "description": "Verify the system is free of deadlocks when 200 coroutines simultaneously access ParserRegistry, FormatRegistry, and ParsedDocument HTML caching. Uses a 10-second timeout as a deadlock detection mechanism.",
       "category": "concurrency",
@@ -77,11 +77,11 @@
       "metrics": ["total_time_ms", "max_coroutine_time_ms"]
     },
     {
-      "id": "yole-conc-race-condition-detection",
+      "id": "example-conc-race-condition-detection",
       "name": "Race Condition Detection in Parser Registry",
       "description": "Verify that concurrent register/unregister/lookup operations on ParserRegistry do not produce inconsistent state. Interleaves register, getParser, hasParser, and clear operations across 50 coroutines to expose potential race conditions in the platformSynchronized lock.",
       "category": "concurrency",
-      "dependencies": ["yole-conc-deadlock-detection"],
+      "dependencies": ["example-conc-deadlock-detection"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "coroutine_count", "source": "config", "required": true},
@@ -101,11 +101,11 @@
       "metrics": ["total_operations", "operations_per_second", "contention_events"]
     },
     {
-      "id": "yole-conc-lock-contention-measurement",
+      "id": "example-conc-lock-contention-measurement",
       "name": "Lock Contention Measurement",
       "description": "Measure lock contention on ParserRegistry and ParsedDocument HTML cache under escalating concurrency levels (1, 10, 50, 100 coroutines). Verify that throughput degrades gracefully rather than collapsing under contention, and that p99 latency remains bounded.",
       "category": "concurrency",
-      "dependencies": ["yole-conc-race-condition-detection"],
+      "dependencies": ["example-conc-race-condition-detection"],
       "estimated_duration": "90s",
       "inputs": [
         {"name": "concurrency_levels", "source": "config", "required": true},

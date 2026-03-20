@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Lazy Loading Challenges",
+  "name": "Example Lazy Loading Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "lazy-loading",
     "description": "Challenges validating lazy initialization correctness, caching, thread-safety, and performance benefits across parsers and documents"
   },
   "challenges": [
     {
-      "id": "yole-lazy-parser-loading-correctness",
+      "id": "example-lazy-parser-loading-correctness",
       "name": "Parser Lazy Loading Correctness",
       "description": "Verify that registerAllParsersLazy() defers parser instantiation until first access. After lazy registration, getInstantiatedParserCount() must be 0 and getPendingParserCount() must be 17. After accessing each parser, instantiated count must increment by 1 and pending must decrement by 1.",
       "category": "lazy-loading",
@@ -35,7 +35,7 @@
       "metrics": ["lazy_registration_time_ms", "first_access_latency_ms", "full_access_time_ms"]
     },
     {
-      "id": "yole-lazy-html-generation-caching",
+      "id": "example-lazy-html-generation-caching",
       "name": "Lazy HTML Generation Caching",
       "description": "Verify that ParsedDocument.toHtml() generates HTML lazily on first call and returns cached HTML on subsequent calls. The first call must populate the cache (hasHtmlCached returns true), and clearHtmlCache() must invalidate the cache (hasHtmlCached returns false).",
       "category": "lazy-loading",
@@ -61,11 +61,11 @@
       "metrics": ["first_call_time_ns", "second_call_time_ns", "cache_speedup_factor"]
     },
     {
-      "id": "yole-lazy-thread-safe-init",
+      "id": "example-lazy-thread-safe-init",
       "name": "Thread-Safe Lazy Initialization",
       "description": "Verify that lazy parser initialization via ParserRegistry is thread-safe. Launch 100 coroutines that simultaneously call getParser() for the same lazily-registered format. Only one parser instance should be created, and all coroutines must receive the same instance.",
       "category": "lazy-loading",
-      "dependencies": ["yole-lazy-parser-loading-correctness"],
+      "dependencies": ["example-lazy-parser-loading-correctness"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "coroutine_count", "source": "config", "required": true},
@@ -87,7 +87,7 @@
       "metrics": ["total_time_ms", "first_init_latency_ms"]
     },
     {
-      "id": "yole-lazy-performance-benefit",
+      "id": "example-lazy-performance-benefit",
       "name": "Lazy Loading Performance Benefit",
       "description": "Measure the startup performance benefit of lazy vs eager parser registration. Compare registerAllParsers() time against registerAllParsersLazy() time. Lazy registration should be at least 50% faster since it defers instantiation.",
       "category": "lazy-loading",

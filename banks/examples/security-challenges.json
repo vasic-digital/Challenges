@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Security Deep Challenges",
+  "name": "Example Security Deep Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "security-deep",
     "description": "Deep security challenges validating path traversal prevention, XSS prevention in HTML output, query injection prevention, CancellationException rethrow safety, credential storage, HTTPS enforcement, certificate validation, and input sanitization across all protocol services and format parsers"
   },
   "challenges": [
     {
-      "id": "yole-secdp-path-traversal-normalization",
+      "id": "example-secdp-path-traversal-normalization",
       "name": "Path Traversal Prevention via normalizePath()",
       "description": "Verify that normalizePath() in Dropbox, FTP, SFTP, and SMB services resolves '..' segments and enforces root boundary. Test with payloads including '../../../etc/passwd', '..\\..\\windows\\system32', URL-encoded '%2e%2e%2f', double-encoded '%252e%252e%252f', and null-byte injection 'file%00.txt'. All must be neutralized to safe paths within the service root.",
       "category": "security",
@@ -31,11 +31,11 @@
       "metrics": ["payloads_tested", "protocols_tested", "escaped_count"]
     },
     {
-      "id": "yole-secdp-path-traversal-symlink",
+      "id": "example-secdp-path-traversal-symlink",
       "name": "Symlink-Based Path Traversal Prevention",
       "description": "Verify that protocol services do not follow symbolic links that point outside the service root. Create test symlinks pointing to parent directories and verify that file operations through them are rejected or resolved safely.",
       "category": "security",
-      "dependencies": ["yole-secdp-path-traversal-normalization"],
+      "dependencies": ["example-secdp-path-traversal-normalization"],
       "estimated_duration": "20s",
       "inputs": [
         {"name": "symlink_scenarios", "source": "config", "required": true},
@@ -51,7 +51,7 @@
       "metrics": ["scenarios_tested", "symlinks_rejected"]
     },
     {
-      "id": "yole-secdp-xss-html-output",
+      "id": "example-secdp-xss-html-output",
       "name": "XSS Prevention in HTML Output for All 17 Formats",
       "description": "Verify that all 17 format parsers properly escape or sanitize HTML special characters in their toHtml() output. Inject XSS payloads including '<script>alert(1)</script>', '<img onerror=alert(1) src=x>', 'javascript:alert(1)', '<svg onload=alert(1)>', and attribute injection '\" onfocus=alert(1) autofocus=\"' into document content and verify none appear unescaped in the generated HTML.",
       "category": "security",
@@ -74,7 +74,7 @@
       "metrics": ["formats_tested", "payloads_per_format", "total_tests"]
     },
     {
-      "id": "yole-secdp-xss-css-injection",
+      "id": "example-secdp-xss-css-injection",
       "name": "CSS Injection Prevention in StyleSheets",
       "description": "Verify that StyleSheets.kt CSS generation does not allow CSS injection through format-controlled content or theme parameters. Test with payloads including 'expression(alert(1))', 'url(javascript:alert(1))', '-moz-binding', '@import url(evil.css)', and 'behavior:url(evil.htc)'. None must appear in generated CSS output.",
       "category": "security",
@@ -94,7 +94,7 @@
       "metrics": ["payloads_tested"]
     },
     {
-      "id": "yole-secdp-query-injection-gdrive",
+      "id": "example-secdp-query-injection-gdrive",
       "name": "Query Injection Prevention in Google Drive API",
       "description": "Verify that GoogleDriveService sanitizes API query strings by escaping single quotes, URL encoding, and JSON escaping. Test with payloads including SQL-like injection ('; DROP TABLE--'), single-quote escaping ('file' OR '1'='1'), and JSON injection ('{\"key\": \"value\"}') in file search and list operations.",
       "category": "security",
@@ -114,7 +114,7 @@
       "metrics": ["payloads_tested", "escaping_methods_verified"]
     },
     {
-      "id": "yole-secdp-query-injection-onedrive",
+      "id": "example-secdp-query-injection-onedrive",
       "name": "Query Injection Prevention in OneDrive API",
       "description": "Verify that OneDriveService sanitizes OData filter expressions and search queries. Test with OData injection ('$filter=true eq true'), path injection ('/me/drive/root:/etc/passwd'), and Unicode normalization attacks in file paths.",
       "category": "security",
@@ -134,7 +134,7 @@
       "metrics": ["payloads_tested"]
     },
     {
-      "id": "yole-secdp-query-injection-dropbox",
+      "id": "example-secdp-query-injection-dropbox",
       "name": "Query Injection Prevention in Dropbox API",
       "description": "Verify that DropboxService sanitizes JSON request bodies and path parameters. Test with JSON injection in file paths, path parameter pollution, and content-type confusion attacks.",
       "category": "security",
@@ -154,7 +154,7 @@
       "metrics": ["payloads_tested"]
     },
     {
-      "id": "yole-secdp-cancellation-rethrow",
+      "id": "example-secdp-cancellation-rethrow",
       "name": "CancellationException Rethrow in All Protocol Services",
       "description": "Verify that all catch blocks in all 8 protocol services (Dropbox, GoogleDrive, OneDrive, FTP, SFTP, SMB, WebDAV, S3) rethrow kotlin.coroutines.cancellation.CancellationException instead of swallowing it. Simulate coroutine cancellation during network operations and verify the exception propagates to the caller.",
       "category": "security",
@@ -176,7 +176,7 @@
       "metrics": ["services_tested", "catch_blocks_verified", "rethrows_confirmed"]
     },
     {
-      "id": "yole-secdp-credential-plaintext",
+      "id": "example-secdp-credential-plaintext",
       "name": "Credential Storage Plaintext Prevention",
       "description": "Scan the entire codebase for plaintext credentials, API keys, tokens, and secrets. Verify that AuthTokenManager uses SecureStorage from Security-KMP rather than plaintext SharedPreferences or file storage. Check that no hardcoded credentials exist in source files, test files, or configuration.",
       "category": "security",
@@ -198,11 +198,11 @@
       "metrics": ["files_scanned", "patterns_checked", "findings_count"]
     },
     {
-      "id": "yole-secdp-credential-logging",
+      "id": "example-secdp-credential-logging",
       "name": "Credential Leak Prevention in Logs",
       "description": "Verify that OAuth tokens, refresh tokens, API keys, and passwords are never written to application logs, crash reports, or debug output. Trigger authentication flows and network operations while capturing log output, then scan for leaked credentials.",
       "category": "security",
-      "dependencies": ["yole-secdp-credential-plaintext"],
+      "dependencies": ["example-secdp-credential-plaintext"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true},
@@ -219,7 +219,7 @@
       "metrics": ["log_lines_scanned", "patterns_checked"]
     },
     {
-      "id": "yole-secdp-https-enforcement",
+      "id": "example-secdp-https-enforcement",
       "name": "HTTPS Enforcement for Cloud Protocol Services",
       "description": "Verify that Dropbox, Google Drive, and OneDrive services enforce HTTPS for all API calls and reject HTTP. Check that base URLs use https://, that HTTP redirects are not followed to plain HTTP, and that mixed-content requests are blocked.",
       "category": "security",
@@ -241,11 +241,11 @@
       "metrics": ["protocols_tested", "urls_verified"]
     },
     {
-      "id": "yole-secdp-certificate-validation",
+      "id": "example-secdp-certificate-validation",
       "name": "TLS Certificate Validation",
       "description": "Verify that Ktor HTTP clients used by cloud protocol services perform proper TLS certificate validation. Check that self-signed certificates are rejected, expired certificates are rejected, hostname mismatches are detected, and certificate pinning is enforced where configured.",
       "category": "security",
-      "dependencies": ["yole-secdp-https-enforcement"],
+      "dependencies": ["example-secdp-https-enforcement"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "certificate_scenarios", "source": "config", "required": true},
@@ -262,7 +262,7 @@
       "metrics": ["scenarios_tested", "certificates_rejected"]
     },
     {
-      "id": "yole-secdp-input-sanitization-filenames",
+      "id": "example-secdp-input-sanitization-filenames",
       "name": "Input Sanitization for Filenames",
       "description": "Verify that filenames provided to protocol services are sanitized to remove dangerous characters including null bytes, control characters, path separators, shell metacharacters (;, |, &, $, `), and overly long names. Test across all 8 protocol services.",
       "category": "security",
@@ -285,7 +285,7 @@
       "metrics": ["payloads_tested", "protocols_tested"]
     },
     {
-      "id": "yole-secdp-input-sanitization-content",
+      "id": "example-secdp-input-sanitization-content",
       "name": "Input Sanitization for Document Content",
       "description": "Verify that document content containing control characters (except newline, tab, carriage return), BOM markers, right-to-left override characters (U+202E), and zero-width characters is handled safely by all 17 format parsers without producing malicious HTML output.",
       "category": "security",
@@ -308,7 +308,7 @@
       "metrics": ["payloads_tested", "formats_tested"]
     },
     {
-      "id": "yole-secdp-scope-lifecycle",
+      "id": "example-secdp-scope-lifecycle",
       "name": "CoroutineScope Lifecycle Safety",
       "description": "Verify that serviceScope in Dropbox, GoogleDrive, and OneDrive services is cancelled on reconnect and disconnect to prevent coroutine leaks. Simulate rapid connect/disconnect/reconnect cycles and verify no orphaned coroutines remain after disconnection.",
       "category": "security",
@@ -331,11 +331,11 @@
       "metrics": ["cycles_tested", "protocols_tested", "orphaned_count"]
     },
     {
-      "id": "yole-secdp-memory-disclosure",
+      "id": "example-secdp-memory-disclosure",
       "name": "Memory Disclosure Prevention",
       "description": "Verify that sensitive data (tokens, passwords, decrypted content) is cleared from memory after use and does not appear in heap dumps or toString() representations. Check that AuthTokenManager clears token buffers and that protocol service error messages do not leak sensitive data.",
       "category": "security",
-      "dependencies": ["yole-secdp-credential-plaintext"],
+      "dependencies": ["example-secdp-credential-plaintext"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true},

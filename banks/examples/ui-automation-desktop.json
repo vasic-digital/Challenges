@@ -1,28 +1,28 @@
 {
   "version": "1.0",
-  "name": "Yole Desktop UI Automation Challenges",
+  "name": "Example Desktop UI Automation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "ui-automation-desktop",
     "description": "Desktop Compose app UI automation flows with recording at three speed modes (slow, normal, fast)"
   },
   "challenges": [
     {
-      "id": "yole-ui-desktop-cold-start",
+      "id": "example-ui-desktop-cold-start",
       "name": "Desktop: App Cold Start and Initial Render",
       "description": "Launch the Compose Desktop app from a cold state, verify the main window renders with the file browser panel, editor area, and toolbar within acceptable time bounds at each speed mode.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-build-desktop-jar"],
+      "dependencies": ["example-build-desktop-jar"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "launch", "target": "java -jar desktopApp/build/compose/jars/Yole.jar", "value": "jar_path", "description": "Launch the Yole desktop application JAR via the JVM"},
+        {"action": "launch", "target": "java -jar desktopApp/build/compose/jars/Yole.jar", "value": "jar_path", "description": "Launch the Example desktop application JAR via the JVM"},
         {"action": "wait", "target": "window", "value": "Yole", "description": "Wait for the main window titled 'Yole' to appear on screen"},
         {"action": "verify", "target": "title_bar", "value": "Yole", "description": "Verify the window title bar displays 'Yole'"},
         {"action": "verify", "target": "nav_buttons", "value": "Files,Todo,QuickNote,Settings", "description": "Verify all four navigation buttons are present in the sidebar"},
@@ -47,17 +47,17 @@
       "metrics": ["cold_start_time_ms", "window_render_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-file-browser-navigation",
+      "id": "example-ui-desktop-file-browser-navigation",
       "name": "Desktop: File Browser Navigation",
       "description": "Create a new folder in the file browser, navigate into it, navigate back out, and verify the breadcrumb trail and folder listing update correctly at each speed mode.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true},
         {"name": "folder_name", "source": "config", "required": true}
       ],
@@ -91,17 +91,17 @@
       "metrics": ["folder_create_time_ms", "navigation_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-create-markdown",
+      "id": "example-ui-desktop-create-markdown",
       "name": "Desktop: Create Markdown Document",
       "description": "Create a new Markdown document, type real content including headings, bold text, a list, and a code block. Save the file and verify the content persists across a reload.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "4m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true},
         {"name": "file_name", "source": "config", "required": true}
       ],
@@ -139,17 +139,17 @@
       "metrics": ["file_create_time_ms", "save_time_ms", "reopen_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-create-todotxt",
+      "id": "example-ui-desktop-create-todotxt",
       "name": "Desktop: Create Todo.txt Document",
       "description": "Create a new todo.txt file, enter tasks with priorities, projects, and contexts. Verify task parsing, priority highlighting, and sort order.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
@@ -158,17 +158,17 @@
         {"action": "type", "target": "file_name_dialog", "value": "tasks.todo", "description": "Type 'tasks.todo' as the filename"},
         {"action": "keyboard", "target": "file_name_dialog", "value": "Enter", "description": "Press Enter to confirm file creation with the .todo extension"},
         {"action": "wait", "target": "editor_area", "value": "empty_ready", "description": "Wait for the empty editor to become active with todo.txt format detected"},
-        {"action": "type", "target": "editor_area", "value": "(A) Write UI automation tests +yole @dev due:2026-03-20", "description": "Type a priority-A task with project, context, and due date"},
+        {"action": "type", "target": "editor_area", "value": "(A) Write UI automation tests +example @dev due:2026-03-20", "description": "Type a priority-A task with project, context, and due date"},
         {"action": "keyboard", "target": "editor_area", "value": "Enter", "description": "Press Enter to move to the next line"},
-        {"action": "type", "target": "editor_area", "value": "(B) Review pull request +yole @review", "description": "Type a priority-B task with project and context tags"},
+        {"action": "type", "target": "editor_area", "value": "(B) Review pull request +example @review", "description": "Type a priority-B task with project and context tags"},
         {"action": "keyboard", "target": "editor_area", "value": "Enter", "description": "Press Enter to move to the next line"},
-        {"action": "type", "target": "editor_area", "value": "(C) Update documentation +yole @docs", "description": "Type a priority-C task"},
+        {"action": "type", "target": "editor_area", "value": "(C) Update documentation +example @docs", "description": "Type a priority-C task"},
         {"action": "keyboard", "target": "editor_area", "value": "Enter", "description": "Press Enter to move to the next line"},
-        {"action": "type", "target": "editor_area", "value": "x 2026-03-15 Complete challenge banks +yole @dev", "description": "Type a completed task with completion date and the 'x' prefix"},
+        {"action": "type", "target": "editor_area", "value": "x 2026-03-15 Complete challenge banks +example @dev", "description": "Type a completed task with completion date and the 'x' prefix"},
         {"action": "keyboard", "target": "Ctrl+S", "value": "save", "description": "Press Ctrl+S to save the todo.txt file"},
         {"action": "verify", "target": "priority_highlight_A", "value": "visible", "description": "Verify priority (A) task is highlighted with the highest priority color"},
         {"action": "verify", "target": "priority_highlight_B", "value": "visible", "description": "Verify priority (B) task is highlighted with medium priority color"},
-        {"action": "verify", "target": "project_tag_yole", "value": "highlighted", "description": "Verify the +yole project tag is syntax-highlighted"},
+        {"action": "verify", "target": "project_tag_example", "value": "highlighted", "description": "Verify the +example project tag is syntax-highlighted"},
         {"action": "verify", "target": "context_tag_dev", "value": "highlighted", "description": "Verify the @dev context tag is syntax-highlighted"},
         {"action": "verify", "target": "completed_task_indicator", "value": "strikethrough", "description": "Verify the completed task is shown with strikethrough or dimmed styling"},
         {"action": "screenshot", "target": "todotxt_editor", "value": "todotxt_created.png", "description": "Capture a screenshot of the todo.txt editor with parsed and highlighted tasks"}
@@ -187,17 +187,17 @@
       "metrics": ["file_create_time_ms", "parse_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-edit-existing",
+      "id": "example-ui-desktop-edit-existing",
       "name": "Desktop: Edit Existing Document",
       "description": "Open an existing document from the file browser, modify content by adding and removing lines, save changes, and verify modifications persist.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "dependencies": ["example-ui-desktop-create-markdown"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true},
         {"name": "test_file", "source": "config", "required": true}
       ],
@@ -231,17 +231,17 @@
       "metrics": ["file_open_time_ms", "save_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-theme-switching",
+      "id": "example-ui-desktop-theme-switching",
       "name": "Desktop: Theme Switching (Light, Dark, System)",
       "description": "Switch between Light, Dark, and System themes via the settings panel. Verify background color, text color, and syntax highlighting colors change at each switch.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
@@ -275,17 +275,17 @@
       "metrics": ["theme_switch_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-settings-toggles",
+      "id": "example-ui-desktop-settings-toggles",
       "name": "Desktop: Settings Toggles (Line Numbers, Auto-Save, Animations)",
       "description": "Toggle line numbers, auto-save, and animations settings. Verify each toggle takes immediate effect in the editor UI.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
@@ -323,17 +323,17 @@
       "metrics": ["toggle_response_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-preview-mode",
+      "id": "example-ui-desktop-preview-mode",
       "name": "Desktop: Preview Mode Toggle",
       "description": "Open a Markdown document, switch from editor to preview mode, verify rendered HTML output, switch back to editor, and verify content is intact.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "dependencies": ["example-ui-desktop-create-markdown"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true},
         {"name": "test_file", "source": "config", "required": true}
       ],
@@ -367,17 +367,17 @@
       "metrics": ["preview_render_time_ms", "mode_switch_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-keyboard-shortcuts",
+      "id": "example-ui-desktop-keyboard-shortcuts",
       "name": "Desktop: Keyboard Shortcuts",
       "description": "Test all primary keyboard shortcuts: Ctrl+N (new file), Ctrl+O (open file), Ctrl+S (save), and Ctrl+Z (undo). Verify each shortcut triggers the correct action.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
@@ -415,17 +415,17 @@
       "metrics": ["shortcut_response_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-navigation-paths",
+      "id": "example-ui-desktop-navigation-paths",
       "name": "Desktop: All Navigation Paths",
       "description": "Navigate through all top-level navigation destinations: Files, Todo, QuickNote, and Settings. Verify each view renders its expected content.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
@@ -465,17 +465,17 @@
       "metrics": ["nav_transition_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-format-info-dialog",
+      "id": "example-ui-desktop-format-info-dialog",
       "name": "Desktop: Format Info Dialog",
       "description": "Open a file in a recognized format, open the format info dialog, and verify it displays the correct format name, supported extensions, and feature list.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-create-markdown"],
+      "dependencies": ["example-ui-desktop-create-markdown"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true},
         {"name": "test_file", "source": "config", "required": true}
       ],
@@ -507,17 +507,17 @@
       "metrics": ["dialog_open_time_ms"]
     },
     {
-      "id": "yole-ui-desktop-window-resize",
+      "id": "example-ui-desktop-window-resize",
       "name": "Desktop: Window Resize and Layout Adaptation",
       "description": "Resize the application window to small, medium, and large sizes. Verify that the layout adapts correctly, the file browser collapses on small widths, and all content remains accessible.",
       "category": "ui-automation",
       "platform": "desktop",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-desktop-cold-start"],
+      "dependencies": ["example-ui-desktop-cold-start"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [

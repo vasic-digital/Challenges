@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Cross-Platform Build Challenges",
+  "name": "Example Cross-Platform Build Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "cross-platform-build",
     "description": "Challenges validating Kotlin Multiplatform builds across Android, Desktop, iOS, and Web targets"
   },
   "challenges": [
     {
-      "id": "yole-build-shared-compile",
+      "id": "example-build-shared-compile",
       "name": "Shared Module Compilation",
       "description": "Verify shared KMP module compiles for all targets (commonMain, androidMain, desktopMain, iosMain, wasmJsMain)",
       "category": "build",
@@ -29,11 +29,11 @@
       "metrics": ["compile_time_seconds", "class_count"]
     },
     {
-      "id": "yole-build-android-debug",
+      "id": "example-build-android-debug",
       "name": "Android Debug Build",
       "description": "Verify Android app assembles debug APK with all dependencies resolved",
       "category": "build",
-      "dependencies": ["yole-build-shared-compile"],
+      "dependencies": ["example-build-shared-compile"],
       "estimated_duration": "8m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true},
@@ -51,11 +51,11 @@
       "metrics": ["build_time_seconds", "apk_size_bytes", "method_count"]
     },
     {
-      "id": "yole-build-desktop-jar",
+      "id": "example-build-desktop-jar",
       "name": "Desktop JAR Build",
       "description": "Verify Desktop (JVM) app compiles and produces runnable JAR",
       "category": "build",
-      "dependencies": ["yole-build-shared-compile"],
+      "dependencies": ["example-build-shared-compile"],
       "estimated_duration": "5m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
@@ -71,11 +71,11 @@
       "metrics": ["build_time_seconds", "jar_size_bytes"]
     },
     {
-      "id": "yole-build-web-wasm",
+      "id": "example-build-web-wasm",
       "name": "Web/Wasm Build",
       "description": "Verify Wasm/JS web app compiles and produces browser-runnable output",
       "category": "build",
-      "dependencies": ["yole-build-shared-compile"],
+      "dependencies": ["example-build-shared-compile"],
       "estimated_duration": "5m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
@@ -90,11 +90,11 @@
       "metrics": ["build_time_seconds", "wasm_size_bytes"]
     },
     {
-      "id": "yole-build-android-lint",
+      "id": "example-build-android-lint",
       "name": "Android Lint Check",
       "description": "Run Android lint on flavorDefaultDebug and verify no critical issues",
       "category": "build",
-      "dependencies": ["yole-build-android-debug"],
+      "dependencies": ["example-build-android-debug"],
       "estimated_duration": "3m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}

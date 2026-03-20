@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Concurrency Safety Validation Challenges",
+  "name": "Example Concurrency Safety Validation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "concurrency-safety-validation",
     "description": "Challenges validating concurrency safety patterns introduced in the comprehensive audit: AtomicBoolean/Volatile for connection state, Mutex-based helpers, StateFlow atomic emissions, Flow cancellation safety, lazy httpClient initialization, and synchronized cache access"
   },
   "challenges": [
     {
-      "id": "yole-csv-atomic-isconnected",
+      "id": "example-csv-atomic-isconnected",
       "name": "AtomicBoolean/Volatile _isConnected in Protocol Services",
       "description": "Verify that _isConnected in all 8 protocol services (Dropbox, GoogleDrive, OneDrive, FTP, SFTP, SMB, WebDAV, S3) uses AtomicBoolean or @Volatile annotation to prevent torn reads under concurrent access. Simulate 100 coroutines reading isConnected while another coroutine toggles connect/disconnect, and verify no stale or inconsistent values are observed.",
       "category": "concurrency",
@@ -32,11 +32,11 @@
       "metrics": ["services_tested", "reader_coroutines", "toggle_cycles", "torn_read_count"]
     },
     {
-      "id": "yole-csv-mutex-isconnected-helper",
+      "id": "example-csv-mutex-isconnected-helper",
       "name": "Mutex-Based isConnected() Helper Consistency",
       "description": "Verify that the Mutex-guarded isConnected() helper method in protocol services returns a consistent snapshot of connection state even when connect() and disconnect() are called concurrently. Run 50 coroutines calling isConnected() in a tight loop while 10 coroutines call connect() and disconnect() randomly, and verify that isConnected() never returns true after a successful disconnect() completes.",
       "category": "concurrency",
-      "dependencies": ["yole-csv-atomic-isconnected"],
+      "dependencies": ["example-csv-atomic-isconnected"],
       "estimated_duration": "40s",
       "inputs": [
         {"name": "reader_coroutines", "source": "config", "required": true},
@@ -57,7 +57,7 @@
       "metrics": ["total_reads", "total_transitions", "inconsistency_count", "avg_read_latency_ns"]
     },
     {
-      "id": "yole-csv-stateflow-atomic-update",
+      "id": "example-csv-stateflow-atomic-update",
       "name": "StateFlow.update{} Atomic Emission Safety",
       "description": "Verify that StateFlow emissions in protocol services use the update{} operator for atomic read-modify-write instead of direct .value assignment. Simulate 200 coroutines concurrently incrementing a counter via StateFlow and verify no lost updates. Additionally, statically verify that source code uses StateFlow.update{} rather than StateFlow.value = pattern for state mutations.",
       "category": "concurrency",
@@ -80,7 +80,7 @@
       "metrics": ["coroutines_run", "total_increments", "lost_update_count", "total_time_ms"]
     },
     {
-      "id": "yole-csv-flow-cancellation-safety",
+      "id": "example-csv-flow-cancellation-safety",
       "name": "Flow Cancellation Safety with ensureActive()",
       "description": "Verify that all Flow producers in protocol services call ensureActive() or check isActive before emit() to handle structured concurrency cancellation correctly. Cancel a Flow collector mid-stream in Dropbox getRecentChanges(), GoogleDrive getRecentChanges(), and OneDrive getRecentChanges(), and verify that CancellationException propagates cleanly without being swallowed by catch blocks.",
       "category": "concurrency",
@@ -103,7 +103,7 @@
       "metrics": ["services_tested", "items_emitted_before_cancel", "cancellation_propagation_time_ms"]
     },
     {
-      "id": "yole-csv-lazy-httpclient-init",
+      "id": "example-csv-lazy-httpclient-init",
       "name": "Lazy httpClient Initialization with isInitialized()",
       "description": "Verify that httpClient in protocol services uses lazy {} initialization and checks ::httpClient.isInitialized() before close() to avoid UninitializedPropertyAccessException. Simulate calling disconnect() on a service that was never connected (httpClient never initialized) and verify no exception is thrown. Also verify that httpClient is initialized only on first connect(), not at construction time.",
       "category": "concurrency",
@@ -126,11 +126,11 @@
       "metrics": ["services_tested", "exceptions_thrown", "lazy_init_confirmed"]
     },
     {
-      "id": "yole-csv-synchronized-cache-access",
+      "id": "example-csv-synchronized-cache-access",
       "name": "Synchronized Cache Access in DocumentCache and StyleSheets",
       "description": "Verify that concurrent access to DocumentCache and StyleSheets.styleSheetCache is thread-safe. Run 100 coroutines simultaneously performing get/put on DocumentCache and 100 coroutines calling getStyleSheet() on StyleSheets with varying theme parameters. Verify no ConcurrentModificationException, no corrupted entries, and that cache hit/miss counts are consistent.",
       "category": "concurrency",
-      "dependencies": ["yole-csv-atomic-isconnected"],
+      "dependencies": ["example-csv-atomic-isconnected"],
       "estimated_duration": "50s",
       "inputs": [
         {"name": "cache_reader_coroutines", "source": "config", "required": true},

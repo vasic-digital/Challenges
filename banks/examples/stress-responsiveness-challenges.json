@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Stress Responsiveness Challenges",
+  "name": "Example Stress Responsiveness Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "stress-responsiveness",
     "description": "Challenges validating system responsiveness under stress conditions including concurrent parsing latency, FormatRegistry initialization under contention, cache overflow handling, rate limiter saturation recovery, non-blocking operation guarantees, connection pool exhaustion behavior, and coroutine scope stress across all protocol services and format parsers"
   },
   "challenges": [
     {
-      "id": "yole-stress-concurrent-parsing-latency",
+      "id": "example-stress-concurrent-parsing-latency",
       "name": "Concurrent Parsing Latency Under Load",
       "description": "Verify that parsing latency for all 17 formats remains within acceptable bounds when 50 concurrent parse requests are active simultaneously. Measure p50, p95, and p99 latency for each format. P95 latency must not exceed 5x the single-threaded baseline. No parse request may time out or fail due to resource contention.",
       "category": "stress",
@@ -32,11 +32,11 @@
       "metrics": ["formats_tested", "avg_p50_ms", "avg_p95_ms", "max_p99_ms", "total_requests"]
     },
     {
-      "id": "yole-stress-concurrent-parsing-fairness",
+      "id": "example-stress-concurrent-parsing-fairness",
       "name": "Concurrent Parsing Fairness Across Formats",
       "description": "Verify that no single format parser starves other parsers under concurrent load. Submit equal numbers of parse requests for all 17 formats simultaneously and verify that completion times are within 3x of each other. A heavyweight format (LaTeX) should not block lightweight formats (plaintext) from completing promptly.",
       "category": "stress",
-      "dependencies": ["yole-stress-concurrent-parsing-latency"],
+      "dependencies": ["example-stress-concurrent-parsing-latency"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "requests_per_format", "source": "config", "required": true},
@@ -56,7 +56,7 @@
       "metrics": ["fastest_format_ms", "slowest_format_ms", "actual_fairness_ratio"]
     },
     {
-      "id": "yole-stress-registry-init-contention",
+      "id": "example-stress-registry-init-contention",
       "name": "FormatRegistry Initialization Under Contention",
       "description": "Verify that FormatRegistry lazy initialization is thread-safe when 100 concurrent coroutines access the formats list simultaneously during first initialization. Only one initialization must occur (no duplicate work). All coroutines must receive the same fully-initialized format list. The lazy delegate must not deadlock or throw ConcurrentModificationException.",
       "category": "stress",
@@ -80,7 +80,7 @@
       "metrics": ["coroutines_tested", "init_duration_ms", "contention_wait_ms"]
     },
     {
-      "id": "yole-stress-cache-overflow-handling",
+      "id": "example-stress-cache-overflow-handling",
       "name": "DocumentCache Overflow Under Rapid Insertion",
       "description": "Verify that DocumentCache handles rapid insertion beyond its maximum capacity without data corruption, deadlocks, or memory leaks. Insert 10x the cache capacity in rapid succession from 20 concurrent coroutines. The cache size must never exceed the configured maximum. All cache operations must return valid results without throwing exceptions.",
       "category": "stress",
@@ -105,11 +105,11 @@
       "metrics": ["total_insertions", "evictions_triggered", "max_size_observed", "concurrent_writers"]
     },
     {
-      "id": "yole-stress-cache-concurrent-read-write",
+      "id": "example-stress-cache-concurrent-read-write",
       "name": "DocumentCache Concurrent Read-Write Consistency",
       "description": "Verify that DocumentCache maintains read-write consistency when simultaneous reads and writes target the same cache keys. Launch 10 writer coroutines and 40 reader coroutines operating on overlapping key sets. Readers must never observe partially written entries or stale data after a write completes. No ConcurrentModificationException may occur.",
       "category": "stress",
-      "dependencies": ["yole-stress-cache-overflow-handling"],
+      "dependencies": ["example-stress-cache-overflow-handling"],
       "estimated_duration": "35s",
       "inputs": [
         {"name": "writer_count", "source": "config", "required": true},
@@ -130,7 +130,7 @@
       "metrics": ["total_reads", "total_writes", "consistency_violations"]
     },
     {
-      "id": "yole-stress-rate-limiter-saturation-recovery",
+      "id": "example-stress-rate-limiter-saturation-recovery",
       "name": "RateLimiter Saturation and Recovery",
       "description": "Verify that RateLimiter recovers gracefully after saturation. Saturate the TokenBucket by sending requests at 10x the configured rate for 5 seconds, then reduce to normal rate and verify recovery within 2 seconds. During saturation, excess requests must be throttled (not dropped or errored). After recovery, throughput must return to the configured rate within tolerance.",
       "category": "stress",
@@ -155,7 +155,7 @@
       "metrics": ["requests_throttled", "recovery_time_ms", "peak_queue_depth"]
     },
     {
-      "id": "yole-stress-nonblocking-guarantees",
+      "id": "example-stress-nonblocking-guarantees",
       "name": "Non-Blocking Operation Guarantees",
       "description": "Verify that all public API methods on FormatRegistry, DocumentCache, and StyleSheets complete without blocking the calling coroutine's thread. Measure wall-clock time vs suspend time for each operation. No operation may block a thread for more than 10ms (excluding actual computation). Verify that suspending operations properly yield to the dispatcher.",
       "category": "stress",
@@ -178,11 +178,11 @@
       "metrics": ["operations_tested", "max_block_time_ms", "avg_suspend_time_ms"]
     },
     {
-      "id": "yole-stress-nonblocking-dispatcher-yield",
+      "id": "example-stress-nonblocking-dispatcher-yield",
       "name": "Dispatcher Yield Verification Under Load",
       "description": "Verify that long-running format parsing operations properly yield to the coroutine dispatcher. Parse a large document (100KB) on a single-threaded dispatcher while also scheduling 10 other lightweight coroutines. The lightweight coroutines must make progress (not starved) during the long parse. Cooperative cancellation via yield() must be verified.",
       "category": "stress",
-      "dependencies": ["yole-stress-nonblocking-guarantees"],
+      "dependencies": ["example-stress-nonblocking-guarantees"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "large_document_size_kb", "source": "config", "required": true},
@@ -202,7 +202,7 @@
       "metrics": ["parse_duration_ms", "min_lightweight_progress_pct", "cancellation_delay_ms"]
     },
     {
-      "id": "yole-stress-connection-pool-exhaustion",
+      "id": "example-stress-connection-pool-exhaustion",
       "name": "Connection Pool Exhaustion Handling",
       "description": "Verify that protocol services handle connection pool exhaustion gracefully when ConnectionLimiter reaches its maximum. Exhaust all permits in the ConnectionLimiter and then issue 50 additional requests. The additional requests must queue and eventually complete (not fail with exceptions). Queue timeout must be configurable and requests exceeding the timeout must fail with a clear error message.",
       "category": "stress",
@@ -227,7 +227,7 @@
       "metrics": ["requests_queued", "requests_completed", "requests_timed_out", "max_wait_time_ms"]
     },
     {
-      "id": "yole-stress-rapid-reconnect-cycles",
+      "id": "example-stress-rapid-reconnect-cycles",
       "name": "Rapid Connect/Disconnect Cycle Stress",
       "description": "Verify that protocol services handle 100 rapid connect/disconnect cycles without resource leaks, orphaned coroutines, or state corruption. After all cycles complete, verify that serviceScope is properly cancelled, no background coroutines are running, and the service can accept new connections normally. Memory usage must not grow unboundedly across cycles.",
       "category": "stress",
@@ -251,7 +251,7 @@
       "metrics": ["cycles_completed", "protocols_tested", "max_memory_growth_pct", "cleanup_time_ms"]
     },
     {
-      "id": "yole-stress-large-document-memory-pressure",
+      "id": "example-stress-large-document-memory-pressure",
       "name": "Large Document Parsing Under Memory Pressure",
       "description": "Verify that parsing very large documents (1MB, 5MB, 10MB) does not cause OutOfMemoryError or excessive GC pauses. Parse large documents for each of the 17 formats and measure peak memory usage and GC pause times. Peak memory during parsing must not exceed 10x the document size. The parser must not hang or become unresponsive on any large input.",
       "category": "stress",

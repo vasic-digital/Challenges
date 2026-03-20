@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Monitoring Challenges",
+  "name": "Example Monitoring Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "monitoring",
     "description": "Challenges validating metrics collection, performance baselines, memory tracking, cache monitoring, and error rate observability"
   },
   "challenges": [
     {
-      "id": "yole-mon-metrics-collection-accuracy",
+      "id": "example-mon-metrics-collection-accuracy",
       "name": "Metrics Collection Accuracy",
       "description": "Verify that ParserRegistry instantiation counts, lazy-loading statistics, and parse timing metrics are collected accurately. After registering parsers lazily and accessing a subset, getInstantiatedParserCount() and getPendingParserCount() must reflect the exact state.",
       "category": "monitoring",
@@ -32,7 +32,7 @@
       "metrics": ["instantiated_count", "pending_count", "total_registered", "access_time_ms"]
     },
     {
-      "id": "yole-mon-performance-baseline",
+      "id": "example-mon-performance-baseline",
       "name": "Performance Baseline Validation",
       "description": "Establish and validate performance baselines for all 17 format parsers. Each parser must parse a representative document within a defined time budget. Measure parse time, HTML generation time, and total pipeline time for each format.",
       "category": "monitoring",
@@ -58,11 +58,11 @@
       "metrics": ["avg_parse_ms", "avg_html_ms", "max_parse_ms", "max_html_ms", "total_pipeline_ms"]
     },
     {
-      "id": "yole-mon-memory-usage-tracking",
+      "id": "example-mon-memory-usage-tracking",
       "name": "Memory Usage Tracking",
       "description": "Track memory usage during document parsing and HTML generation. Parse 1000 documents of varying sizes, measure memory before and after, and verify that memory is reclaimed after clearing HTML caches via clearHtmlCache().",
       "category": "monitoring",
-      "dependencies": ["yole-mon-performance-baseline"],
+      "dependencies": ["example-mon-performance-baseline"],
       "estimated_duration": "90s",
       "inputs": [
         {"name": "document_count", "source": "config", "required": true},
@@ -84,7 +84,7 @@
       "metrics": ["memory_delta_parse_bytes", "memory_delta_html_bytes", "memory_reclaimed_bytes", "gc_count"]
     },
     {
-      "id": "yole-mon-cache-hit-rate",
+      "id": "example-mon-cache-hit-rate",
       "name": "Cache Hit Rate Monitoring",
       "description": "Verify that ParsedDocument HTML caching achieves expected hit rates. After the first toHtml() call, subsequent calls must return cached HTML. Measure cache hit rate across 1000 toHtml() calls on 100 documents with mixed light/dark modes.",
       "category": "monitoring",
@@ -108,7 +108,7 @@
       "metrics": ["hit_rate_percent", "avg_cache_hit_time_ns", "avg_cache_miss_time_ns", "speedup_factor"]
     },
     {
-      "id": "yole-mon-error-rate-monitoring",
+      "id": "example-mon-error-rate-monitoring",
       "name": "Error Rate Monitoring",
       "description": "Verify that parse errors are correctly tracked and reported. Feed a mix of valid and intentionally malformed documents to all parsers and verify that error counts match expectations. Validate that ParsedDocument.errors accurately reflects all parse issues.",
       "category": "monitoring",

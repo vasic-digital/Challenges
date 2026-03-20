@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Performance Challenges",
+  "name": "Example Performance Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "performance",
     "description": "Challenges validating parser performance, memory usage, and scalability"
   },
   "challenges": [
     {
-      "id": "yole-perf-markdown-large",
+      "id": "example-perf-markdown-large",
       "name": "Markdown Large Document Performance",
       "description": "Parse a 100KB+ Markdown document and verify parse time stays under threshold",
       "category": "performance",
@@ -27,7 +27,7 @@
       "metrics": ["parse_time_ms", "html_size_bytes", "memory_used_mb"]
     },
     {
-      "id": "yole-perf-csv-large",
+      "id": "example-perf-csv-large",
       "name": "CSV Large Dataset Performance",
       "description": "Parse a 10000-row CSV file and verify parse time and memory stay under thresholds",
       "category": "performance",
@@ -47,7 +47,7 @@
       "metrics": ["parse_time_ms", "row_count", "memory_used_mb"]
     },
     {
-      "id": "yole-perf-format-detection",
+      "id": "example-perf-format-detection",
       "name": "Format Detection Speed",
       "description": "Run format detection across 100 sample documents and verify average detection time",
       "category": "performance",
@@ -67,7 +67,7 @@
       "metrics": ["avg_detection_ms", "max_detection_ms"]
     },
     {
-      "id": "yole-perf-html-cache",
+      "id": "example-perf-html-cache",
       "name": "HTML Cache Effectiveness",
       "description": "Verify ParsedDocument HTML cache: first call generates, subsequent calls return cached (100x speedup expected)",
       "category": "performance",
@@ -86,7 +86,7 @@
       "metrics": ["first_call_ms", "cached_call_ms", "speedup_factor"]
     },
     {
-      "id": "yole-perf-concurrent-parse",
+      "id": "example-perf-concurrent-parse",
       "name": "Concurrent Parsing Performance",
       "description": "Parse 50 documents concurrently across multiple formats and verify no deadlocks or data races",
       "category": "performance",
@@ -107,7 +107,7 @@
       "metrics": ["total_time_ms", "avg_per_doc_ms"]
     },
     {
-      "id": "yole-perf-registry-lookup",
+      "id": "example-perf-registry-lookup",
       "name": "FormatRegistry Lookup Performance",
       "description": "Benchmark FormatRegistry lookups: getById, getByExtension, detectByExtension (10000 iterations)",
       "category": "performance",
@@ -127,7 +127,7 @@
       "metrics": ["getById_avg_ns", "getByExtension_avg_ns", "detectByExtension_avg_ns"]
     },
     {
-      "id": "yole-perf-lazy-loading",
+      "id": "example-perf-lazy-loading",
       "name": "Lazy Parser Loading Performance",
       "description": "Verify ParserInitializer lazy-loaded parsers initialize on first use with minimal startup cost",
       "category": "performance",

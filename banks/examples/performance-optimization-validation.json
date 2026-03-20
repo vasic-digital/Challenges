@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Performance Optimization Validation Challenges",
+  "name": "Example Performance Optimization Validation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "performance-optimization-validation",
     "description": "Challenges validating performance optimizations introduced in the comprehensive audit: FormatRegistry lazy initialization, StyleSheets cache effectiveness, DocumentCache hit rates, Semaphore-controlled concurrent parsing, non-blocking I/O verification, and parse time budgets per format"
   },
   "challenges": [
     {
-      "id": "yole-pov-format-registry-lazy-init",
+      "id": "example-pov-format-registry-lazy-init",
       "name": "FormatRegistry Lazy Initialization Verification",
       "description": "Verify that FormatRegistry.formats uses lazy { createFormats() } and does not initialize until first access. Check that isFormatsInitialized returns false before any format lookup, true after the first lookup. Measure the time from application startup to first format access and verify that no format parsing objects are created during static initialization.",
       "category": "performance",
@@ -31,7 +31,7 @@
       "metrics": ["lazy_init_time_ms", "formats_loaded_count"]
     },
     {
-      "id": "yole-pov-stylesheets-cache-effectiveness",
+      "id": "example-pov-stylesheets-cache-effectiveness",
       "name": "StyleSheets Cache Effectiveness",
       "description": "Verify that StyleSheets.styleSheetCache returns cached CSS on repeated calls with the same theme parameters. Measure first-call vs cached-call latency for both light and dark themes. Verify that clearCache() invalidates all entries and that subsequent calls regenerate CSS. Target: at least 50x speedup on cached calls.",
       "category": "performance",
@@ -56,11 +56,11 @@
       "metrics": ["first_call_avg_ms", "cached_call_avg_ms", "cache_speedup_factor", "themes_tested"]
     },
     {
-      "id": "yole-pov-document-cache-hit-rates",
+      "id": "example-pov-document-cache-hit-rates",
       "name": "DocumentCache Hit Rate Under Realistic Workload",
       "description": "Simulate a realistic editing workload against DocumentCache: parse 20 unique documents, then re-parse them in a Zipf-distributed access pattern (some documents accessed far more often than others) for 1000 total operations. Verify hit rate exceeds 80%, that LRU eviction works correctly when cache is full, and that hit/miss counters are accurate.",
       "category": "performance",
-      "dependencies": ["yole-pov-format-registry-lazy-init"],
+      "dependencies": ["example-pov-format-registry-lazy-init"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "unique_documents", "source": "config", "required": true},
@@ -83,11 +83,11 @@
       "metrics": ["cache_hit_rate", "total_hits", "total_misses", "lru_evictions", "avg_hit_latency_ns", "avg_miss_latency_ns"]
     },
     {
-      "id": "yole-pov-semaphore-concurrent-parsing",
+      "id": "example-pov-semaphore-concurrent-parsing",
       "name": "Semaphore-Controlled Concurrent Parsing (parseWithCacheConcurrent)",
       "description": "Verify that parseWithCacheConcurrent uses a Semaphore to limit concurrent parse operations and prevent resource exhaustion. Launch 50 concurrent parse requests and verify that at most N (the Semaphore permit count) are executing simultaneously. Measure throughput and verify no OOM or thread pool exhaustion occurs. Verify that requests beyond the Semaphore limit are queued, not rejected.",
       "category": "performance",
-      "dependencies": ["yole-pov-document-cache-hit-rates"],
+      "dependencies": ["example-pov-document-cache-hit-rates"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "concurrent_requests", "source": "config", "required": true},
@@ -111,7 +111,7 @@
       "metrics": ["max_concurrent_observed", "total_time_ms", "throughput_docs_per_sec", "queued_requests", "avg_wait_time_ms"]
     },
     {
-      "id": "yole-pov-nonblocking-io-verification",
+      "id": "example-pov-nonblocking-io-verification",
       "name": "Non-Blocking I/O Verification for Protocol Services",
       "description": "Verify that file read/write operations in all 8 protocol services use non-blocking I/O (withContext(Dispatchers.IO) or equivalent) and do not block the main/calling coroutine dispatcher. Launch file operations on the Default dispatcher and verify that the dispatcher thread pool is not starved by measuring concurrent non-I/O task latency during file operations.",
       "category": "performance",
@@ -137,11 +137,11 @@
       "metrics": ["non_io_task_latency_ms", "services_tested", "io_operations_completed"]
     },
     {
-      "id": "yole-pov-parse-time-budgets",
+      "id": "example-pov-parse-time-budgets",
       "name": "Parse Time Budgets Per Format",
       "description": "Verify that each of the 17 format parsers meets its parse time budget for standard-size documents. Budgets: Markdown 200ms (10KB), CSV 300ms (5000 rows), LaTeX 250ms (10KB), TodoTxt 100ms (500 items), OrgMode 200ms (10KB), WikiText 200ms (10KB), AsciiDoc 250ms (10KB), RST 200ms (10KB), Textile 150ms (5KB), Creole 150ms (5KB), BibTeX 200ms (5KB), JSON 100ms (50KB), XML 150ms (50KB), YAML 150ms (10KB), Properties 50ms (1000 lines), INI 50ms (500 sections), TOML 150ms (10KB). Run each parser 10 times and report p50 and p99.",
       "category": "performance",
-      "dependencies": ["yole-pov-format-registry-lazy-init"],
+      "dependencies": ["example-pov-format-registry-lazy-init"],
       "estimated_duration": "90s",
       "inputs": [
         {"name": "format_budgets", "source": "config", "required": true},
