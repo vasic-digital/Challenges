@@ -59,7 +59,7 @@ func WithTokenField(field string) ClientOption {
 }
 
 // WithTokenHeader overrides the header name used to send the token
-// (e.g., "X-Access-Token" for Bear Messenger).
+// (e.g., "X-Access-Token" for custom authentication).
 func WithTokenHeader(header string) ClientOption {
 	return func(c *APIClient) { c.tokenHeader = header }
 }

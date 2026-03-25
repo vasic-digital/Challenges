@@ -33,7 +33,7 @@ type ServiceConfig struct {
 	Timeout  time.Duration
 }
 
-// DefaultServices returns the default Bear Messenger services.
+// DefaultServices returns the default example services.
 func DefaultServices() []ServiceConfig {
 	return []ServiceConfig{
 		{
