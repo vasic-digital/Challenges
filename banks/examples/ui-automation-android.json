@@ -1,31 +1,31 @@
 {
   "version": "1.0",
-  "name": "Yole Android UI Automation Challenges",
+  "name": "Example Android UI Automation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "ui-automation-android",
     "description": "Android app UI automation flows via ADB with recording at three speed modes (slow, normal, fast)"
   },
   "challenges": [
     {
-      "id": "yole-ui-android-app-launch",
+      "id": "example-ui-android-app-launch",
       "name": "Android: App Launch from Launcher",
-      "description": "Launch the Yole Android app from the device launcher, verify the splash screen displays, the main activity starts, and the bottom navigation bar renders within acceptable time bounds at each speed mode.",
+      "description": "Launch the Example Android app from the device launcher, verify the splash screen displays, the main activity starts, and the bottom navigation bar renders within acceptable time bounds at each speed mode.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileLaunchChallenge",
-      "dependencies": ["yole-build-android-debug"],
+      "dependencies": ["example-build-android-debug"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
-        {"name": "apk_path", "source": "dependency:yole-build-android-debug", "required": true},
+        {"name": "apk_path", "source": "dependency:example-build-android-debug", "required": true},
         {"name": "test_device", "source": "env", "required": true},
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
         {"action": "keyboard", "target": "adb install -r {{apk_path}}", "value": "{{apk_path}}", "description": "Install the debug APK on the connected device/emulator via ADB"},
-        {"action": "verify", "target": "adb shell pm list packages | grep digital.vasic.yole", "value": "package found", "description": "Verify the package 'digital.vasic.yole' is installed on the device"},
-        {"action": "launch", "target": "adb shell am start -n digital.vasic.yole/.MainActivity", "value": "MainActivity", "description": "Launch the Yole main activity via ADB activity manager"},
+        {"action": "verify", "target": "adb shell pm list packages | grep com.example.app", "value": "package found", "description": "Verify the package 'com.example.app' is installed on the device"},
+        {"action": "launch", "target": "adb shell am start -n com.example.app/.MainActivity", "value": "MainActivity", "description": "Launch the Example main activity via ADB activity manager"},
         {"action": "wait", "target": "adb shell dumpsys activity activities | grep mResumedActivity", "value": "MainActivity", "description": "Wait for MainActivity to become the resumed (foreground) activity"},
         {"action": "screenshot", "target": "adb exec-out screencap -p > launch_state.png", "value": "launch_state.png", "description": "Capture a screenshot of the app immediately after launch"},
         {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep bottom_navigation", "value": "visible", "description": "Verify the bottom navigation bar is present in the UI hierarchy"},
@@ -51,13 +51,13 @@
       "metrics": ["launch_time_ms", "first_frame_time_ms"]
     },
     {
-      "id": "yole-ui-android-bottom-navigation",
+      "id": "example-ui-android-bottom-navigation",
       "name": "Android: Bottom Navigation (Files, Todo, QuickNote, More)",
       "description": "Tap each bottom navigation tab in sequence and verify each screen renders its expected content. Verify the selected tab indicator updates.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -101,13 +101,13 @@
       "metrics": ["tab_switch_time_ms"]
     },
     {
-      "id": "yole-ui-android-fab-actions",
+      "id": "example-ui-android-fab-actions",
       "name": "Android: FAB Actions (New File, Quick Note)",
       "description": "Tap the floating action button (FAB) to create a new file and a quick note. Verify the FAB menu expands, each action navigates to the correct editor, and the file is persisted.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -146,13 +146,13 @@
       "metrics": ["fab_animation_time_ms", "file_create_time_ms"]
     },
     {
-      "id": "yole-ui-android-create-document-keyboard",
+      "id": "example-ui-android-create-document-keyboard",
       "name": "Android: Document Creation with On-Screen Keyboard",
       "description": "Create a new Markdown document and type content using the on-screen keyboard. Verify keyboard appears, text is entered correctly, and the content is saved.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "4m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -196,13 +196,13 @@
       "metrics": ["keyboard_show_time_ms", "typing_input_time_ms", "save_time_ms"]
     },
     {
-      "id": "yole-ui-android-swipe-scroll",
+      "id": "example-ui-android-swipe-scroll",
       "name": "Android: Swipe Gestures and Scroll",
       "description": "Open a long document, verify smooth scrolling via swipe gestures. Test fling scrolling, precise scrolling, and scroll-to-top/bottom.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "dependencies": ["example-ui-android-create-document-keyboard"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -243,13 +243,13 @@
       "metrics": ["scroll_fps", "fling_distance_px"]
     },
     {
-      "id": "yole-ui-android-settings-navigation",
+      "id": "example-ui-android-settings-navigation",
       "name": "Android: Settings Screen Navigation",
       "description": "Navigate to the Settings screen via the More tab, verify all setting categories render, toggle theme and editor settings, and verify changes take effect.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -290,13 +290,13 @@
       "metrics": ["settings_load_time_ms", "theme_switch_time_ms"]
     },
     {
-      "id": "yole-ui-android-back-button",
+      "id": "example-ui-android-back-button",
       "name": "Android: Back Button Behavior",
       "description": "Test Android system back button behavior across navigation depth: from editor back to file list, from settings back to more menu, and from root activity to home.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -320,7 +320,7 @@
         {"action": "keyboard", "target": "adb shell input keyevent KEYCODE_BACK", "value": "BACK", "description": "Press Back to go from settings back to the More menu"},
         {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep more_menu", "value": "visible", "description": "Verify the More menu is displayed (back from settings worked)"},
         {"action": "keyboard", "target": "adb shell input keyevent KEYCODE_BACK", "value": "BACK", "description": "Press Back from the root activity to go to the Android launcher"},
-        {"action": "verify", "target": "adb shell dumpsys activity activities | grep -v digital.vasic.yole", "value": "launcher_foreground", "description": "Verify the launcher is now the foreground activity (app exited)"}
+        {"action": "verify", "target": "adb shell dumpsys activity activities | grep -v com.example.app", "value": "launcher_foreground", "description": "Verify the launcher is now the foreground activity (app exited)"}
       ],
       "outputs": [
         {"name": "back_from_editor", "type": "string", "description": "Whether back from editor returned to file list"},
@@ -336,13 +336,13 @@
       "metrics": ["back_navigation_time_ms"]
     },
     {
-      "id": "yole-ui-android-rotation",
+      "id": "example-ui-android-rotation",
       "name": "Android: Rotation Handling (Portrait/Landscape)",
       "description": "Open a document, rotate the device from portrait to landscape and back. Verify content is preserved, scroll position is maintained, and layout adapts correctly.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "dependencies": ["example-ui-android-create-document-keyboard"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -382,13 +382,13 @@
       "metrics": ["rotation_time_ms", "layout_adapt_time_ms"]
     },
     {
-      "id": "yole-ui-android-share-intent",
+      "id": "example-ui-android-share-intent",
       "name": "Android: Share Intent Handling",
-      "description": "Send a share intent with text content to the Yole app via ADB. Verify the app opens, receives the shared text, and displays it in the editor.",
+      "description": "Send a share intent with text content to the Example app via ADB. Verify the app opens, receives the shared text, and displays it in the editor.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -397,9 +397,9 @@
         {"name": "shared_text", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "keyboard", "target": "adb shell am force-stop digital.vasic.yole", "value": "force_stop", "description": "Force-stop the app to ensure the share intent launches it from a clean state"},
-        {"action": "launch", "target": "adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT '{{shared_text}}' digital.vasic.yole/.MainActivity", "value": "share_intent", "description": "Send a SEND intent with text/plain MIME type and the shared text extra to the Yole app"},
-        {"action": "wait", "target": "adb shell dumpsys activity activities | grep mResumedActivity", "value": "MainActivity", "description": "Wait for the Yole MainActivity to become the resumed foreground activity"},
+        {"action": "keyboard", "target": "adb shell am force-stop com.example.app", "value": "force_stop", "description": "Force-stop the app to ensure the share intent launches it from a clean state"},
+        {"action": "launch", "target": "adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT '{{shared_text}}' com.example.app/.MainActivity", "value": "share_intent", "description": "Send a SEND intent with text/plain MIME type and the shared text extra to the Example app"},
+        {"action": "wait", "target": "adb shell dumpsys activity activities | grep mResumedActivity", "value": "MainActivity", "description": "Wait for the Example MainActivity to become the resumed foreground activity"},
         {"action": "wait", "target": "adb shell uiautomator dump /dev/tty | grep editor_area", "value": "visible", "description": "Wait for the editor area to appear with the shared text content"},
         {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep editor_area", "value": "visible", "description": "Verify the editor area is displayed and contains content"},
         {"action": "verify", "target": "editor content", "value": "{{shared_text}}", "description": "Verify the shared text appears in the editor content area"},
@@ -421,13 +421,13 @@
       "metrics": ["intent_handle_time_ms"]
     },
     {
-      "id": "yole-ui-android-file-browser-nav",
+      "id": "example-ui-android-file-browser-nav",
       "name": "Android: File Browser Navigation",
       "description": "Navigate the file browser on Android: create a folder, enter it, navigate back using the toolbar up button, and verify the file listing updates correctly.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -467,13 +467,13 @@
       "metrics": ["folder_create_time_ms", "navigation_time_ms"]
     },
     {
-      "id": "yole-ui-android-create-todotxt",
+      "id": "example-ui-android-create-todotxt",
       "name": "Android: Create Todo.txt Document",
       "description": "Create a todo.txt file on Android, enter tasks with priorities and projects using the on-screen keyboard. Verify task parsing and priority highlighting.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-app-launch"],
+      "dependencies": ["example-ui-android-app-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -489,15 +489,15 @@
         {"action": "tap", "target": "adb shell input tap 700 1050", "value": "Create button", "description": "Tap Create to open the new file in the editor with todo.txt format"},
         {"action": "wait", "target": "adb shell uiautomator dump /dev/tty | grep editor_area", "value": "visible", "description": "Wait for the editor to become active with an empty todo.txt document"},
         {"action": "tap", "target": "adb shell input tap 540 800", "value": "Editor area", "description": "Tap the editor area to focus it and bring up the on-screen keyboard"},
-        {"action": "type", "target": "adb shell input text '(A) Fix Android layout bug +yole @mobile due:2026-03-22'", "value": "priority A task", "description": "Type a priority (A) task with project tag, context tag, and due date"},
+        {"action": "type", "target": "adb shell input text '(A) Fix Android layout bug +example @mobile due:2026-03-22'", "value": "priority A task", "description": "Type a priority (A) task with project tag, context tag, and due date"},
         {"action": "keyboard", "target": "adb shell input keyevent KEYCODE_ENTER", "value": "Enter", "description": "Press Enter to move to the next line"},
-        {"action": "type", "target": "adb shell input text '(B) Add swipe gesture support +yole @ux'", "value": "priority B task", "description": "Type a priority (B) task with project and context tags"},
+        {"action": "type", "target": "adb shell input text '(B) Add swipe gesture support +example @ux'", "value": "priority B task", "description": "Type a priority (B) task with project and context tags"},
         {"action": "keyboard", "target": "adb shell input keyevent KEYCODE_ENTER", "value": "Enter", "description": "Press Enter to move to the next line"},
-        {"action": "type", "target": "adb shell input text 'x 2026-03-16 Implement bottom nav +yole @mobile'", "value": "completed task", "description": "Type a completed task with the 'x' prefix and completion date"},
+        {"action": "type", "target": "adb shell input text 'x 2026-03-16 Implement bottom nav +example @mobile'", "value": "completed task", "description": "Type a completed task with the 'x' prefix and completion date"},
         {"action": "tap", "target": "adb shell input tap 960 100", "value": "Save button", "description": "Tap the Save button in the toolbar to persist the todo.txt file"},
         {"action": "wait", "target": "save indicator", "value": "saved", "description": "Wait for the save indicator to confirm the file was written to storage"},
         {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep priority_highlight_A", "value": "visible", "description": "Verify the priority (A) task is highlighted with the highest-priority color"},
-        {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep project_tag", "value": "+yole visible", "description": "Verify the +yole project tags are syntax-highlighted"},
+        {"action": "verify", "target": "adb shell uiautomator dump /dev/tty | grep project_tag", "value": "+example visible", "description": "Verify the +example project tags are syntax-highlighted"},
         {"action": "screenshot", "target": "adb exec-out screencap -p > android_todotxt.png", "value": "android_todotxt.png", "description": "Capture a screenshot of the todo.txt editor with parsed and highlighted tasks"}
       ],
       "outputs": [
@@ -514,13 +514,13 @@
       "metrics": ["file_create_time_ms", "parse_time_ms"]
     },
     {
-      "id": "yole-ui-android-preview-mode",
+      "id": "example-ui-android-preview-mode",
       "name": "Android: Preview Mode Toggle",
       "description": "Open a Markdown document, switch to preview mode via the toolbar, verify HTML rendering, then switch back to editor mode and verify content integrity.",
       "category": "ui-automation",
       "platform": "android",
       "type": "RecordedMobileFlowChallenge",
-      "dependencies": ["yole-ui-android-create-document-keyboard"],
+      "dependencies": ["example-ui-android-create-document-keyboard"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [

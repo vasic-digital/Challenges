@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Platform Coverage Challenges",
+  "name": "Example Platform Coverage Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "platform-coverage",
     "description": "Challenges validating platform-specific test coverage including desktop tests for SSH, SMB, and FTP clients, Wasm protocol stubs throwing NotImplementedError, iOS stubs with proper documentation and Result types, platform factory tests, expect/actual declaration completeness, and platform-specific source set organization"
   },
   "challenges": [
     {
-      "id": "yole-platcov-desktop-ssh-tests",
+      "id": "example-platcov-desktop-ssh-tests",
       "name": "Desktop SSH Client Test Coverage",
       "description": "Verify that desktop-specific SFTP/SSH client tests exist in desktopTest source set. Tests must cover connection establishment, authentication (password and key-based), file upload/download, directory listing, path traversal prevention, connection timeout handling, and session cleanup. At least 15 test methods must exist for SSH client functionality.",
       "category": "platform-coverage",
@@ -31,7 +31,7 @@
       "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
     },
     {
-      "id": "yole-platcov-desktop-smb-tests",
+      "id": "example-platcov-desktop-smb-tests",
       "name": "Desktop SMB Client Test Coverage",
       "description": "Verify that desktop-specific SMB client tests exist in desktopTest source set. Tests must cover share connection, NTLM and Kerberos authentication, file CRUD operations, directory traversal, connection guards on deleteFile and getFileInfo, large file handling, and reconnection behavior. At least 12 test methods must exist.",
       "category": "platform-coverage",
@@ -54,7 +54,7 @@
       "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
     },
     {
-      "id": "yole-platcov-desktop-ftp-tests",
+      "id": "example-platcov-desktop-ftp-tests",
       "name": "Desktop FTP Client Test Coverage",
       "description": "Verify that desktop-specific FTP client tests exist in desktopTest source set. Tests must cover active and passive mode connections, anonymous and authenticated access, file transfer (binary and ASCII), directory navigation, FTP command injection prevention, timeout handling, and TLS/FTPS negotiation. At least 12 test methods must exist.",
       "category": "platform-coverage",
@@ -77,7 +77,7 @@
       "metrics": ["test_files_found", "test_methods_found", "scenarios_covered"]
     },
     {
-      "id": "yole-platcov-wasm-protocol-stubs",
+      "id": "example-platcov-wasm-protocol-stubs",
       "name": "Wasm Protocol Stubs Throw NotImplementedError",
       "description": "Verify that all protocol service implementations in wasmJsMain throw NotImplementedError (or UnsupportedOperationException) with descriptive messages. Wasm does not support native socket connections, so FTP, SFTP, SMB, WebDAV, and S3 stubs must fail explicitly rather than silently. Each stub method must include the protocol name and operation in its error message.",
       "category": "platform-coverage",
@@ -101,11 +101,11 @@
       "metrics": ["protocols_checked", "stub_methods_verified", "silent_stubs_found"]
     },
     {
-      "id": "yole-platcov-wasm-stub-tests",
+      "id": "example-platcov-wasm-stub-tests",
       "name": "Wasm Protocol Stub Test Coverage",
       "description": "Verify that wasmJsTest source set contains tests that invoke each protocol stub and assert the expected NotImplementedError is thrown. Each protocol must have at least one test verifying the stub behavior. Tests must verify both the exception type and the error message content.",
       "category": "platform-coverage",
-      "dependencies": ["yole-platcov-wasm-protocol-stubs"],
+      "dependencies": ["example-platcov-wasm-protocol-stubs"],
       "estimated_duration": "20s",
       "inputs": [
         {"name": "wasm_test_path", "source": "config", "required": true},
@@ -125,7 +125,7 @@
       "metrics": ["test_files_found", "test_methods_found", "protocols_tested"]
     },
     {
-      "id": "yole-platcov-ios-stubs-documented",
+      "id": "example-platcov-ios-stubs-documented",
       "name": "iOS Stubs Documented with KDoc and TODOs",
       "description": "Verify that all iOS platform stubs in iosMain include KDoc documentation explaining the expected iOS implementation, Result return types where applicable, and TODO comments referencing specific iOS frameworks (e.g., Network.framework for SFTP, FileProvider for cloud storage). Each stub file must have at least one KDoc block and at least one TODO comment.",
       "category": "platform-coverage",
@@ -149,11 +149,11 @@
       "metrics": ["stub_files_checked", "kdoc_blocks_found", "todos_found", "frameworks_referenced"]
     },
     {
-      "id": "yole-platcov-ios-stubs-result-types",
+      "id": "example-platcov-ios-stubs-result-types",
       "name": "iOS Stubs Use Result Return Types",
       "description": "Verify that iOS platform stubs return Result<T> types instead of throwing exceptions or returning null for operations that may fail. Check all actual fun declarations in iosMain for network operations, authentication, and file I/O. Each must return Result<T> or a sealed class that models success/failure.",
       "category": "platform-coverage",
-      "dependencies": ["yole-platcov-ios-stubs-documented"],
+      "dependencies": ["example-platcov-ios-stubs-documented"],
       "estimated_duration": "20s",
       "inputs": [
         {"name": "ios_source_path", "source": "config", "required": true},
@@ -172,7 +172,7 @@
       "metrics": ["functions_checked", "result_type_count", "non_result_count"]
     },
     {
-      "id": "yole-platcov-platform-factory-tests",
+      "id": "example-platcov-platform-factory-tests",
       "name": "Platform Factory Test Presence",
       "description": "Verify that platform-specific factory functions (createHttpClient, createSecureStorage, createPlatformFileSystem, etc.) have tests in each platform's test source set. Each expect/actual pair must have at least one test verifying the factory produces a valid, functional instance. Check desktopTest, androidTest (androidUnitTest), wasmJsTest, and iosTest.",
       "category": "platform-coverage",
@@ -195,7 +195,7 @@
       "metrics": ["factories_checked", "platforms_checked", "untested_count"]
     },
     {
-      "id": "yole-platcov-expect-actual-completeness",
+      "id": "example-platcov-expect-actual-completeness",
       "name": "Expect/Actual Declaration Completeness",
       "description": "Verify that every expect declaration in commonMain has a corresponding actual declaration in all four platform source sets (androidMain, desktopMain, iosMain, wasmJsMain). Scan for expect fun, expect class, and expect object declarations and verify each has matching actual declarations. Report any missing actual implementations per platform.",
       "category": "platform-coverage",
@@ -218,7 +218,7 @@
       "metrics": ["expect_count", "actual_count_per_platform", "missing_count"]
     },
     {
-      "id": "yole-platcov-source-set-organization",
+      "id": "example-platcov-source-set-organization",
       "name": "Platform Source Set Organization",
       "description": "Verify that platform-specific source sets follow the expected directory structure. Each platform (android, desktop, ios, wasmJs) must have Main and Test directories. Platform-specific code must only exist in the correct source set (e.g., no Android-only imports in desktopMain). Verify no commonMain file imports platform-specific APIs directly.",
       "category": "platform-coverage",
@@ -242,7 +242,7 @@
       "metrics": ["source_sets_verified", "files_scanned", "misplaced_imports_found"]
     },
     {
-      "id": "yole-platcov-desktop-test-count",
+      "id": "example-platcov-desktop-test-count",
       "name": "Desktop Test Suite Minimum Count",
       "description": "Verify that the desktopTest source set plus commonTest (which runs on desktop) together provide at least 6,695 passing tests. This is the established baseline from the last verification. The test count must not decrease, only increase. Run the full desktop test suite and verify the pass count meets or exceeds the baseline.",
       "category": "platform-coverage",

@@ -1,20 +1,20 @@
 {
   "version": "1.0",
-  "name": "Yole Web UI Automation Challenges",
+  "name": "Example Web UI Automation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "ui-automation-web",
     "description": "Web/Wasm PWA UI automation flows via Playwright with recording at three speed modes (slow, normal, fast)"
   },
   "challenges": [
     {
-      "id": "yole-ui-web-pwa-launch",
+      "id": "example-ui-web-pwa-launch",
       "name": "Web: PWA Launch in Chrome",
-      "description": "Navigate to the Yole Wasm PWA URL in Chrome, verify the Wasm module initializes, the app shell renders, and the main UI becomes interactive within acceptable time bounds at each speed mode.",
+      "description": "Navigate to the Example Wasm PWA URL in Chrome, verify the Wasm module initializes, the app shell renders, and the main UI becomes interactive within acceptable time bounds at each speed mode.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-build-web-wasm"],
+      "dependencies": ["example-build-web-wasm"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -23,7 +23,7 @@
       ],
       "steps": [
         {"action": "launch", "target": "playwright.chromium.launch({ headless: false })", "value": "browser_instance", "description": "Launch a Chromium browser instance via Playwright for the PWA test"},
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole Wasm PWA URL and begin loading"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example Wasm PWA URL and begin loading"},
         {"action": "wait", "target": "page.waitForSelector('[data-wasm-ready]', { timeout: 15000 })", "value": "wasm_ready", "description": "Wait up to 15 seconds for the Wasm module to initialize and set the data-wasm-ready attribute"},
         {"action": "verify", "target": "page.locator('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Verify the Compose app shell container is visible on the page"},
         {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser panel is rendered inside the app shell"},
@@ -49,13 +49,13 @@
       "metrics": ["pwa_load_time_ms", "wasm_init_time_ms", "first_paint_time_ms"]
     },
     {
-      "id": "yole-ui-web-file-browser",
+      "id": "example-ui-web-file-browser",
       "name": "Web: File Browser Navigation",
       "description": "Navigate the file browser in the Web app: create a folder, enter it, go back, and verify the browser-based IndexedDB storage reflects the folder structure.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -64,7 +64,7 @@
         {"name": "folder_name", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render after Wasm initialization"},
         {"action": "click", "target": "page.locator('[data-testid=\"file-browser\"]').click()", "value": "focus", "description": "Click the file browser panel to give it focus"},
         {"action": "click", "target": "page.locator('[data-testid=\"new-folder-btn\"]').click()", "value": "new_folder", "description": "Click the 'New Folder' button to start folder creation"},
@@ -92,13 +92,13 @@
       "metrics": ["folder_create_time_ms", "navigation_time_ms"]
     },
     {
-      "id": "yole-ui-web-create-markdown",
+      "id": "example-ui-web-create-markdown",
       "name": "Web: Create Markdown Document",
       "description": "Create a new Markdown document in the browser, type content with headings, lists, and code blocks. Save to IndexedDB and verify persistence by refreshing the page.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "4m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -107,7 +107,7 @@
         {"name": "file_name", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with all UI panels"},
         {"action": "click", "target": "page.locator('[data-testid=\"new-file-btn\"]').click()", "value": "new_file", "description": "Click the 'New File' button to open the file creation dialog"},
         {"action": "type", "target": "page.locator('[data-testid=\"file-name-input\"]').fill('{{file_name}}.md')", "value": "{{file_name}}.md", "description": "Type the filename with .md extension into the file creation input"},
@@ -136,13 +136,13 @@
       "metrics": ["file_create_time_ms", "save_time_ms", "reload_time_ms"]
     },
     {
-      "id": "yole-ui-web-create-todotxt",
+      "id": "example-ui-web-create-todotxt",
       "name": "Web: Create Todo.txt Document",
       "description": "Create a todo.txt file in the Web app, enter prioritized tasks with projects and contexts, and verify parsing and rendering in the browser.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -150,18 +150,18 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to fully render"},
         {"action": "click", "target": "page.locator('[data-testid=\"new-file-btn\"]').click()", "value": "new_file", "description": "Click the 'New File' button to open the file creation dialog"},
         {"action": "type", "target": "page.locator('[data-testid=\"file-name-input\"]').fill('web-tasks.todo')", "value": "web-tasks.todo", "description": "Type the filename 'web-tasks.todo' into the creation input"},
         {"action": "keyboard", "target": "page.keyboard.press('Enter')", "value": "Enter", "description": "Press Enter to create the file and open the editor with todo.txt format"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "editor_ready", "description": "Wait for the editor to become active for the new todo.txt file"},
-        {"action": "type", "target": "page.locator('[data-testid=\"editor\"]').fill('(A) Deploy web app +yole @ops due:2026-03-25\\n(B) Fix responsive layout +yole @frontend\\nx 2026-03-14 Set up PWA manifest +yole @web')", "value": "todo_content", "description": "Type three todo.txt tasks with priorities, projects, contexts, and a completed task"},
+        {"action": "type", "target": "page.locator('[data-testid=\"editor\"]').fill('(A) Deploy web app +example @ops due:2026-03-25\\n(B) Fix responsive layout +example @frontend\\nx 2026-03-14 Set up PWA manifest +example @web')", "value": "todo_content", "description": "Type three todo.txt tasks with priorities, projects, contexts, and a completed task"},
         {"action": "click", "target": "page.locator('[data-testid=\"save-btn\"]').click()", "value": "save", "description": "Click the Save button to persist the todo.txt to IndexedDB"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"save-indicator\"][data-state=\"saved\"]')", "value": "saved", "description": "Wait for the save indicator to confirm successful persistence"},
         {"action": "verify", "target": "page.locator('[data-testid=\"priority-A\"]')", "value": "visible", "description": "Verify priority (A) task is highlighted with the highest-priority styling"},
         {"action": "verify", "target": "page.locator('[data-testid=\"priority-B\"]')", "value": "visible", "description": "Verify priority (B) task is highlighted with medium-priority styling"},
-        {"action": "verify", "target": "page.locator('.project-tag')", "value": "+yole highlighted", "description": "Verify the +yole project tags are syntax-highlighted in the editor"},
+        {"action": "verify", "target": "page.locator('.project-tag')", "value": "+example highlighted", "description": "Verify the +example project tags are syntax-highlighted in the editor"},
         {"action": "verify", "target": "page.locator('.completed-task')", "value": "strikethrough", "description": "Verify the completed task has strikethrough or dimmed styling"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'web_todotxt.png' })", "value": "web_todotxt.png", "description": "Capture a screenshot of the todo.txt editor with parsed and highlighted tasks"}
       ],
@@ -177,13 +177,13 @@
       "metrics": ["file_create_time_ms", "parse_time_ms"]
     },
     {
-      "id": "yole-ui-web-edit-document",
+      "id": "example-ui-web-edit-document",
       "name": "Web: Edit Existing Document",
       "description": "Open an existing document in the Web app, modify content, save, and verify modifications are reflected in IndexedDB storage.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-create-markdown"],
+      "dependencies": ["example-ui-web-create-markdown"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -192,7 +192,7 @@
         {"name": "test_file", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render after Wasm initialization"},
         {"action": "click", "target": "page.locator('text={{test_file}}').click()", "value": "{{test_file}}", "description": "Click the test file in the file browser to open it in the editor"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "content_loaded", "description": "Wait for the file content to fully load in the editor area"},
@@ -221,13 +221,13 @@
       "metrics": ["file_open_time_ms", "save_time_ms"]
     },
     {
-      "id": "yole-ui-web-theme-settings",
+      "id": "example-ui-web-theme-settings",
       "name": "Web: Theme and Settings Changes",
       "description": "Switch themes (Light, Dark, System) and toggle settings in the Web app. Verify CSS custom properties change and settings persist via localStorage.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -235,7 +235,7 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with all navigation elements"},
         {"action": "click", "target": "page.locator('[data-testid=\"nav-settings\"]').click()", "value": "Settings", "description": "Click the Settings navigation button to open the settings panel"},
         {"action": "verify", "target": "page.locator('[data-testid=\"settings-panel\"]')", "value": "visible", "description": "Verify the settings panel with theme options is visible"},
@@ -249,7 +249,7 @@
         {"action": "wait", "target": "page.waitForTimeout(300)", "value": "transition_complete", "description": "Wait 300ms for the CSS theme transition to complete"},
         {"action": "verify", "target": "page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg'))", "value": "light_color", "description": "Verify the --color-bg CSS variable reflects the light theme color"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'web_theme_light.png' })", "value": "web_theme_light.png", "description": "Capture a screenshot of the app with Light theme applied"},
-        {"action": "verify", "target": "page.evaluate(() => localStorage.getItem('yole-theme'))", "value": "light", "description": "Verify the selected theme was persisted to localStorage as 'light'"}
+        {"action": "verify", "target": "page.evaluate(() => localStorage.getItem('example-theme'))", "value": "light", "description": "Verify the selected theme was persisted to localStorage as 'light'"}
       ],
       "outputs": [
         {"name": "dark_theme_applied", "type": "string", "description": "Whether dark theme changed CSS variables"},
@@ -265,13 +265,13 @@
       "metrics": ["theme_switch_time_ms"]
     },
     {
-      "id": "yole-ui-web-navigation-routes",
+      "id": "example-ui-web-navigation-routes",
       "name": "Web: Navigation Through All Routes",
       "description": "Navigate to all top-level routes in the Web app (Files, Todo, QuickNote, Settings) and verify each view renders correctly with proper URL routing.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -279,7 +279,7 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render with navigation elements"},
         {"action": "click", "target": "page.locator('[data-testid=\"nav-files\"]').click()", "value": "Files", "description": "Click the 'Files' navigation link to navigate to the files route"},
         {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser panel is displayed on the Files route"},
@@ -314,13 +314,13 @@
       "metrics": ["route_transition_time_ms"]
     },
     {
-      "id": "yole-ui-web-responsive-mobile",
+      "id": "example-ui-web-responsive-mobile",
       "name": "Web: Responsive Layout - Mobile Viewport",
       "description": "Set the browser viewport to mobile dimensions (375x667), verify the layout adapts with a hamburger menu, stacked panels, and touch-friendly button sizes.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -329,7 +329,7 @@
       ],
       "steps": [
         {"action": "viewport", "target": "page.setViewportSize({ width: 375, height: 667 })", "value": "375x667", "description": "Set the Playwright viewport to iPhone SE mobile dimensions (375x667)"},
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the mobile viewport size"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app at the mobile viewport size"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in mobile layout mode"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_mobile.png', fullPage: true })", "value": "responsive_mobile.png", "description": "Capture a full-page screenshot showing the mobile responsive layout"},
         {"action": "verify", "target": "page.locator('[data-testid=\"hamburger-menu\"]')", "value": "visible", "description": "Verify the hamburger menu icon appeared (replacing the full sidebar)"},
@@ -356,13 +356,13 @@
       "metrics": ["layout_adapt_time_ms"]
     },
     {
-      "id": "yole-ui-web-responsive-tablet",
+      "id": "example-ui-web-responsive-tablet",
       "name": "Web: Responsive Layout - Tablet Viewport",
       "description": "Set the browser viewport to tablet dimensions (768x1024), verify the layout adapts with a collapsible sidebar and appropriate panel sizing.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -371,7 +371,7 @@
       ],
       "steps": [
         {"action": "viewport", "target": "page.setViewportSize({ width: 768, height: 1024 })", "value": "768x1024", "description": "Set the Playwright viewport to iPad portrait dimensions (768x1024)"},
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the tablet viewport size"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app at the tablet viewport size"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in tablet layout mode"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_tablet.png', fullPage: true })", "value": "responsive_tablet.png", "description": "Capture a full-page screenshot showing the tablet responsive layout"},
         {"action": "verify", "target": "page.locator('[data-testid=\"editor\"]')", "value": "visible", "description": "Verify the editor area is visible and occupies the main content area"},
@@ -395,13 +395,13 @@
       "metrics": ["layout_adapt_time_ms"]
     },
     {
-      "id": "yole-ui-web-responsive-desktop",
+      "id": "example-ui-web-responsive-desktop",
       "name": "Web: Responsive Layout - Desktop Viewport",
       "description": "Set the browser viewport to desktop dimensions (1920x1080), verify the full two-panel layout with sidebar and editor renders at full width.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "2m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -410,7 +410,7 @@
       ],
       "steps": [
         {"action": "viewport", "target": "page.setViewportSize({ width: 1920, height: 1080 })", "value": "1920x1080", "description": "Set the Playwright viewport to full HD desktop dimensions (1920x1080)"},
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app at the desktop viewport size"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app at the desktop viewport size"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render in full desktop layout mode"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'responsive_desktop.png', fullPage: true })", "value": "responsive_desktop.png", "description": "Capture a full-page screenshot showing the full desktop layout"},
         {"action": "verify", "target": "page.locator('[data-testid=\"file-browser\"]')", "value": "visible", "description": "Verify the file browser sidebar is permanently visible at desktop width"},
@@ -433,13 +433,13 @@
       "metrics": ["layout_render_time_ms"]
     },
     {
-      "id": "yole-ui-web-offline-mode",
+      "id": "example-ui-web-offline-mode",
       "name": "Web: Offline Mode (Service Worker)",
       "description": "Load the PWA, go offline by disabling network via Playwright, verify the app continues to function for local file operations, then re-enable network and verify sync.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-pwa-launch"],
+      "dependencies": ["example-ui-web-pwa-launch"],
       "estimated_duration": "4m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -447,7 +447,7 @@
         {"name": "speed_mode", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole PWA and wait for full initial load"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example PWA and wait for full initial load"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render and the service worker to register"},
         {"action": "verify", "target": "page.evaluate(() => navigator.serviceWorker.ready.then(() => true))", "value": "true", "description": "Verify the service worker is registered and in the 'ready' state"},
         {"action": "screenshot", "target": "page.screenshot({ path: 'web_online_state.png' })", "value": "web_online_state.png", "description": "Capture a screenshot of the app in online state before going offline"},
@@ -478,13 +478,13 @@
       "metrics": ["offline_save_time_ms", "online_recovery_time_ms"]
     },
     {
-      "id": "yole-ui-web-preview-mode",
+      "id": "example-ui-web-preview-mode",
       "name": "Web: Preview Mode Toggle",
       "description": "Open a Markdown document in the Web app, switch between editor and preview modes. Verify HTML rendering in preview and content integrity when switching back.",
       "category": "ui-automation",
       "platform": "web",
       "type": "RecordedBrowserFlowChallenge",
-      "dependencies": ["yole-ui-web-create-markdown"],
+      "dependencies": ["example-ui-web-create-markdown"],
       "estimated_duration": "3m",
       "speed_modes": ["slow", "normal", "fast"],
       "inputs": [
@@ -493,7 +493,7 @@
         {"name": "test_file", "source": "config", "required": true}
       ],
       "steps": [
-        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Yole web app URL"},
+        {"action": "navigate", "target": "page.goto('{{web_app_url}}')", "value": "{{web_app_url}}", "description": "Navigate to the Example web app URL"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"app-shell\"]')", "value": "visible", "description": "Wait for the app shell to render"},
         {"action": "click", "target": "page.locator('text={{test_file}}').click()", "value": "{{test_file}}", "description": "Click the test Markdown file in the file browser to open it"},
         {"action": "wait", "target": "page.waitForSelector('[data-testid=\"editor\"]')", "value": "content_loaded", "description": "Wait for the file content to fully load in the editor area"},

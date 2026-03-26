@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Resilience Challenges",
+  "name": "Example Resilience Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "resilience",
     "description": "Challenges validating resilience patterns including circuit breakers, timeouts, retries, graceful degradation, and connection pool recovery"
   },
   "challenges": [
     {
-      "id": "yole-res-circuit-breaker-activation",
+      "id": "example-res-circuit-breaker-activation",
       "name": "Circuit Breaker Activation and Recovery",
       "description": "Verify that the AdaptiveRateLimiter circuit breaker opens after consecutive failures exceed the threshold, rejects requests while open, and transitions back to closed after a cooldown period. Test with 1000 rapid failing calls followed by a recovery period.",
       "category": "resilience",
@@ -33,7 +33,7 @@
       "metrics": ["open_time_ms", "recovery_time_ms", "total_rejected", "total_accepted_after_recovery"]
     },
     {
-      "id": "yole-res-timeout-handling",
+      "id": "example-res-timeout-handling",
       "name": "Timeout Handling Across Protocols",
       "description": "Verify that all network protocol services (Dropbox, Google Drive, OneDrive, FTP, WebDAV) correctly handle connection timeouts and request timeouts. Each protocol must respect configured timeout values and throw appropriate timeout exceptions rather than hanging indefinitely.",
       "category": "resilience",
@@ -57,11 +57,11 @@
       "metrics": ["avg_timeout_ms", "max_timeout_ms", "protocols_tested"]
     },
     {
-      "id": "yole-res-retry-behavior",
+      "id": "example-res-retry-behavior",
       "name": "Retry Behavior with Exponential Backoff",
       "description": "Verify that the OperationThrottler correctly implements retry logic with exponential backoff. Test that retries occur at increasing intervals, respect the maximum retry count, and eventually succeed when the underlying operation recovers.",
       "category": "resilience",
-      "dependencies": ["yole-res-timeout-handling"],
+      "dependencies": ["example-res-timeout-handling"],
       "estimated_duration": "60s",
       "inputs": [
         {"name": "max_retries", "source": "config", "required": true},
@@ -83,7 +83,7 @@
       "metrics": ["total_retry_time_ms", "retry_count", "final_delay_ms"]
     },
     {
-      "id": "yole-res-graceful-degradation",
+      "id": "example-res-graceful-degradation",
       "name": "Graceful Degradation Under Load",
       "description": "Verify that the system degrades gracefully when overwhelmed with concurrent parsing requests. Under load of 500 concurrent parse operations, the system should complete all operations (possibly with increased latency) rather than crashing, deadlocking, or producing corrupted results.",
       "category": "resilience",
@@ -107,11 +107,11 @@
       "metrics": ["total_time_ms", "avg_latency_ms", "p99_latency_ms", "success_rate"]
     },
     {
-      "id": "yole-res-connection-pool-exhaustion",
+      "id": "example-res-connection-pool-exhaustion",
       "name": "Connection Pool Exhaustion Recovery",
       "description": "Verify that the system recovers from connection pool exhaustion. Saturate the connection pool by opening maximum connections, then verify that new requests queue or fail gracefully rather than crashing. After connections are released, verify that queued requests are served.",
       "category": "resilience",
-      "dependencies": ["yole-res-graceful-degradation"],
+      "dependencies": ["example-res-graceful-degradation"],
       "estimated_duration": "90s",
       "inputs": [
         {"name": "pool_size", "source": "config", "required": true},

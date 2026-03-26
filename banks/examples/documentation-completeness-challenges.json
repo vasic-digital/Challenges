@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Documentation Completeness Challenges",
+  "name": "Example Documentation Completeness Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "documentation-completeness",
     "description": "Challenges validating documentation completeness including CODE_OF_CONDUCT presence, format guide coverage for all 17 formats, video course script presence, website page functionality, CHANGELOG currency, architecture diagram accuracy, KMP module documentation, legacy migration guide, and challenge framework documentation"
   },
   "challenges": [
     {
-      "id": "yole-doccmp-code-of-conduct-exists",
+      "id": "example-doccmp-code-of-conduct-exists",
       "name": "CODE_OF_CONDUCT.md Exists and Is Complete",
       "description": "Verify that CODE_OF_CONDUCT.md exists in the project root, contains substantive content (not a placeholder), includes sections for expected behavior, unacceptable behavior, enforcement responsibilities, and contact information. The file must be at least 50 lines long and reference either the Contributor Covenant or a custom code of conduct.",
       "category": "documentation",
@@ -30,7 +30,7 @@
       "metrics": ["line_count", "sections_found", "sections_missing"]
     },
     {
-      "id": "yole-doccmp-format-guides-present",
+      "id": "example-doccmp-format-guides-present",
       "name": "Format Guides Present for All 17 Formats",
       "description": "Verify that documentation exists for each of the 17 supported text formats: Markdown, TodoTxt, CSV, LaTeX, OrgMode, Plaintext, Wikitext, AsciiDoc, reStructuredText, R Markdown, TaskPaper, Textile, Creole, TiddlyWiki, Jupyter, KeyValue, and Binary. Each format guide must describe the syntax supported, parsing behavior, known limitations, and example documents.",
       "category": "documentation",
@@ -54,7 +54,7 @@
       "metrics": ["formats_documented", "guides_found", "incomplete_count"]
     },
     {
-      "id": "yole-doccmp-video-course-scripts",
+      "id": "example-doccmp-video-course-scripts",
       "name": "Video Course Scripts Present",
       "description": "Verify that all 19 video course scripts exist and contain up-to-date content. Scripts must reference correct test counts (9,400+), correct format counts (17), and correct module counts (10 extracted KMP modules). No script may reference non-existent formats or outdated architecture descriptions.",
       "category": "documentation",
@@ -78,7 +78,7 @@
       "metrics": ["scripts_found", "stale_references_count", "total_script_lines"]
     },
     {
-      "id": "yole-doccmp-website-pages-present",
+      "id": "example-doccmp-website-pages-present",
       "name": "Website Pages Present and Functional",
       "description": "Verify that all 11 website pages exist, contain valid HTML/Markdown, do not reference non-existent formats or features, and have consistent navigation links. Each page must be non-empty, have a title, and link back to the main index. Verify that metrics and feature lists on website pages match the current project state.",
       "category": "documentation",
@@ -104,7 +104,7 @@
       "metrics": ["pages_found", "broken_links_count", "stale_content_count"]
     },
     {
-      "id": "yole-doccmp-changelog-current",
+      "id": "example-doccmp-changelog-current",
       "name": "CHANGELOG Current with Recent Changes",
       "description": "Verify that CHANGELOG.md (or equivalent) exists and includes entries for the most recent development session. The changelog must follow a consistent format (Keep a Changelog or similar), include dates, and cover major changes from the last 3 development sessions. The most recent entry must not be older than 30 days from the current date.",
       "category": "documentation",
@@ -128,7 +128,7 @@
       "metrics": ["entries_count", "staleness_days", "sections_per_entry"]
     },
     {
-      "id": "yole-doccmp-architecture-diagrams",
+      "id": "example-doccmp-architecture-diagrams",
       "name": "Architecture Diagrams Up to Date",
       "description": "Verify that architecture diagrams exist and reflect the current system state. Diagrams must include the 10 extracted KMP modules, the shared module structure, platform source sets, the text parsing pipeline, the network protocol layer with resilience patterns, and the composite build topology. At least 8 architecture diagrams must be present.",
       "category": "documentation",
@@ -152,7 +152,7 @@
       "metrics": ["diagrams_found", "outdated_count", "diagram_formats"]
     },
     {
-      "id": "yole-doccmp-kmp-module-docs",
+      "id": "example-doccmp-kmp-module-docs",
       "name": "KMP Module Documentation Complete",
       "description": "Verify that each of the 10 extracted KMP modules has CHANGELOG.md and CONTRIBUTING.md files. Each CHANGELOG must have at least one version entry. Each CONTRIBUTING must describe the build process, testing approach, and code style. Modules: RateLimiter-KMP, Concurrency-KMP, UI-Components-KMP, Auth-KMP, Security-KMP, Document-KMP, Config-KMP, Database-KMP, Storage-KMP, Formatters-KMP.",
       "category": "documentation",
@@ -177,7 +177,7 @@
       "metrics": ["modules_checked", "changelogs_found", "contributing_found", "incomplete_count"]
     },
     {
-      "id": "yole-doccmp-legacy-migration-guide",
+      "id": "example-doccmp-legacy-migration-guide",
       "name": "Legacy Migration Guide Present",
       "description": "Verify that LEGACY_MIGRATION.md exists and documents the migration path from legacy Android-only modules (commons/, core/) to the KMP shared module architecture. The guide must include audit results, migration status per module, facade bridge documentation, and instructions for migrating remaining legacy code.",
       "category": "documentation",
@@ -199,7 +199,7 @@
       "metrics": ["line_count", "sections_found", "modules_documented"]
     },
     {
-      "id": "yole-doccmp-challenge-framework-docs",
+      "id": "example-doccmp-challenge-framework-docs",
       "name": "Challenge Framework Documentation Present",
       "description": "Verify that CHALLENGE_FRAMEWORK.md exists and documents the challenge framework integration including the CI workflow (challenges.yml), Gradle task (runChallenges), challenge bank structure, how to add new challenge banks, and how to run challenges locally. The document must reference the three session-2 challenge banks plus any additional banks added in session-3.",
       "category": "documentation",
@@ -222,7 +222,7 @@
       "metrics": ["line_count", "sections_found", "banks_referenced"]
     },
     {
-      "id": "yole-doccmp-claude-md-accuracy",
+      "id": "example-doccmp-claude-md-accuracy",
       "name": "CLAUDE.md Accuracy and Currency",
       "description": "Verify that CLAUDE.md in the project root accurately reflects the current project state. Check that the format count (17), KMP module count (10), test count (9,400+), platform list (Android, Desktop, iOS, Web), and key file paths all match the actual codebase. The document must not reference files that do not exist or features that have been removed.",
       "category": "documentation",
@@ -244,7 +244,7 @@
       "metrics": ["claims_verified", "inaccurate_count", "missing_refs_count"]
     },
     {
-      "id": "yole-doccmp-license-headers",
+      "id": "example-doccmp-license-headers",
       "name": "SPDX License Headers Present in Source Files",
       "description": "Verify that all Kotlin source files in shared/src contain SPDX license headers as specified in the code conventions (Apache-2.0, CC0-1.0, or Unlicense). Sample at least 50 source files across commonMain, androidMain, desktopMain, iosMain, and wasmJsMain. Each sampled file must have a license header in the first 5 lines.",
       "category": "documentation",

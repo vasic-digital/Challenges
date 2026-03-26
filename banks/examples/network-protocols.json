@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Network Protocol Challenges",
+  "name": "Example Network Protocol Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "network-protocols",
     "description": "Challenges validating cloud storage and network protocol integrations"
   },
   "challenges": [
     {
-      "id": "yole-net-dropbox-auth",
+      "id": "example-net-dropbox-auth",
       "name": "Dropbox OAuth Authentication",
       "description": "Verify Dropbox OAuth2 flow: token acquisition, refresh, and revocation",
       "category": "network",
@@ -28,14 +28,14 @@
       "metrics": ["auth_time_ms"]
     },
     {
-      "id": "yole-net-dropbox-crud",
+      "id": "example-net-dropbox-crud",
       "name": "Dropbox File CRUD Operations",
       "description": "Verify Dropbox create, read, update, delete file operations via NetworkStorageService",
       "category": "network",
-      "dependencies": ["yole-net-dropbox-auth"],
+      "dependencies": ["example-net-dropbox-auth"],
       "estimated_duration": "60s",
       "inputs": [
-        {"name": "dropbox_token", "source": "dependency:yole-net-dropbox-auth", "required": true},
+        {"name": "dropbox_token", "source": "dependency:example-net-dropbox-auth", "required": true},
         {"name": "test_folder", "source": "config", "required": true}
       ],
       "outputs": [
@@ -52,7 +52,7 @@
       "metrics": ["create_time_ms", "read_time_ms", "delete_time_ms"]
     },
     {
-      "id": "yole-net-gdrive-auth",
+      "id": "example-net-gdrive-auth",
       "name": "Google Drive OAuth Authentication",
       "description": "Verify Google Drive OAuth2 flow with service account or user credentials",
       "category": "network",
@@ -69,14 +69,14 @@
       "metrics": ["auth_time_ms"]
     },
     {
-      "id": "yole-net-gdrive-crud",
+      "id": "example-net-gdrive-crud",
       "name": "Google Drive File CRUD Operations",
       "description": "Verify Google Drive create, read, update, delete operations via NetworkStorageService",
       "category": "network",
-      "dependencies": ["yole-net-gdrive-auth"],
+      "dependencies": ["example-net-gdrive-auth"],
       "estimated_duration": "60s",
       "inputs": [
-        {"name": "gdrive_token", "source": "dependency:yole-net-gdrive-auth", "required": true},
+        {"name": "gdrive_token", "source": "dependency:example-net-gdrive-auth", "required": true},
         {"name": "test_folder", "source": "config", "required": true}
       ],
       "outputs": [
@@ -88,7 +88,7 @@
       "metrics": ["create_time_ms", "read_time_ms", "delete_time_ms"]
     },
     {
-      "id": "yole-net-onedrive-auth",
+      "id": "example-net-onedrive-auth",
       "name": "OneDrive OAuth Authentication",
       "description": "Verify OneDrive/Microsoft Graph OAuth2 flow",
       "category": "network",
@@ -106,7 +106,7 @@
       "metrics": ["auth_time_ms"]
     },
     {
-      "id": "yole-net-ftp-connect",
+      "id": "example-net-ftp-connect",
       "name": "FTP Connection and Operations",
       "description": "Verify FTP protocol adapter: connect, list, upload, download, delete against test FTP server",
       "category": "network",
@@ -130,7 +130,7 @@
       "metrics": ["connect_time_ms", "upload_time_ms", "download_time_ms"]
     },
     {
-      "id": "yole-net-sftp-connect",
+      "id": "example-net-sftp-connect",
       "name": "SFTP Connection and Operations",
       "description": "Verify SFTP protocol adapter: connect with key/password auth, list, upload, download, delete",
       "category": "network",
@@ -151,7 +151,7 @@
       "metrics": ["connect_time_ms", "upload_time_ms", "download_time_ms"]
     },
     {
-      "id": "yole-net-rate-limiting",
+      "id": "example-net-rate-limiting",
       "name": "Rate Limited Storage Service",
       "description": "Verify RateLimitedStorageService correctly throttles concurrent operations with semaphore-based limiting",
       "category": "network",
@@ -171,7 +171,7 @@
       "metrics": ["total_time_ms", "max_concurrent_observed"]
     },
     {
-      "id": "yole-net-storage-quota",
+      "id": "example-net-storage-quota",
       "name": "Storage Quota Display",
       "description": "Verify StorageQuota formatting: formatBytes for B/KB/MB/GB, computed display properties, usage percentage",
       "category": "network",

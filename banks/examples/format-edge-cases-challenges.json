@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Format Edge Cases Challenges",
+  "name": "Example Format Edge Cases Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "format-edge-cases",
     "description": "Challenges validating edge-case handling across all 17 text format parsers: empty files, maximum file sizes, binary content detection, corrupted headers, mixed encodings, nested format embedding, and boundary conditions"
   },
   "challenges": [
     {
-      "id": "yole-fedge-empty-file-all-formats",
+      "id": "example-fedge-empty-file-all-formats",
       "name": "Empty File Parsing for All 17 Formats",
       "description": "Verify that all 17 format parsers handle empty string input gracefully without crashing, throwing exceptions, or producing invalid ParsedDocument. Each parser must return a valid ParsedDocument with empty or minimal content, no errors, and a valid toHtml() output.",
       "category": "format-edge-cases",
@@ -31,7 +31,7 @@
       "metrics": ["formats_tested", "parse_time_ms"]
     },
     {
-      "id": "yole-fedge-whitespace-only",
+      "id": "example-fedge-whitespace-only",
       "name": "Whitespace-Only Content Parsing",
       "description": "Verify that all 17 format parsers handle content consisting only of whitespace (spaces, tabs, newlines, carriage returns, form feeds) without errors. Test with various whitespace-only patterns including single space, multiple newlines, mixed whitespace, and Unicode whitespace characters.",
       "category": "format-edge-cases",
@@ -52,7 +52,7 @@
       "metrics": ["patterns_tested", "formats_tested"]
     },
     {
-      "id": "yole-fedge-max-file-size",
+      "id": "example-fedge-max-file-size",
       "name": "Maximum File Size Handling",
       "description": "Verify that format parsers handle large documents (1MB, 5MB, 10MB) without OutOfMemoryError or excessive parse times. For each supported format, generate documents of increasing sizes and verify that parsing completes within a time budget proportional to file size, and that memory usage stays within bounds.",
       "category": "format-edge-cases",
@@ -75,7 +75,7 @@
       "metrics": ["max_parse_time_ms", "max_memory_mb", "avg_throughput_kb_per_sec"]
     },
     {
-      "id": "yole-fedge-single-line",
+      "id": "example-fedge-single-line",
       "name": "Single-Line Document Parsing",
       "description": "Verify that all format parsers handle documents consisting of a single very long line (100KB) without stack overflow, excessive memory usage, or regex catastrophic backtracking. This tests parsers that may rely on line-by-line processing.",
       "category": "format-edge-cases",
@@ -97,7 +97,7 @@
       "metrics": ["parse_time_ms", "max_memory_mb"]
     },
     {
-      "id": "yole-fedge-binary-detection",
+      "id": "example-fedge-binary-detection",
       "name": "Binary Content Detection Accuracy",
       "description": "Verify that FormatRegistry correctly identifies binary content and routes it to the binary format parser. Test with actual binary payloads including PNG headers, ZIP headers, ELF binaries, PDF magic bytes, and random binary data. Also test that text files with occasional high bytes are not falsely detected as binary.",
       "category": "format-edge-cases",
@@ -120,7 +120,7 @@
       "metrics": ["samples_tested", "detection_time_ms"]
     },
     {
-      "id": "yole-fedge-corrupted-markdown",
+      "id": "example-fedge-corrupted-markdown",
       "name": "Corrupted Markdown Header Handling",
       "description": "Verify Markdown parser handles corrupted or malformed headers gracefully: unclosed code fences, mismatched heading levels, broken link syntax ([link(url), deeply nested blockquotes (>>>>>), and truncated YAML front matter (--- without closing ---).",
       "category": "format-edge-cases",
@@ -140,7 +140,7 @@
       "metrics": ["samples_tested", "errors_reported"]
     },
     {
-      "id": "yole-fedge-corrupted-todotxt",
+      "id": "example-fedge-corrupted-todotxt",
       "name": "Corrupted Todo.txt Format Handling",
       "description": "Verify Todo.txt parser handles malformed entries: invalid priority markers ((Z)), invalid dates (2025-13-32), entries with only whitespace between fields, excessively long context/project tags, and mixed line endings within a single file.",
       "category": "format-edge-cases",
@@ -160,7 +160,7 @@
       "metrics": ["samples_tested"]
     },
     {
-      "id": "yole-fedge-corrupted-csv",
+      "id": "example-fedge-corrupted-csv",
       "name": "Corrupted CSV Format Handling",
       "description": "Verify CSV parser handles malformed data: unclosed quotes, inconsistent column counts across rows, embedded newlines in unquoted fields, BOM markers, null bytes in cells, and files with only delimiters and no data.",
       "category": "format-edge-cases",
@@ -180,7 +180,7 @@
       "metrics": ["samples_tested"]
     },
     {
-      "id": "yole-fedge-corrupted-latex",
+      "id": "example-fedge-corrupted-latex",
       "name": "Corrupted LaTeX Document Handling",
       "description": "Verify LaTeX parser handles corrupted documents: missing \\end{document}, unmatched braces, invalid command sequences, deeply nested environments (100 levels), and binary garbage after \\documentclass.",
       "category": "format-edge-cases",
@@ -200,7 +200,7 @@
       "metrics": ["samples_tested"]
     },
     {
-      "id": "yole-fedge-mixed-encoding",
+      "id": "example-fedge-mixed-encoding",
       "name": "Mixed Encoding Detection and Handling",
       "description": "Verify that format parsers handle documents with mixed character encodings: UTF-8 with embedded Latin-1 sequences, UTF-16 BOM followed by UTF-8 content, Shift-JIS in a UTF-8 document, and invalid UTF-8 continuation bytes. Parsers must not crash and should produce valid output even if some characters are replaced.",
       "category": "format-edge-cases",
@@ -222,7 +222,7 @@
       "metrics": ["formats_tested", "samples_tested"]
     },
     {
-      "id": "yole-fedge-nested-markdown-in-orgmode",
+      "id": "example-fedge-nested-markdown-in-orgmode",
       "name": "Nested Format Embedding: Markdown Inside Org-mode",
       "description": "Verify that Org-mode parser handles content that contains valid Markdown syntax (# headings, **bold**, [links](url)) within Org-mode src blocks or plain text. The Markdown syntax must not confuse the Org-mode parser or corrupt its output.",
       "category": "format-edge-cases",
@@ -242,7 +242,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fedge-nested-latex-in-markdown",
+      "id": "example-fedge-nested-latex-in-markdown",
       "name": "Nested Format Embedding: LaTeX Inside Markdown",
       "description": "Verify that Markdown parser handles embedded LaTeX math notation ($E=mc^2$, $$\\int_0^1 f(x)dx$$, \\begin{equation}...\\end{equation}) without corrupting the document structure or crashing on unmatched delimiters.",
       "category": "format-edge-cases",
@@ -263,7 +263,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fedge-nested-code-blocks",
+      "id": "example-fedge-nested-code-blocks",
       "name": "Nested Format Embedding: Code Blocks with Format Syntax",
       "description": "Verify that format parsers correctly handle code blocks or verbatim sections that contain syntax from other formats. For example, Markdown code blocks containing Org-mode headers, AsciiDoc listing blocks containing CSV data, or WikiText nowiki blocks containing HTML.",
       "category": "format-edge-cases",
@@ -283,7 +283,7 @@
       "metrics": ["scenarios_tested"]
     },
     {
-      "id": "yole-fedge-deep-nesting",
+      "id": "example-fedge-deep-nesting",
       "name": "Deep Nesting Depth Limits",
       "description": "Verify that format parsers handle extremely deep nesting without stack overflow: 100-level nested Markdown blockquotes, 100-level nested LaTeX environments, 100-level nested Org-mode headings, and 100-level nested WikiText templates. Parsers must either handle the depth or fail gracefully.",
       "category": "format-edge-cases",
@@ -305,7 +305,7 @@
       "metrics": ["formats_tested", "max_depth_tested"]
     },
     {
-      "id": "yole-fedge-html-cache-consistency",
+      "id": "example-fedge-html-cache-consistency",
       "name": "ParsedDocument HTML Cache Consistency",
       "description": "Verify that ParsedDocument.toHtml() lazy caching is consistent: the first call generates HTML, subsequent calls return the cached value, and the cached value is identical to the first generation. Test across all 17 formats with documents that include special characters and Unicode.",
       "category": "format-edge-cases",

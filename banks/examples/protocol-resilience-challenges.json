@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Protocol Resilience Challenges",
+  "name": "Example Protocol Resilience Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "protocol-resilience",
     "description": "Challenges validating resilience patterns in network protocol services: circuit breaker state transitions, connection limiter saturation, timeout handling, reconnection behavior, concurrent operation limits, error cascading prevention, and graceful degradation under failure conditions"
   },
   "challenges": [
     {
-      "id": "yole-pres-cb-closed-to-open",
+      "id": "example-pres-cb-closed-to-open",
       "name": "Circuit Breaker: CLOSED to OPEN Transition",
       "description": "Verify that CircuitBreaker transitions from CLOSED to OPEN state after the configured failure threshold is reached. Send exactly failureThreshold consecutive failing requests and verify the circuit opens. Verify that the (failureThreshold - 1)th failure keeps the circuit closed while the failureThreshold-th failure opens it.",
       "category": "protocol-resilience",
@@ -30,11 +30,11 @@
       "metrics": ["failures_before_open", "transition_time_ms"]
     },
     {
-      "id": "yole-pres-cb-open-rejection",
+      "id": "example-pres-cb-open-rejection",
       "name": "Circuit Breaker: Request Rejection While OPEN",
       "description": "Verify that CircuitBreaker in OPEN state immediately rejects all incoming requests without forwarding them to the underlying service. After opening the circuit, send 100 requests and verify all are rejected with CircuitBreakerOpenException. Measure rejection latency to ensure it is near-zero (no network call made).",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-cb-closed-to-open"],
+      "dependencies": ["example-pres-cb-closed-to-open"],
       "estimated_duration": "20s",
       "inputs": [
         {"name": "requests_while_open", "source": "config", "required": true},
@@ -53,11 +53,11 @@
       "metrics": ["rejected_count", "avg_rejection_latency_ms"]
     },
     {
-      "id": "yole-pres-cb-half-open",
+      "id": "example-pres-cb-half-open",
       "name": "Circuit Breaker: OPEN to HALF_OPEN Transition",
       "description": "Verify that CircuitBreaker transitions from OPEN to HALF_OPEN after the configured reset timeout expires. After opening the circuit, wait for resetTimeout duration and verify the state changes to HALF_OPEN. Then send one successful request and verify the circuit transitions back to CLOSED.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-cb-open-rejection"],
+      "dependencies": ["example-pres-cb-open-rejection"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "reset_timeout_ms", "source": "config", "required": true},
@@ -78,11 +78,11 @@
       "metrics": ["actual_timeout_ms", "half_open_duration_ms"]
     },
     {
-      "id": "yole-pres-cb-half-open-failure",
+      "id": "example-pres-cb-half-open-failure",
       "name": "Circuit Breaker: HALF_OPEN Failure Reopens Circuit",
       "description": "Verify that a failed request during HALF_OPEN state immediately returns the circuit to OPEN state. After the circuit transitions to HALF_OPEN, send a failing request and verify the circuit reopens. This prevents premature recovery when the underlying service is still unhealthy.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-cb-half-open"],
+      "dependencies": ["example-pres-cb-half-open"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "reset_timeout_ms", "source": "config", "required": true},
@@ -99,7 +99,7 @@
       "metrics": ["reopen_latency_ms"]
     },
     {
-      "id": "yole-pres-cl-saturation",
+      "id": "example-pres-cl-saturation",
       "name": "Connection Limiter: Saturation Behavior",
       "description": "Verify that ConnectionLimiter correctly limits concurrent connections to the configured maximum. Start maxConnections simultaneous operations, then attempt one more and verify it either queues or is rejected. After one operation completes, verify the queued operation proceeds.",
       "category": "protocol-resilience",
@@ -121,11 +121,11 @@
       "metrics": ["max_concurrent", "overflow_wait_ms"]
     },
     {
-      "id": "yole-pres-cl-nonblocking",
+      "id": "example-pres-cl-nonblocking",
       "name": "Connection Limiter: Non-Blocking Semaphore",
       "description": "Verify that ConnectionLimiter uses a non-blocking semaphore implementation. When the limiter is saturated, new acquire attempts must not block the calling thread but instead suspend the coroutine. Verify by running on a single-threaded dispatcher and confirming no deadlock occurs.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-cl-saturation"],
+      "dependencies": ["example-pres-cl-saturation"],
       "estimated_duration": "25s",
       "inputs": [
         {"name": "max_connections", "source": "config", "required": true},
@@ -142,7 +142,7 @@
       "metrics": ["completion_time_ms"]
     },
     {
-      "id": "yole-pres-timeout-connect",
+      "id": "example-pres-timeout-connect",
       "name": "Connection Timeout Enforcement",
       "description": "Verify that all protocol services enforce connection timeouts. Configure a 5-second connection timeout, then attempt to connect to an unreachable host. The connection attempt must fail within the timeout window (5 seconds + tolerance) rather than hanging indefinitely. Test across FTP, SFTP, WebDAV, SMB, and S3 services.",
       "category": "protocol-resilience",
@@ -166,11 +166,11 @@
       "metrics": ["protocols_tested", "avg_timeout_ms", "max_timeout_ms"]
     },
     {
-      "id": "yole-pres-timeout-request",
+      "id": "example-pres-timeout-request",
       "name": "Request Timeout Enforcement",
       "description": "Verify that protocol services enforce request-level timeouts independent of connection timeouts. Establish a connection successfully, then send a request to an endpoint that intentionally delays response. The request must fail within the configured request timeout.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-timeout-connect"],
+      "dependencies": ["example-pres-timeout-connect"],
       "estimated_duration": "60s",
       "inputs": [
         {"name": "request_timeout_ms", "source": "config", "required": true},
@@ -189,7 +189,7 @@
       "metrics": ["protocols_tested", "avg_request_timeout_ms"]
     },
     {
-      "id": "yole-pres-reconnect-after-disconnect",
+      "id": "example-pres-reconnect-after-disconnect",
       "name": "Reconnection After Graceful Disconnect",
       "description": "Verify that protocol services can successfully reconnect after a graceful disconnect. For each protocol, connect, perform an operation, disconnect, then reconnect and perform another operation. Both operations must succeed and the service must reach CONNECTED state after reconnection.",
       "category": "protocol-resilience",
@@ -210,11 +210,11 @@
       "metrics": ["protocols_tested", "reconnect_time_ms"]
     },
     {
-      "id": "yole-pres-reconnect-after-error",
+      "id": "example-pres-reconnect-after-error",
       "name": "Reconnection After Connection Error",
       "description": "Verify that protocol services can recover from connection errors by reconnecting. Simulate a connection drop (network error, server crash) during an active operation, then verify the service detects the error, transitions to DISCONNECTED/ERROR state, and can be reconnected.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-reconnect-after-disconnect"],
+      "dependencies": ["example-pres-reconnect-after-disconnect"],
       "estimated_duration": "60s",
       "inputs": [
         {"name": "protocol_services", "source": "config", "required": true},
@@ -233,7 +233,7 @@
       "metrics": ["protocols_tested", "avg_recovery_time_ms", "error_scenarios_tested"]
     },
     {
-      "id": "yole-pres-concurrent-ops-limit",
+      "id": "example-pres-concurrent-ops-limit",
       "name": "Concurrent Operation Limits per Protocol",
       "description": "Verify that each protocol service correctly limits concurrent operations to prevent overwhelming the remote server. Launch 50 simultaneous file listing operations against a single protocol and verify that no more than the configured maximum run concurrently. Verify all operations eventually complete.",
       "category": "protocol-resilience",
@@ -256,7 +256,7 @@
       "metrics": ["protocols_tested", "max_concurrent_observed", "total_completion_time_ms"]
     },
     {
-      "id": "yole-pres-error-cascade-prevention",
+      "id": "example-pres-error-cascade-prevention",
       "name": "Error Cascading Prevention Across Protocols",
       "description": "Verify that a failure in one protocol service does not cascade to other protocol services. Simultaneously connect to multiple protocols, cause one to fail (e.g., Dropbox authentication failure), and verify that other protocols (Google Drive, OneDrive, FTP) continue operating normally without errors.",
       "category": "protocol-resilience",
@@ -278,11 +278,11 @@
       "metrics": ["protocols_tested", "isolation_verified"]
     },
     {
-      "id": "yole-pres-error-cascade-shared-resources",
+      "id": "example-pres-error-cascade-shared-resources",
       "name": "Error Cascading Prevention in Shared Resources",
       "description": "Verify that shared resources (DocumentCache, ConnectionLimiter, FormatRegistry) do not become corrupted when one protocol service fails. After a protocol failure, verify that cache lookups still work, the connection limiter still accepts new connections, and format detection still functions.",
       "category": "protocol-resilience",
-      "dependencies": ["yole-pres-error-cascade-prevention"],
+      "dependencies": ["example-pres-error-cascade-prevention"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
@@ -302,7 +302,7 @@
       "metrics": ["resources_tested"]
     },
     {
-      "id": "yole-pres-rapid-connect-disconnect",
+      "id": "example-pres-rapid-connect-disconnect",
       "name": "Rapid Connect/Disconnect Cycle Stability",
       "description": "Verify that protocol services remain stable during rapid connect/disconnect cycles. Execute 100 consecutive connect/disconnect cycles for each cloud protocol (Dropbox, GoogleDrive, OneDrive) and verify no resource leaks (coroutine, connection, memory), no deadlocks, and the service remains usable after the final cycle.",
       "category": "protocol-resilience",
@@ -326,7 +326,7 @@
       "metrics": ["cycles_completed", "avg_cycle_time_ms", "memory_before_mb", "memory_after_mb"]
     },
     {
-      "id": "yole-pres-document-cache-eviction",
+      "id": "example-pres-document-cache-eviction",
       "name": "DocumentCache LRU Eviction Under Memory Pressure",
       "description": "Verify that DocumentCache correctly evicts least-recently-used entries when the cache reaches its size limit. Fill the cache beyond capacity, then verify that the oldest entries were evicted while recently accessed entries remain. Also verify that hit/miss metrics are accurate throughout.",
       "category": "protocol-resilience",

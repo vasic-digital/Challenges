@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Security Scanning Validation Challenges",
+  "name": "Example Security Scanning Validation Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "security-scanning-validation",
     "description": "Challenges validating security scanning infrastructure: Detekt zero-issues policy, OWASP CVSS threshold, Gitleaks custom rules, path traversal prevention via normalizePath(), SBOM generation capability, and CodeQL configuration"
   },
   "challenges": [
     {
-      "id": "yole-ssv-detekt-zero-issues",
+      "id": "example-ssv-detekt-zero-issues",
       "name": "Detekt Zero-Issues Policy Enforcement",
       "description": "Verify that the Detekt static analysis configuration enforces maxIssues: 0 across all rule sets. Run './gradlew detekt' and verify that the build fails on any new issue. Check detekt.yml configuration for maxIssues setting, verify that no rule sets are disabled, and confirm that the failOnSeverity threshold is set to 'warning' or lower so that warnings also break the build.",
       "category": "security",
@@ -32,7 +32,7 @@
       "metrics": ["max_issues_setting", "disabled_rule_sets_count", "total_issues_found", "detekt_execution_time_ms"]
     },
     {
-      "id": "yole-ssv-owasp-cvss-threshold",
+      "id": "example-ssv-owasp-cvss-threshold",
       "name": "OWASP Dependency Check CVSS 7.0 Threshold",
       "description": "Verify that the OWASP Dependency Check is configured with a CVSS threshold of 7.0 (High severity) so that any dependency with a known vulnerability scoring 7.0 or above causes the build to fail. Check the CI configuration and Gradle plugin settings for failBuildOnCVSS, verify the NVD data feed is configured, and confirm that suppression files only suppress false positives with documented justification.",
       "category": "security",
@@ -56,9 +56,9 @@
       "metrics": ["cvss_threshold", "total_dependencies_scanned", "suppressed_cve_count", "unjustified_suppression_count"]
     },
     {
-      "id": "yole-ssv-gitleaks-custom-rules",
+      "id": "example-ssv-gitleaks-custom-rules",
       "name": "Gitleaks Custom Rules Configuration (8 Rules)",
-      "description": "Verify that the Gitleaks configuration includes all 8 custom rules for detecting secrets in the Yole codebase: (1) OAuth client secrets, (2) API keys for cloud storage providers, (3) SFTP/FTP passwords, (4) Firebase config tokens, (5) base64-encoded credentials, (6) JWT signing keys, (7) database connection strings with embedded passwords, (8) private key file contents. Run Gitleaks against test fixtures containing each secret type and verify all 8 are detected.",
+      "description": "Verify that the Gitleaks configuration includes all 8 custom rules for detecting secrets in the Example codebase: (1) OAuth client secrets, (2) API keys for cloud storage providers, (3) SFTP/FTP passwords, (4) Firebase config tokens, (5) base64-encoded credentials, (6) JWT signing keys, (7) database connection strings with embedded passwords, (8) private key file contents. Run Gitleaks against test fixtures containing each secret type and verify all 8 are detected.",
       "category": "security",
       "estimated_duration": "45s",
       "inputs": [
@@ -80,11 +80,11 @@
       "metrics": ["rules_configured", "rules_passing", "false_negative_count", "false_positive_count", "scan_time_ms"]
     },
     {
-      "id": "yole-ssv-path-traversal-prevention",
+      "id": "example-ssv-path-traversal-prevention",
       "name": "Path Traversal Prevention via normalizePath() in All Services",
       "description": "Verify that normalizePath() from PathUtils.kt is called in all 8 protocol services for every file operation (listFiles, readFile, writeFile, deleteFile, getFileInfo, createDirectory). Statically verify that no file operation method accepts a raw path without normalization. Dynamically test with 20 traversal payloads including '../', '..\\', URL-encoded variants, double-encoded variants, null-byte injection, and Unicode normalization attacks. All must resolve to safe paths within the service root.",
       "category": "security",
-      "dependencies": ["yole-ssv-detekt-zero-issues"],
+      "dependencies": ["example-ssv-detekt-zero-issues"],
       "estimated_duration": "40s",
       "inputs": [
         {"name": "traversal_payloads", "source": "config", "required": true},
@@ -107,7 +107,7 @@
       "metrics": ["services_tested", "operations_verified", "payloads_tested", "escaped_count"]
     },
     {
-      "id": "yole-ssv-sbom-generation",
+      "id": "example-ssv-sbom-generation",
       "name": "SBOM Generation Capability",
       "description": "Verify that the project can generate a Software Bill of Materials (SBOM) in CycloneDX or SPDX format. Check that the Gradle plugin is configured, that the generated SBOM includes all direct and transitive dependencies with version numbers, that license information is present for each dependency, and that the SBOM includes the project's own version metadata.",
       "category": "security",
@@ -133,7 +133,7 @@
       "metrics": ["total_components", "components_with_version", "components_with_license", "sbom_generation_time_ms"]
     },
     {
-      "id": "yole-ssv-codeql-configuration",
+      "id": "example-ssv-codeql-configuration",
       "name": "CodeQL Configuration and Query Coverage",
       "description": "Verify that CodeQL is configured in the CI pipeline with appropriate query suites for Kotlin/Java analysis. Check that the codeql-config.yml or GitHub Actions workflow includes: (1) 'security-and-quality' query suite, (2) Kotlin and Java language targets, (3) autobuild or custom build step, (4) SARIF upload to GitHub Security tab, (5) scheduled scan frequency (at least weekly), and (6) paths-ignore for generated code and test fixtures.",
       "category": "security",

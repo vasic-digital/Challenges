@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Security Challenges",
+  "name": "Example Security Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "security",
     "description": "Challenges validating security posture: XSS prevention, injection protection, dependency scanning"
   },
   "challenges": [
     {
-      "id": "yole-sec-xss-html-escape",
+      "id": "example-sec-xss-html-escape",
       "name": "HTML Escaping in Parsers",
       "description": "Verify all format parsers properly escape HTML special characters (&, <, >, \", ') to prevent XSS in rendered output",
       "category": "security",
@@ -27,7 +27,7 @@
       "metrics": ["formats_tested", "payloads_tested"]
     },
     {
-      "id": "yole-sec-xss-stylesheet",
+      "id": "example-sec-xss-stylesheet",
       "name": "CSS Injection Prevention in StyleSheets",
       "description": "Verify StyleSheets constants do not allow CSS injection via format-controlled content",
       "category": "security",
@@ -44,7 +44,7 @@
       "metrics": ["payloads_tested"]
     },
     {
-      "id": "yole-sec-path-traversal",
+      "id": "example-sec-path-traversal",
       "name": "Path Traversal Prevention",
       "description": "Verify Document path handling prevents directory traversal attacks (../, %2e%2e, etc.)",
       "category": "security",
@@ -61,7 +61,7 @@
       "metrics": ["payloads_tested"]
     },
     {
-      "id": "yole-sec-dependency-scan",
+      "id": "example-sec-dependency-scan",
       "name": "Dependency Vulnerability Scan",
       "description": "Run dependency vulnerability scan on Gradle dependencies and report any known CVEs",
       "category": "security",
@@ -82,7 +82,7 @@
       "metrics": ["scan_time_seconds", "total_dependencies", "total_vulnerabilities"]
     },
     {
-      "id": "yole-sec-network-tls",
+      "id": "example-sec-network-tls",
       "name": "TLS Configuration for Network Protocols",
       "description": "Verify all network protocol implementations enforce TLS 1.2+ and reject insecure connections",
       "category": "security",
@@ -99,7 +99,7 @@
       "metrics": ["protocols_tested"]
     },
     {
-      "id": "yole-sec-credential-handling",
+      "id": "example-sec-credential-handling",
       "name": "Credential Storage Security",
       "description": "Verify OAuth tokens and credentials are not stored in plaintext, logs, or crash reports",
       "category": "security",
@@ -118,7 +118,7 @@
       "metrics": ["files_scanned"]
     },
     {
-      "id": "yole-sec-static-analysis",
+      "id": "example-sec-static-analysis",
       "name": "Static Analysis with Detekt",
       "description": "Run Detekt static analysis and verify no security-related findings",
       "category": "security",

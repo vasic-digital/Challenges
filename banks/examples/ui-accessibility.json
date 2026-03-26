@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole UI and Accessibility Challenges",
+  "name": "Example UI and Accessibility Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "ui-accessibility",
     "description": "Challenges validating Compose Multiplatform UI, themes, animations, and accessibility"
   },
   "challenges": [
     {
-      "id": "yole-ui-theme-light",
+      "id": "example-ui-theme-light",
       "name": "Light Theme Rendering",
       "description": "Verify light theme applies correct colors, typography, and spacing across all components",
       "category": "ui",
@@ -27,7 +27,7 @@
       "metrics": ["components_tested"]
     },
     {
-      "id": "yole-ui-theme-dark",
+      "id": "example-ui-theme-dark",
       "name": "Dark Theme Rendering",
       "description": "Verify dark theme applies correct colors with sufficient contrast ratios",
       "category": "ui",
@@ -46,7 +46,7 @@
       "metrics": ["components_tested", "min_contrast_ratio"]
     },
     {
-      "id": "yole-ui-stylesheet-consistency",
+      "id": "example-ui-stylesheet-consistency",
       "name": "StyleSheet Light/Dark Consistency",
       "description": "Verify CSS stylesheets for all themed formats (RST, OrgMode, AsciiDoc, LaTeX) have both light and dark variants with matching structure",
       "category": "ui",
@@ -64,7 +64,7 @@
       "metrics": ["formats_checked", "rules_compared"]
     },
     {
-      "id": "yole-ui-animation-timing",
+      "id": "example-ui-animation-timing",
       "name": "Animation Timing Constants",
       "description": "Verify AnimationTiming constants are within acceptable ranges for smooth 60fps rendering",
       "category": "ui",
@@ -82,7 +82,7 @@
       "metrics": ["constants_checked"]
     },
     {
-      "id": "yole-a11y-content-description",
+      "id": "example-a11y-content-description",
       "name": "Accessibility Content Descriptions",
       "description": "Verify all interactive UI elements have content descriptions for screen readers",
       "category": "accessibility",
@@ -100,7 +100,7 @@
       "metrics": ["total_elements", "compliant_elements"]
     },
     {
-      "id": "yole-a11y-color-contrast",
+      "id": "example-a11y-color-contrast",
       "name": "WCAG Color Contrast Compliance",
       "description": "Verify text color contrast ratios meet WCAG 2.1 AA standards (4.5:1 for normal text, 3:1 for large text)",
       "category": "accessibility",

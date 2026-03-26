@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Format Parsing Challenges",
+  "name": "Example Format Parsing Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "format-parsing",
-    "description": "Challenges validating all 17 text format parsers in the Yole editor"
+    "description": "Challenges validating all 17 text format parsers in the Example editor"
   },
   "challenges": [
     {
-      "id": "yole-fmt-markdown-basic",
+      "id": "example-fmt-markdown-basic",
       "name": "Markdown Basic Parsing",
       "description": "Verify Markdown parser handles headings, bold, italic, links, images, code blocks, and lists correctly",
       "category": "format-parsing",
@@ -30,11 +30,11 @@
       "metrics": ["parse_time_ms", "html_size_bytes"]
     },
     {
-      "id": "yole-fmt-markdown-extensions",
+      "id": "example-fmt-markdown-extensions",
       "name": "Markdown Extensions Parsing",
       "description": "Verify Flexmark extensions: tables, task lists, strikethrough, footnotes, abbreviations, definition lists, emoji, TOC, YAML front matter, math",
       "category": "format-parsing",
-      "dependencies": ["yole-fmt-markdown-basic"],
+      "dependencies": ["example-fmt-markdown-basic"],
       "estimated_duration": "45s",
       "inputs": [
         {"name": "extended_markdown", "source": "config", "required": true},
@@ -52,7 +52,7 @@
       "metrics": ["parse_time_ms", "extensions_loaded"]
     },
     {
-      "id": "yole-fmt-todotxt-parse",
+      "id": "example-fmt-todotxt-parse",
       "name": "Todo.txt Format Parsing",
       "description": "Verify Todo.txt parser handles priorities, dates, projects, contexts, and completion markers",
       "category": "format-parsing",
@@ -74,11 +74,11 @@
       "metrics": ["parse_time_ms", "task_count"]
     },
     {
-      "id": "yole-fmt-todotxt-query",
+      "id": "example-fmt-todotxt-query",
       "name": "Todo.txt Query Syntax",
       "description": "Verify Todo.txt query syntax: filtering by priority, project, context, date ranges, completion status",
       "category": "format-parsing",
-      "dependencies": ["yole-fmt-todotxt-parse"],
+      "dependencies": ["example-fmt-todotxt-parse"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "todotxt_content", "source": "config", "required": true},
@@ -95,7 +95,7 @@
       "metrics": ["query_time_ms"]
     },
     {
-      "id": "yole-fmt-csv-parse",
+      "id": "example-fmt-csv-parse",
       "name": "CSV Format Parsing",
       "description": "Verify CSV parser handles headers, quoted fields, escaped delimiters, empty cells, and various line endings",
       "category": "format-parsing",
@@ -117,7 +117,7 @@
       "metrics": ["parse_time_ms", "row_count", "column_count"]
     },
     {
-      "id": "yole-fmt-latex-parse",
+      "id": "example-fmt-latex-parse",
       "name": "LaTeX Format Parsing",
       "description": "Verify LaTeX parser handles document structure, sections, math environments, lists, tables, and inline formatting",
       "category": "format-parsing",
@@ -138,7 +138,7 @@
       "metrics": ["parse_time_ms", "html_size_bytes"]
     },
     {
-      "id": "yole-fmt-orgmode-parse",
+      "id": "example-fmt-orgmode-parse",
       "name": "Org-mode Format Parsing",
       "description": "Verify Org-mode parser handles headings, TODO states, properties, code blocks, tables, links, and inline formatting",
       "category": "format-parsing",
@@ -160,7 +160,7 @@
       "metrics": ["parse_time_ms", "heading_count"]
     },
     {
-      "id": "yole-fmt-rst-parse",
+      "id": "example-fmt-rst-parse",
       "name": "reStructuredText Format Parsing",
       "description": "Verify RST parser handles sections, directives, admonitions, code blocks, tables, field lists, and roles",
       "category": "format-parsing",
@@ -181,7 +181,7 @@
       "metrics": ["parse_time_ms", "html_size_bytes"]
     },
     {
-      "id": "yole-fmt-asciidoc-parse",
+      "id": "example-fmt-asciidoc-parse",
       "name": "AsciiDoc Format Parsing",
       "description": "Verify AsciiDoc parser handles headings, admonitions, source blocks, tables, cross-references, and macros",
       "category": "format-parsing",
@@ -201,7 +201,7 @@
       "metrics": ["parse_time_ms", "html_size_bytes"]
     },
     {
-      "id": "yole-fmt-wikitext-parse",
+      "id": "example-fmt-wikitext-parse",
       "name": "WikiText Format Parsing",
       "description": "Verify WikiText parser handles headings, bold/italic, links, templates, lists, tables, and categories",
       "category": "format-parsing",
@@ -221,7 +221,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fmt-keyvalue-parse",
+      "id": "example-fmt-keyvalue-parse",
       "name": "Key-Value Format Parsing",
       "description": "Verify Key-Value parser handles various separators (=, :), comments, sections, multi-line values",
       "category": "format-parsing",
@@ -241,7 +241,7 @@
       "metrics": ["parse_time_ms", "entry_count"]
     },
     {
-      "id": "yole-fmt-taskpaper-parse",
+      "id": "example-fmt-taskpaper-parse",
       "name": "TaskPaper Format Parsing",
       "description": "Verify TaskPaper parser handles projects, tasks, notes, tags, and nesting",
       "category": "format-parsing",
@@ -260,7 +260,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fmt-textile-parse",
+      "id": "example-fmt-textile-parse",
       "name": "Textile Format Parsing",
       "description": "Verify Textile parser handles headings, paragraphs, bold/italic, links, images, lists, and tables",
       "category": "format-parsing",
@@ -279,7 +279,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fmt-creole-parse",
+      "id": "example-fmt-creole-parse",
       "name": "Creole Wiki Format Parsing",
       "description": "Verify Creole parser handles headings, bold/italic, links, images, lists, tables, and nowiki blocks",
       "category": "format-parsing",
@@ -298,7 +298,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fmt-tiddlywiki-parse",
+      "id": "example-fmt-tiddlywiki-parse",
       "name": "TiddlyWiki Format Parsing",
       "description": "Verify TiddlyWiki parser handles tiddler syntax, transclusion, macros, widgets, and formatting",
       "category": "format-parsing",
@@ -317,7 +317,7 @@
       "metrics": ["parse_time_ms"]
     },
     {
-      "id": "yole-fmt-jupyter-parse",
+      "id": "example-fmt-jupyter-parse",
       "name": "Jupyter Notebook Format Parsing",
       "description": "Verify Jupyter parser handles code cells, markdown cells, output cells, metadata, and kernel info",
       "category": "format-parsing",
@@ -338,11 +338,11 @@
       "metrics": ["parse_time_ms", "cell_count"]
     },
     {
-      "id": "yole-fmt-rmarkdown-parse",
+      "id": "example-fmt-rmarkdown-parse",
       "name": "R Markdown Format Parsing",
       "description": "Verify R Markdown parser handles YAML front matter, R code chunks, inline R, and Markdown content",
       "category": "format-parsing",
-      "dependencies": ["yole-fmt-markdown-basic"],
+      "dependencies": ["example-fmt-markdown-basic"],
       "estimated_duration": "30s",
       "inputs": [
         {"name": "rmarkdown_content", "source": "config", "required": true},

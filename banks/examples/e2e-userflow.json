@@ -1,21 +1,21 @@
 {
   "version": "1.0",
-  "name": "Yole End-to-End User Flow Challenges",
+  "name": "Example End-to-End User Flow Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "e2e-userflow",
     "description": "End-to-end user flow challenges across all platforms using the userflow automation framework"
   },
   "challenges": [
     {
-      "id": "yole-e2e-android-open-file",
+      "id": "example-e2e-android-open-file",
       "name": "Android: Open and Edit File",
       "description": "User flow: launch Android app, open a Markdown file, verify content loads, edit text, verify changes persisted",
       "category": "e2e",
-      "dependencies": ["yole-build-android-debug"],
+      "dependencies": ["example-build-android-debug"],
       "estimated_duration": "2m",
       "inputs": [
-        {"name": "apk_path", "source": "dependency:yole-build-android-debug", "required": true},
+        {"name": "apk_path", "source": "dependency:example-build-android-debug", "required": true},
         {"name": "test_device", "source": "env", "required": true},
         {"name": "test_file_content", "source": "config", "required": true}
       ],
@@ -33,11 +33,11 @@
       "metrics": ["launch_time_ms", "file_open_time_ms", "save_time_ms"]
     },
     {
-      "id": "yole-e2e-android-format-switch",
+      "id": "example-e2e-android-format-switch",
       "name": "Android: Switch Between Formats",
       "description": "User flow: open files of different formats (MD, CSV, LaTeX, Org) and verify correct rendering for each",
       "category": "e2e",
-      "dependencies": ["yole-e2e-android-open-file"],
+      "dependencies": ["example-e2e-android-open-file"],
       "estimated_duration": "3m",
       "inputs": [
         {"name": "test_device", "source": "env", "required": true},
@@ -52,14 +52,14 @@
       "metrics": ["formats_tested", "avg_render_time_ms"]
     },
     {
-      "id": "yole-e2e-desktop-open-file",
+      "id": "example-e2e-desktop-open-file",
       "name": "Desktop: Open and Edit File",
       "description": "User flow: launch Desktop app, open a file via file dialog, verify content, edit and save",
       "category": "e2e",
-      "dependencies": ["yole-build-desktop-jar"],
+      "dependencies": ["example-build-desktop-jar"],
       "estimated_duration": "2m",
       "inputs": [
-        {"name": "jar_path", "source": "dependency:yole-build-desktop-jar", "required": true},
+        {"name": "jar_path", "source": "dependency:example-build-desktop-jar", "required": true},
         {"name": "test_file", "source": "config", "required": true}
       ],
       "outputs": [
@@ -74,11 +74,11 @@
       "metrics": ["launch_time_ms", "file_open_time_ms"]
     },
     {
-      "id": "yole-e2e-web-load",
+      "id": "example-e2e-web-load",
       "name": "Web: Load PWA and Open Document",
       "description": "User flow: navigate to Wasm PWA, verify app loads, open a document, verify rendering",
       "category": "e2e",
-      "dependencies": ["yole-build-web-wasm"],
+      "dependencies": ["example-build-web-wasm"],
       "estimated_duration": "2m",
       "inputs": [
         {"name": "web_app_url", "source": "config", "required": true},
@@ -97,11 +97,11 @@
       "metrics": ["load_time_ms", "wasm_init_time_ms"]
     },
     {
-      "id": "yole-e2e-multiplatform-consistency",
+      "id": "example-e2e-multiplatform-consistency",
       "name": "Cross-Platform Rendering Consistency",
       "description": "Verify the same document produces identical HTML output across Android, Desktop, and Web platforms",
       "category": "e2e",
-      "dependencies": ["yole-e2e-android-open-file", "yole-e2e-desktop-open-file", "yole-e2e-web-load"],
+      "dependencies": ["example-e2e-android-open-file", "example-e2e-desktop-open-file", "example-e2e-web-load"],
       "estimated_duration": "3m",
       "inputs": [
         {"name": "test_document", "source": "config", "required": true},
@@ -117,7 +117,7 @@
       "metrics": ["platforms_compared"]
     },
     {
-      "id": "yole-e2e-offline-first",
+      "id": "example-e2e-offline-first",
       "name": "Offline-First Operation",
       "description": "Verify app functions fully offline: create, edit, save documents without network. Verify sync queue when connectivity restored.",
       "category": "e2e",

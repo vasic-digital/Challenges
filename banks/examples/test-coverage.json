@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "name": "Yole Test Coverage Challenges",
+  "name": "Example Test Coverage Challenges",
   "metadata": {
-    "project": "yole",
+    "project": "example",
     "domain": "test-coverage",
     "description": "Challenges validating test suite execution and coverage thresholds"
   },
   "challenges": [
     {
-      "id": "yole-test-common-all",
+      "id": "example-test-common-all",
       "name": "All Common Tests Pass",
       "description": "Run all commonTest tests and verify zero failures across ~3000+ test cases",
       "category": "testing",
@@ -32,7 +32,7 @@
       "metrics": ["test_time_seconds", "total_tests", "passed_tests"]
     },
     {
-      "id": "yole-test-desktop-all",
+      "id": "example-test-desktop-all",
       "name": "All Desktop Tests Pass",
       "description": "Run all desktopTest tests and verify zero failures",
       "category": "testing",
@@ -52,11 +52,11 @@
       "metrics": ["test_time_seconds", "total_tests"]
     },
     {
-      "id": "yole-test-coverage-line",
+      "id": "example-test-coverage-line",
       "name": "Line Coverage Threshold",
       "description": "Verify Kover line coverage meets minimum threshold of 50%",
       "category": "testing",
-      "dependencies": ["yole-test-common-all"],
+      "dependencies": ["example-test-common-all"],
       "estimated_duration": "2m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
@@ -75,11 +75,11 @@
       "metrics": ["line_coverage", "branch_coverage", "class_coverage", "method_coverage"]
     },
     {
-      "id": "yole-test-format-coverage",
+      "id": "example-test-format-coverage",
       "name": "Per-Format Test Coverage",
       "description": "Verify each of the 17 format parsers has dedicated test coverage with minimum thresholds",
       "category": "testing",
-      "dependencies": ["yole-test-common-all"],
+      "dependencies": ["example-test-common-all"],
       "estimated_duration": "2m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true},
@@ -95,11 +95,11 @@
       "metrics": ["coverage_by_format"]
     },
     {
-      "id": "yole-test-stress-parsers",
+      "id": "example-test-stress-parsers",
       "name": "Parser Stress Tests Pass",
       "description": "Run stress test suite targeting parser performance and memory under large inputs",
       "category": "testing",
-      "dependencies": ["yole-test-common-all"],
+      "dependencies": ["example-test-common-all"],
       "estimated_duration": "3m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
@@ -116,11 +116,11 @@
       "metrics": ["max_parse_time_ms", "peak_memory_mb"]
     },
     {
-      "id": "yole-test-integration",
+      "id": "example-test-integration",
       "name": "Integration Tests Pass",
       "description": "Run cross-format integration tests verifying format interop, registry consistency, and pipeline integrity",
       "category": "testing",
-      "dependencies": ["yole-test-common-all"],
+      "dependencies": ["example-test-common-all"],
       "estimated_duration": "2m",
       "inputs": [
         {"name": "project_root", "source": "env", "required": true}
