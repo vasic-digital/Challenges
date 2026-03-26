@@ -1,0 +1,254 @@
+{
+  "version": "1.0",
+  "name": "Yole Timeout and Recovery Challenges",
+  "metadata": {
+    "project": "yole",
+    "domain": "timeout-recovery",
+    "description": "Challenges validating timeout enforcement and recovery behavior across all 8 protocol services: HttpTimeout plugin configuration, connection/request/socket timeouts, coroutine cancellation propagation, retry-after-timeout, and recovery from partial operations interrupted by timeout"
+  },
+  "challenges": [
+    {
+      "id": "yole-tr-httptimeout-all-platforms",
+      "name": "HttpTimeout Plugin Installed on All Platforms",
+      "description": "Verify that the HttpTimeout plugin is installed in the HttpClient factory on all 4 platforms (Android, Desktop, iOS, Wasm). For each platform, check that connectTimeoutMillis, requestTimeoutMillis, and socketTimeoutMillis are configured with non-zero values. A missing timeout configuration means operations can hang indefinitely.",
+      "category": "timeout-recovery",
+      "estimated_duration": "15s",
+      "inputs": [
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "platforms_with_timeout", "type": "json", "description": "Map of platform to whether HttpTimeout is installed"},
+        {"name": "platforms_missing_timeout", "type": "json", "description": "Platforms where HttpTimeout is not configured"},
+        {"name": "timeout_values", "type": "json", "description": "connectTimeoutMillis/requestTimeoutMillis/socketTimeoutMillis per platform"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "platforms_missing_timeout", "value": 0, "message": "All platforms must have HttpTimeout installed in HttpClient"},
+        {"type": "all_valid", "target": "platforms_with_timeout", "message": "HttpTimeout must be installed on Android, Desktop, iOS, and Wasm"}
+      ],
+      "metrics": ["platforms_tested", "platforms_configured"]
+    },
+    {
+      "id": "yole-tr-connect-timeout-enforcement",
+      "name": "Connection Timeout Enforcement Across All Protocols",
+      "description": "Verify that all 8 protocol services (Dropbox, GoogleDrive, OneDrive, FTP, SFTP, SMB, WebDAV, S3) enforce connection timeouts when connecting to an unreachable endpoint. Configure a 3-second connection timeout, attempt to connect to a black-hole address (203.0.113.1), and verify each service throws a timeout exception within 3 seconds + 500ms tolerance. No service may block indefinitely.",
+      "category": "timeout-recovery",
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "connection_timeout_ms", "source": "config", "required": true},
+        {"name": "black_hole_address", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "timeout_tolerance_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "timeout_results", "type": "json", "description": "Connection timeout results per protocol (timed_out, actual_ms, exception_type)"},
+        {"name": "hanging_services", "type": "json", "description": "Services that exceeded the timeout window"},
+        {"name": "exception_types", "type": "json", "description": "Exception thrown on timeout per service"},
+        {"name": "all_enforced", "type": "string", "description": "Whether all services enforced the connection timeout"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "hanging_services", "value": 0, "message": "No protocol service may hang beyond the configured connection timeout"},
+        {"type": "contains", "target": "all_enforced", "value": "true", "message": "All 8 protocol services must enforce connection timeout"},
+        {"type": "min_count", "target": "timeout_results", "value": 8, "message": "All 8 protocol services must be tested"}
+      ],
+      "metrics": ["services_tested", "avg_timeout_ms", "max_timeout_ms", "min_timeout_ms"]
+    },
+    {
+      "id": "yole-tr-request-timeout-enforcement",
+      "name": "Request Timeout Enforcement During Active Transfer",
+      "description": "Verify that protocol services enforce request-level timeouts for in-progress data transfers. Establish a connection to a mock server that starts sending data but then stalls mid-transfer. With a 5-second request timeout configured, the transfer must be interrupted and the service must return a timeout error within the deadline. Test with FTP, SFTP, and WebDAV services.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-connect-timeout-enforcement"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "request_timeout_ms", "source": "config", "required": true},
+        {"name": "stall_delay_ms", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "request_timeout_results", "type": "json", "description": "Request timeout results per protocol"},
+        {"name": "services_hung", "type": "json", "description": "Services that did not abort stalled transfer in time"},
+        {"name": "partial_data_returned", "type": "json", "description": "Whether any service returned partial data on timeout"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "services_hung", "value": 0, "message": "No service may hang on a stalled mid-transfer request"},
+        {"type": "all_valid", "target": "request_timeout_results", "message": "All services must enforce request timeout during stalled transfers"}
+      ],
+      "metrics": ["services_tested", "avg_abort_latency_ms", "max_abort_latency_ms"]
+    },
+    {
+      "id": "yole-tr-socket-timeout-read",
+      "name": "Socket Read Timeout During Idle Connection",
+      "description": "Verify that socket-level read timeouts fire when a connected server goes silent. Establish a successful connection, begin a read operation, then have the server stop sending data without closing the connection (simulating a silent server hang). With socketTimeoutMillis configured, the read must fail within the deadline.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-request-timeout-enforcement"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "socket_timeout_ms", "source": "config", "required": true},
+        {"name": "idle_server_endpoint", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "socket_timeout_fired", "type": "string", "description": "Whether the socket read timeout fired"},
+        {"name": "actual_timeout_ms", "type": "string", "description": "Actual time elapsed before timeout exception"},
+        {"name": "timeout_exception_type", "type": "string", "description": "Type of exception thrown on socket timeout"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "socket_timeout_fired", "value": "true", "message": "Socket read timeout must fire on silent server"},
+        {"type": "max_latency", "target": "actual_timeout_ms", "value": 6000, "message": "Socket timeout must fire within configured window plus 1 second tolerance"}
+      ],
+      "metrics": ["actual_timeout_ms", "connection_established_ms"]
+    },
+    {
+      "id": "yole-tr-cancellation-propagation",
+      "name": "Coroutine Cancellation Propagates Through Timeout",
+      "description": "Verify that when a protocol operation times out, the resulting CancellationException propagates correctly through the coroutine hierarchy without being swallowed. Launch a file download in a child coroutine with a timeout, let it time out, and verify: (1) CancellationException is rethrown not swallowed, (2) parent coroutine is notified, (3) structured concurrency scope is not corrupted, (4) subsequent operations on the same service succeed.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-connect-timeout-enforcement"],
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "operation_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "cancellation_propagated", "type": "string", "description": "Whether CancellationException propagated to parent coroutine"},
+        {"name": "exception_swallowed", "type": "string", "description": "Whether CancellationException was caught and not rethrown"},
+        {"name": "scope_intact_after_timeout", "type": "string", "description": "Whether coroutine scope remains usable after timeout"},
+        {"name": "subsequent_op_succeeded", "type": "string", "description": "Whether a subsequent operation on the service succeeded after timeout"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "cancellation_propagated", "value": "true", "message": "CancellationException must propagate through timeout to parent coroutine"},
+        {"type": "contains", "target": "exception_swallowed", "value": "false", "message": "CancellationException must never be swallowed in timeout catch blocks"},
+        {"type": "contains", "target": "scope_intact_after_timeout", "value": "true", "message": "Coroutine scope must remain intact after timeout cancellation"},
+        {"type": "contains", "target": "subsequent_op_succeeded", "value": "true", "message": "Service must accept new operations after timeout recovery"}
+      ],
+      "metrics": ["timeout_propagation_time_ms", "scope_recovery_time_ms"]
+    },
+    {
+      "id": "yole-tr-retry-after-timeout",
+      "name": "Automatic Retry After Timeout with Exponential Backoff",
+      "description": "Verify that protocol services automatically retry operations after a timeout, using exponential backoff to avoid thundering herd. Simulate a server that times out the first 2 requests but succeeds on the 3rd. Verify: (1) exactly the configured retry count is attempted, (2) wait intervals double between retries, (3) the operation ultimately succeeds, (4) the caller receives the successful result.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-cancellation-propagation"],
+      "estimated_duration": "40s",
+      "inputs": [
+        {"name": "max_retries", "source": "config", "required": true},
+        {"name": "initial_retry_delay_ms", "source": "config", "required": true},
+        {"name": "operation_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "retry_count", "type": "string", "description": "Number of retry attempts before success"},
+        {"name": "retry_intervals_ms", "type": "json", "description": "Wait durations between retry attempts"},
+        {"name": "operation_succeeded", "type": "string", "description": "Whether the operation ultimately succeeded"},
+        {"name": "backoff_correct", "type": "string", "description": "Whether intervals follow exponential doubling pattern"}
+      ],
+      "assertions": [
+        {"type": "min_count", "target": "retry_count", "value": 1, "message": "At least one retry must be attempted after timeout"},
+        {"type": "contains", "target": "operation_succeeded", "value": "true", "message": "Operation must succeed after retries when server recovers"},
+        {"type": "contains", "target": "backoff_correct", "value": "true", "message": "Retry intervals must follow exponential backoff pattern"}
+      ],
+      "metrics": ["retry_count", "total_elapsed_ms", "final_retry_delay_ms"]
+    },
+    {
+      "id": "yole-tr-partial-upload-recovery",
+      "name": "Recovery from Partial Upload Interrupted by Timeout",
+      "description": "Verify that protocol services handle partial upload interruption due to timeout gracefully. Begin a file upload to FTP or WebDAV, allow it to partially complete, then trigger a timeout. Verify: (1) the service correctly reports the operation as failed, (2) no partial file is left in a corrupted state that blocks future uploads, (3) a retry upload of the same file succeeds completely.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-retry-after-timeout"],
+      "estimated_duration": "60s",
+      "inputs": [
+        {"name": "upload_timeout_ms", "source": "config", "required": true},
+        {"name": "file_size_kb", "source": "config", "required": true},
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "partial_upload_reported_as_failure", "type": "string", "description": "Whether the interrupted upload was correctly reported as failed"},
+        {"name": "corrupted_file_present", "type": "string", "description": "Whether a corrupted partial file remains after timeout"},
+        {"name": "retry_upload_succeeded", "type": "string", "description": "Whether a full retry upload succeeded after the partial failure"},
+        {"name": "recovery_results", "type": "json", "description": "Per-protocol partial upload recovery results"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "partial_upload_reported_as_failure", "value": "true", "message": "Interrupted uploads must be reported as failed, not partially successful"},
+        {"type": "contains", "target": "corrupted_file_present", "value": "false", "message": "No corrupted partial file may remain after upload timeout"},
+        {"type": "contains", "target": "retry_upload_succeeded", "value": "true", "message": "A retry upload must succeed after the partial failure is cleaned up"}
+      ],
+      "metrics": ["protocols_tested", "partial_cleanup_time_ms", "retry_upload_time_ms"]
+    },
+    {
+      "id": "yole-tr-timeout-state-consistency",
+      "name": "Service State Consistency After Timeout",
+      "description": "Verify that protocol services maintain consistent internal state after an operation times out. After a timeout, check: (1) isConnected() returns the correct value (not stale true if connection was dropped), (2) the service scope is not cancelled, (3) pending operations are not left in an unresolvable state, (4) the service accepts new connect() calls without throwing. Test all 8 protocol services.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-cancellation-propagation"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "protocol_services", "source": "config", "required": true},
+        {"name": "operation_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "state_consistency_results", "type": "json", "description": "State consistency check results per protocol after timeout"},
+        {"name": "stale_connected_state", "type": "json", "description": "Services where isConnected() returned stale true after timeout"},
+        {"name": "scope_cancelled", "type": "json", "description": "Services where serviceScope was cancelled by timeout"},
+        {"name": "reconnect_accepted", "type": "json", "description": "Services that accepted a new connect() after timeout"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "stale_connected_state", "value": 0, "message": "No service may return stale connected state after a timeout that dropped the connection"},
+        {"type": "exact_count", "target": "scope_cancelled", "value": 0, "message": "Service scope must not be cancelled by a single operation timeout"},
+        {"type": "all_valid", "target": "reconnect_accepted", "message": "All services must accept a new connect() call after timeout recovery"}
+      ],
+      "metrics": ["services_tested", "avg_state_check_time_ms"]
+    },
+    {
+      "id": "yole-tr-concurrent-timeout-isolation",
+      "name": "Concurrent Operation Timeout Isolation",
+      "description": "Verify that a timeout in one concurrent operation does not cancel or corrupt other concurrent operations on the same service. Launch 10 file read operations concurrently on FTP or SFTP. Cause operations 1, 3, and 5 to time out. Verify that operations 2, 4, 6, 7, 8, 9, and 10 complete successfully with correct data, and that the timed-out operations only affect their own coroutines.",
+      "category": "timeout-recovery",
+      "dependencies": ["yole-tr-timeout-state-consistency"],
+      "estimated_duration": "45s",
+      "inputs": [
+        {"name": "concurrent_ops", "source": "config", "required": true},
+        {"name": "ops_to_timeout", "source": "config", "required": true},
+        {"name": "operation_timeout_ms", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "successful_ops", "type": "string", "description": "Number of concurrent operations that completed successfully"},
+        {"name": "timed_out_ops", "type": "string", "description": "Number of operations that timed out as intended"},
+        {"name": "unintended_failures", "type": "string", "description": "Number of operations that failed without being in the timeout set"},
+        {"name": "isolation_maintained", "type": "string", "description": "Whether timed-out operations did not affect successful ones"}
+      ],
+      "assertions": [
+        {"type": "exact_count", "target": "unintended_failures", "value": 0, "message": "No operation outside the timeout set may fail due to another operation timing out"},
+        {"type": "contains", "target": "isolation_maintained", "value": "true", "message": "Timeout isolation must be maintained across concurrent operations"},
+        {"type": "min_count", "target": "successful_ops", "value": 7, "message": "At least 7 of 10 concurrent operations must succeed (the non-timeout ones)"}
+      ],
+      "metrics": ["concurrent_ops_tested", "timeout_isolation_verified", "successful_op_latency_ms"]
+    },
+    {
+      "id": "yole-tr-timeout-metrics-reporting",
+      "name": "Timeout Events Recorded in PerformanceMetrics",
+      "description": "Verify that timeout events are captured in PerformanceMetrics so that operations teams can detect and diagnose timeout spikes. Trigger 5 connection timeouts and 5 request timeouts, then verify that PerformanceMetrics contains timeout counter increments for each event. Check that timeout duration histograms reflect accurate measurements.",
+      "category": "timeout-recovery",
+      "estimated_duration": "30s",
+      "inputs": [
+        {"name": "connection_timeouts_to_trigger", "source": "config", "required": true},
+        {"name": "request_timeouts_to_trigger", "source": "config", "required": true},
+        {"name": "project_root", "source": "env", "required": true}
+      ],
+      "outputs": [
+        {"name": "timeout_events_recorded", "type": "string", "description": "Number of timeout events recorded in PerformanceMetrics"},
+        {"name": "expected_timeout_count", "type": "string", "description": "Expected number of timeout events"},
+        {"name": "metrics_accurate", "type": "string", "description": "Whether PerformanceMetrics timeout count matches expected"}
+      ],
+      "assertions": [
+        {"type": "contains", "target": "metrics_accurate", "value": "true", "message": "PerformanceMetrics must record all timeout events accurately"},
+        {"type": "min_count", "target": "timeout_events_recorded", "value": 10, "message": "All 10 timeout events (5 connection + 5 request) must be recorded"}
+      ],
+      "metrics": ["connection_timeouts_recorded", "request_timeouts_recorded", "avg_recorded_timeout_ms"]
+    }
+  ]
+}
