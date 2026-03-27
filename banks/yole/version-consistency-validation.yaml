@@ -1,0 +1,171 @@
+# SPDX-FileCopyrightText: 2025 Milos Vasic
+# SPDX-License-Identifier: Apache-2.0
+#
+# Challenge: Version Consistency Validation
+# Validates that version 1.0.0 is correctly applied across all platforms
+
+name: version-consistency-validation
+version: 1.0.0
+description: |
+  Validates that version 1.0.0 is correctly applied across all platforms
+  and that no old version references (2.19.3, 2.19.35) remain in the codebase.
+
+platforms:
+  - android
+  - desktop
+  - web
+
+timeout: 5m
+
+steps:
+  # Check Android build.gradle.kts
+  - name: android-build-gradle-version
+    type: assert_file_contains
+    params:
+      file: androidApp/build.gradle.kts
+      expected_content: |
+        versionCode = 7
+        versionName = "1.0.0"
+    on_failure: |
+      Android build.gradle.kts does not contain correct version 1.0.0 and versionCode 7
+
+  # Check Desktop build.gradle.kts
+  - name: desktop-build-gradle-version
+    type: assert_file_contains
+    params:
+      file: desktopApp/build.gradle.kts
+      expected_content: 'packageVersion = "1.0.0"'
+    on_failure: |
+      Desktop build.gradle.kts does not contain correct packageVersion 1.0.0
+
+  # Check Android App - no old versions
+  - name: android-app-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      forbidden_content:
+        - "2.19.3"
+        - "2.19.35"
+    on_failure: |
+      Android YoleApp.kt still contains old version references
+
+  # Check Android App - has new version
+  - name: android-app-has-new-version
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content:
+        - 'Yole v1.0.0'
+        - 'Version 1.0.0'
+    on_failure: |
+      Android YoleApp.kt does not contain new version 1.0.0
+
+  # Check Desktop App - no old versions
+  - name: desktop-app-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: desktopApp/src/main/kotlin/digital/vasic/yole/desktop/ui/YoleApp.kt
+      forbidden_content: "2.19.3.5"
+    on_failure: |
+      Desktop YoleApp.kt still contains old version reference 2.19.3.5
+
+  # Check Desktop App - has new version
+  - name: desktop-app-has-new-version
+    type: assert_file_contains
+    params:
+      file: desktopApp/src/main/kotlin/digital/vasic/yole/desktop/ui/YoleApp.kt
+      expected_content: 'Version: 1.0.0'
+    on_failure: |
+      Desktop YoleApp.kt does not contain new version 1.0.0
+
+  # Check Desktop Dialogs - no old versions
+  - name: desktop-dialogs-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: desktopApp/src/main/kotlin/digital/vasic/yole/desktop/ui/Dialogs.kt
+      forbidden_content: "2.19.3.5"
+    on_failure: |
+      Desktop Dialogs.kt still contains old version reference 2.19.3.5
+
+  # Check Desktop Dialogs - has new version
+  - name: desktop-dialogs-has-new-version
+    type: assert_file_contains
+    params:
+      file: desktopApp/src/main/kotlin/digital/vasic/yole/desktop/ui/Dialogs.kt
+      expected_content: 'Version 1.0.0'
+    on_failure: |
+      Desktop Dialogs.kt does not contain new version 1.0.0
+
+  # Check Web Main - no old versions
+  - name: web-main-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: webApp/src/wasmJsMain/kotlin/digital/vasic/yole/web/Main.kt
+      forbidden_content: "2.19.3"
+    on_failure: |
+      Web Main.kt still contains old version reference
+
+  # Check Web Main - has new version
+  - name: web-main-has-new-version
+    type: assert_file_contains
+    params:
+      file: webApp/src/wasmJsMain/kotlin/digital/vasic/yole/web/Main.kt
+      expected_content: 'app.version=1.0.0'
+    on_failure: |
+      Web Main.kt does not contain new version
+
+  # Check Web Enhanced - no old versions
+  - name: web-enhanced-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: webApp/src/wasmJsMain/kotlin/digital/vasic/yole/web/EnhancedWebApp.kt
+      forbidden_content: "2.19.3"
+    on_failure: |
+      Web EnhancedWebApp.kt still contains old version reference
+
+  # Check Web Enhanced - has new version
+  - name: web-enhanced-has-new-version
+    type: assert_file_contains
+    params:
+      file: webApp/src/wasmJsMain/kotlin/digital/vasic/yole/web/EnhancedWebApp.kt
+      expected_content: 'app.version=1.0.0'
+    on_failure: |
+      Web EnhancedWebApp.kt does not contain new version
+
+  # Check Desktop Tests - no old versions
+  - name: desktop-tests-no-old-versions
+    type: assert_file_not_contains
+    params:
+      file: desktopApp/src/test/kotlin/digital/vasic/yole/desktop/FullUIAutomationTest.kt
+      forbidden_content: "2.19.3.5"
+    on_failure: |
+      Desktop FullUIAutomationTest.kt still contains old version reference
+
+  # Check Desktop Tests - has new version
+  - name: desktop-tests-has-new-version
+    type: assert_file_contains
+    params:
+      file: desktopApp/src/test/kotlin/digital/vasic/yole/desktop/FullUIAutomationTest.kt
+      expected_content: 'Version: 1.0.0'
+    on_failure: |
+      Desktop FullUIAutomationTest.kt does not contain new version
+
+  # Run unit tests for version consistency
+  - name: run-version-consistency-tests
+    type: gradle_test
+    params:
+      module: androidApp
+      test_class: digital.vasic.yole.android.VersionConsistencyTests
+    on_failure: |
+      Version consistency tests failed
+
+success_criteria:
+  all_steps_passed: true
+  no_crashes: true
+
+report:
+  format: markdown
+  sections:
+    - summary
+    - step_results
+    - recommendations

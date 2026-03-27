@@ -1,0 +1,117 @@
+# SPDX-FileCopyrightText: 2025 Milos Vasic
+# SPDX-License-Identifier: Apache-2.0
+#
+# Challenge: File Browser and Save Functionality Validation
+# Validates that file browser shows files correctly and save works with SAF
+
+name: file-browser-save-functionality
+version: 1.0.0
+description: |
+  Validates that file browser correctly displays files in directories
+  and that save functionality works with both direct file access and SAF.
+
+platforms:
+  - android
+
+timeout: 10m
+
+steps:
+  # Check saveFile function has SAF support
+  - name: save-function-has-saf-support
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content: |
+        fun saveFile(context: Context, filePath: String, content: String, safUri: Uri? = null)
+    on_failure: |
+      saveFile function does not have SAF support with safUri parameter
+
+  # Check createFileWithSAF function exists
+  - name: create-file-saf-function-exists
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content: |
+        fun createFileWithSAF(context: Context, parentUri: Uri, fileName: String, content: String)
+    on_failure: |
+      createFileWithSAF function does not exist
+
+  # Check saveFile calls use context parameter
+  - name: save-calls-use-context
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content: |
+        saveFile(context,
+    on_failure: |
+      Not all saveFile calls have been updated to use context parameter
+
+  # Check FileBrowser loads files correctly
+  - name: file-browser-loads-files
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content: |
+        val directFiles = if (docsDir.exists() && docsDir.canRead()) {
+            docsDir.listFiles()?.toList() ?: emptyList()
+        } else {
+            emptyList()
+        }
+    on_failure: |
+      File browser does not properly check for files before deciding on SAF fallback
+
+  # Check FileBrowser has SAF fallback
+  - name: file-browser-saf-fallback
+    type: assert_file_contains
+    params:
+      file: androidApp/src/main/java/digital/vasic/yole/android/ui/YoleApp.kt
+      expected_content: |
+        if (directFiles.isNotEmpty()) {
+            // We have direct access and files exist
+        } else {
+            // No direct access or directory is empty — check persisted SAF permissions
+    on_failure: |
+      File browser does not have proper SAF fallback logic
+
+  # Run file browser tests
+  - name: run-file-browser-tests
+    type: gradle_test
+    params:
+      module: androidApp
+      test_class: digital.vasic.yole.android.FileBrowserSaveFunctionalityTests
+    on_failure: |
+      File browser and save functionality tests failed
+
+  # Build Android Debug APK to verify compilation
+  - name: build-android-debug
+    type: gradle_build
+    params:
+      module: androidApp
+      task: assembleDebug
+    on_failure: |
+      Android debug build failed - check for compilation errors
+
+  # Verify APK contains correct version
+  - name: verify-apk-version
+    type: shell
+    params:
+      command: |
+        aapt dump badging androidApp/build/outputs/apk/debug/androidApp-debug.apk | grep version
+    expected_output_contains:
+      - "versionName='1.0.0'"
+      - "versionCode='7'"
+    on_failure: |
+      Built APK does not contain correct version 1.0.0 and versionCode 7
+
+success_criteria:
+  all_steps_passed: true
+  no_crashes: true
+  artifacts_built: true
+
+report:
+  format: markdown
+  sections:
+    - summary
+    - step_results
+    - artifacts
+    - recommendations
