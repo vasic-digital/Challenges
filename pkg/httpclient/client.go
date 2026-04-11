@@ -3,6 +3,7 @@ package httpclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -83,6 +84,19 @@ func WithTimeout(d time.Duration) ClientOption {
 
 // Login authenticates with the API and stores the JWT token
 // for subsequent requests. Returns the parsed login response.
+// AuthError is returned by Login when the server rejects the credentials
+// (HTTP 4xx). It's a non-retryable failure: no amount of re-requesting
+// will turn bad credentials into good ones. LoginWithRetry short-circuits
+// on this error via errors.As.
+type AuthError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *AuthError) Error() string {
+	return fmt.Sprintf("login returned HTTP %d: %s", e.StatusCode, e.Body)
+}
+
 func (c *APIClient) Login(
 	ctx context.Context, username, password string,
 ) (map[string]interface{}, error) {
@@ -111,6 +125,13 @@ func (c *APIClient) Login(
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		// 4xx is a definitive client error: bad credentials, missing
+		// fields, rate limited, etc. Surfacing AuthError lets
+		// LoginWithRetry short-circuit instead of burning ~150 seconds
+		// of exponential backoff.
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			return nil, &AuthError{StatusCode: resp.StatusCode, Body: string(data)}
+		}
 		return nil, fmt.Errorf(
 			"login returned HTTP %d: %s", resp.StatusCode, string(data),
 		)
@@ -130,6 +151,8 @@ func (c *APIClient) Login(
 
 // LoginWithRetry calls Login with exponential backoff retry.
 // Useful when the server may be under heavy load (e.g., post-scan aggregation).
+// Short-circuits on AuthError (HTTP 4xx) because retrying bad credentials
+// is pointless and wastes ~150 seconds of backoff.
 func (c *APIClient) LoginWithRetry(
 	ctx context.Context, username, password string, maxRetries int,
 ) (map[string]interface{}, error) {
@@ -146,6 +169,12 @@ func (c *APIClient) LoginWithRetry(
 		resp, err := c.Login(ctx, username, password)
 		if err == nil {
 			return resp, nil
+		}
+		// Don't retry on authentication failures — bad credentials
+		// stay bad no matter how many times we ask.
+		var authErr *AuthError
+		if errors.As(err, &authErr) {
+			return nil, err
 		}
 		lastErr = err
 	}
