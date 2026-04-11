@@ -95,6 +95,11 @@ func parseBankFile(path string, data []byte) (*BankFile, error) {
 			return nil, fmt.Errorf("parse bank file %s: %w", path, err)
 		}
 	}
+	// HelixQA banks use "test_cases" as the root key — fold those
+	// into Challenges so every caller only ever reads one slice.
+	if len(file.Challenges) == 0 && len(file.TestCases) > 0 {
+		file.Challenges = file.TestCases
+	}
 	return &file, nil
 }
 
