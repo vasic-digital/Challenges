@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"digital.vasic.challenges/pkg/challenge"
+	"digital.vasic.challenges/pkg/userflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,147 +19,110 @@ import (
 // ---------------------------------------------------------------------------
 // resolveGroups tests
 // ---------------------------------------------------------------------------
+//
+// resolveGroups walks the caller-supplied platformGroups map. The tests here
+// install a small synthetic map for the duration of each test and restore the
+// original after — no project-specific names or service lists appear, keeping
+// the binary 100% decoupled per CLAUDE.md §MANDATORY: Project-Agnostic.
 
-func TestResolveGroups_AllPlatform(t *testing.T) {
-	groups, err := resolveGroups("all")
-	require.NoError(t, err)
-	assert.Len(t, groups, 6, "all should resolve to 6 platform groups")
+// withPlatformGroups swaps the package-level platformGroups for the duration
+// of a test. The cleanup restores whatever was there before so tests stay
+// independent.
+func withPlatformGroups(t *testing.T, groups map[string]userflow.PlatformGroup) {
+	t.Helper()
+	orig := platformGroups
+	platformGroups = groups
+	t.Cleanup(func() { platformGroups = orig })
+}
 
-	// Verify deterministic ordering.
-	expectedOrder := []string{
-		"api", "web", "desktop", "wizard", "android", "tv",
-	}
-	for i, name := range expectedOrder {
-		assert.Equal(t, name, groups[i].Name,
-			"group at index %d should be %s", i, name)
+// synthPlatformGroups returns a deterministic, intentionally-generic three-
+// platform map used by the resolveGroups tests. The keys and service names
+// are arbitrary strings — nothing project-specific leaks into the binary.
+func synthPlatformGroups() map[string]userflow.PlatformGroup {
+	return map[string]userflow.PlatformGroup{
+		"alpha": {
+			Name:     "alpha",
+			Services: []string{"service-a"},
+			CPULimit: 1.0, MemoryMB: 256,
+		},
+		"beta": {
+			Name:     "beta",
+			Services: []string{"service-a", "service-b"},
+			CPULimit: 2.0, MemoryMB: 512,
+		},
+		"gamma": {
+			Name:     "gamma",
+			Services: []string{"service-c"},
+			CPULimit: 0.5, MemoryMB: 128,
+		},
 	}
 }
 
-func TestResolveGroups_SinglePlatform(t *testing.T) {
-	tests := []struct {
-		name          string
-		platform      string
-		wantName      string
-		wantServices  []string
-		wantCPU       float64
-		wantMemoryMB  int
-	}{
-		{
-			name:         "api platform",
-			platform:     "api",
-			wantName:     "api",
-			wantServices: []string{"catalog-api", "postgres", "redis"},
-			wantCPU:      2.0,
-			wantMemoryMB: 4096,
-		},
-		{
-			name:     "web platform",
-			platform: "web",
-			wantName: "web",
-			wantServices: []string{
-				"catalog-api", "catalog-web", "postgres", "redis",
-			},
-			wantCPU:      3.0,
-			wantMemoryMB: 6144,
-		},
-		{
-			name:         "desktop platform",
-			platform:     "desktop",
-			wantName:     "desktop",
-			wantServices: []string{"catalog-api", "postgres", "redis"},
-			wantCPU:      2.0,
-			wantMemoryMB: 4096,
-		},
-		{
-			name:         "wizard platform",
-			platform:     "wizard",
-			wantName:     "wizard",
-			wantServices: []string{"catalog-api", "postgres", "redis"},
-			wantCPU:      2.0,
-			wantMemoryMB: 4096,
-		},
-		{
-			name:         "android platform",
-			platform:     "android",
-			wantName:     "android",
-			wantServices: []string{"catalog-api", "postgres", "redis"},
-			wantCPU:      2.0,
-			wantMemoryMB: 4096,
-		},
-		{
-			name:         "tv platform",
-			platform:     "tv",
-			wantName:     "tv",
-			wantServices: []string{"catalog-api", "postgres", "redis"},
-			wantCPU:      2.0,
-			wantMemoryMB: 4096,
-		},
-	}
+func TestResolveGroups_AllPlatformExpandsEveryKey(t *testing.T) {
+	withPlatformGroups(t, synthPlatformGroups())
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			groups, err := resolveGroups(tc.platform)
+	groups, err := resolveGroups("all")
+	require.NoError(t, err)
+	assert.Len(t, groups, 3, "`all` must expand to every configured group")
+
+	names := make([]string, 0, len(groups))
+	for _, g := range groups {
+		names = append(names, g.Name)
+	}
+	assert.ElementsMatch(t, []string{"alpha", "beta", "gamma"}, names)
+}
+
+func TestResolveGroups_SinglePlatformRoundTrip(t *testing.T) {
+	withPlatformGroups(t, synthPlatformGroups())
+
+	for _, name := range []string{"alpha", "beta", "gamma"} {
+		t.Run(name, func(t *testing.T) {
+			groups, err := resolveGroups(name)
 			require.NoError(t, err)
 			require.Len(t, groups, 1)
-
-			g := groups[0]
-			assert.Equal(t, tc.wantName, g.Name)
-			assert.Equal(t, tc.wantServices, g.Services)
-			assert.InDelta(t, tc.wantCPU, g.CPULimit, 0.001)
-			assert.Equal(t, tc.wantMemoryMB, g.MemoryMB)
+			assert.Equal(t, name, groups[0].Name)
 		})
 	}
 }
 
 func TestResolveGroups_CaseInsensitive(t *testing.T) {
-	tests := []struct {
-		input    string
-		wantName string
-	}{
-		{"API", "api"},
-		{"Api", "api"},
-		{"WEB", "web"},
-		{"ALL", "api"}, // first element of all
-	}
+	withPlatformGroups(t, synthPlatformGroups())
 
-	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			groups, err := resolveGroups(tc.input)
+	for _, input := range []string{"ALPHA", "Alpha", "BeTa"} {
+		t.Run(input, func(t *testing.T) {
+			groups, err := resolveGroups(input)
 			require.NoError(t, err)
-			assert.Equal(t, tc.wantName, groups[0].Name)
+			require.Len(t, groups, 1)
+			assert.Equal(t, strings.ToLower(input), groups[0].Name)
 		})
 	}
 }
 
 func TestResolveGroups_Whitespace(t *testing.T) {
-	tests := []struct {
-		input    string
-		wantName string
-	}{
-		{"  api  ", "api"},
-		{"\tweb\t", "web"},
-		{" all ", "api"}, // first element
-	}
+	withPlatformGroups(t, synthPlatformGroups())
 
-	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			groups, err := resolveGroups(tc.input)
+	for _, input := range []string{"  alpha  ", "\tbeta\t"} {
+		t.Run(input, func(t *testing.T) {
+			groups, err := resolveGroups(input)
 			require.NoError(t, err)
-			assert.Equal(t, tc.wantName, groups[0].Name)
+			require.Len(t, groups, 1)
+			assert.Equal(t, strings.TrimSpace(strings.ToLower(input)), groups[0].Name)
 		})
 	}
 }
 
 func TestResolveGroups_InvalidPlatform(t *testing.T) {
+	withPlatformGroups(t, synthPlatformGroups())
+
 	tests := []struct {
 		name     string
 		platform string
 	}{
 		{"empty string", ""},
-		{"unknown platform", "ios"},
-		{"typo", "dekstop"},
+		{"unknown platform", "delta"},
+		{"typo", "alhpa"},
 		{"numeric", "123"},
-		{"special chars", "api!"},
+		{"special chars", "alpha!"},
 	}
 
 	for _, tc := range tests {
@@ -169,6 +133,14 @@ func TestResolveGroups_InvalidPlatform(t *testing.T) {
 			assert.Contains(t, err.Error(), "unknown platform")
 		})
 	}
+}
+
+func TestResolveGroups_UnloadedPlatformGroupsErrors(t *testing.T) {
+	withPlatformGroups(t, map[string]userflow.PlatformGroup{})
+
+	groups, err := resolveGroups("alpha")
+	assert.Error(t, err, "empty platformGroups must reject every request")
+	assert.Nil(t, groups)
 }
 
 // ---------------------------------------------------------------------------
@@ -714,63 +686,63 @@ func TestPrintSummary_StuckAndTimedOutCountAsErrors(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// platformGroups map validation
+// loadPlatformGroups contract
 // ---------------------------------------------------------------------------
+//
+// The module's constitution (CLAUDE.md §MANDATORY: Project-Agnostic) forbids
+// baking any project-specific service data into this binary. Platform groups
+// are loaded at runtime from a caller-supplied JSON file; the tests here
+// exercise that loader contract without asserting on any specific service
+// name, platform key, or resource number — those all belong to the caller.
 
-func TestPlatformGroups_AllKeysPresent(t *testing.T) {
-	expected := []string{
-		"api", "web", "desktop", "wizard", "android", "tv",
-	}
-	for _, name := range expected {
-		t.Run(name, func(t *testing.T) {
-			group, ok := platformGroups[name]
-			assert.True(t, ok, "platformGroups should contain %s", name)
-			assert.Equal(t, name, group.Name,
-				"group Name should match map key")
-			assert.NotEmpty(t, group.Services,
-				"group should have at least one service")
-			assert.Greater(t, group.CPULimit, 0.0,
-				"CPU limit should be positive")
-			assert.Greater(t, group.MemoryMB, 0,
-				"memory limit should be positive")
-		})
-	}
+func TestLoadPlatformGroups_EmptyPathReturnsEmptyMap(t *testing.T) {
+	groups, err := loadPlatformGroups("")
+	assert.NoError(t, err)
+	assert.NotNil(t, groups, "empty-path loader must return a non-nil map")
+	assert.Empty(t, groups, "empty-path loader must yield no groups")
 }
 
-func TestPlatformGroups_WebHasWebService(t *testing.T) {
-	web := platformGroups["web"]
-	assert.Contains(t, web.Services, "catalog-web",
-		"web group should include catalog-web service")
-	assert.Contains(t, web.Services, "catalog-api",
-		"web group should include catalog-api service")
+func TestLoadPlatformGroups_MissingFileErrors(t *testing.T) {
+	_, err := loadPlatformGroups("/nonexistent/path/platform-groups.json")
+	assert.Error(t, err, "missing file must surface an error")
+	assert.Contains(t, err.Error(), "read platform groups")
 }
 
-func TestPlatformGroups_AllGroupsHaveCommonServices(t *testing.T) {
-	// All platform groups should include at least the API and
-	// database services.
-	for name, group := range platformGroups {
-		t.Run(name, func(t *testing.T) {
-			assert.Contains(t, group.Services, "catalog-api",
-				"every group should include catalog-api")
-			assert.Contains(t, group.Services, "postgres",
-				"every group should include postgres")
-			assert.Contains(t, group.Services, "redis",
-				"every group should include redis")
-		})
-	}
+func TestLoadPlatformGroups_MalformedJSONErrors(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.json")
+	require.NoError(t, os.WriteFile(path, []byte("{ not: json"), 0o600))
+
+	_, err := loadPlatformGroups(path)
+	assert.Error(t, err, "malformed JSON must surface an error")
+	assert.Contains(t, err.Error(), "parse platform groups")
 }
 
-func TestPlatformGroups_ResourceLimits(t *testing.T) {
-	// All groups should respect the host resource budget:
-	// max 4 CPUs and 8 GB RAM per group.
-	for name, group := range platformGroups {
-		t.Run(name, func(t *testing.T) {
-			assert.LessOrEqual(t, group.CPULimit, 4.0,
-				"CPU limit should not exceed 4 cores")
-			assert.LessOrEqual(t, group.MemoryMB, 8192,
-				"memory limit should not exceed 8 GB")
-		})
-	}
+func TestLoadPlatformGroups_ValidFixtureRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "groups.json")
+	// Caller-supplied fixture: service names, cpu/memory values, and
+	// platform keys are all arbitrary — the loader treats them as opaque
+	// user data. This is exactly what the constitution requires.
+	fixture := []byte(`{
+	  "test-platform": {
+	    "name": "test-platform",
+	    "services": ["service-one", "service-two"],
+	    "cpu_limit": 1.5,
+	    "memory_mb": 512
+	  }
+	}`)
+	require.NoError(t, os.WriteFile(path, fixture, 0o600))
+
+	groups, err := loadPlatformGroups(path)
+	require.NoError(t, err)
+	require.Contains(t, groups, "test-platform")
+
+	g := groups["test-platform"]
+	assert.Equal(t, "test-platform", g.Name)
+	assert.Equal(t, []string{"service-one", "service-two"}, g.Services)
+	assert.InDelta(t, 1.5, g.CPULimit, 0.0001)
+	assert.Equal(t, 512, g.MemoryMB)
 }
 
 // ---------------------------------------------------------------------------
