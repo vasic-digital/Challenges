@@ -75,9 +75,9 @@ func (c *BrowserFlowChallenge) Execute(
 	); err != nil {
 		assertions = append(
 			assertions, challenge.AssertionResult{
-				Type:    "browser_init",
-				Target:  "initialize",
-				Passed:  false,
+				Type:   "browser_init",
+				Target: "initialize",
+				Passed: false,
 				Message: fmt.Sprintf(
 					"browser init failed: %s",
 					err.Error(),
@@ -156,9 +156,9 @@ func (c *BrowserFlowChallenge) Execute(
 		} else {
 			assertions = append(
 				assertions, challenge.AssertionResult{
-					Type:    step.Action,
-					Target:  step.Name,
-					Passed:  true,
+					Type:   step.Action,
+					Target: step.Name,
+					Passed: true,
 					Message: fmt.Sprintf(
 						"step %q (%s) succeeded",
 						step.Name, step.Action,

@@ -15,8 +15,8 @@ func AllPassComposite(
 	for _, r := range results {
 		if !r.Passed {
 			return Result{
-				Type:    "all_pass",
-				Passed:  false,
+				Type:   "all_pass",
+				Passed: false,
 				Message: fmt.Sprintf(
 					"assertion '%s' on target '%s' failed: %s",
 					r.Type, r.Target, r.Message,
@@ -26,8 +26,8 @@ func AllPassComposite(
 	}
 
 	return Result{
-		Type:    "all_pass",
-		Passed:  true,
+		Type:   "all_pass",
+		Passed: true,
 		Message: fmt.Sprintf(
 			"all %d assertions passed", len(results),
 		),

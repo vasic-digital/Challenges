@@ -521,9 +521,9 @@ func TestSubstituteVars(t *testing.T) {
 		expected string
 	}{
 		{
-			name:  "single variable",
-			input: "/api/items/{{id}}",
-			vars:  map[string]string{"id": "42"},
+			name:     "single variable",
+			input:    "/api/items/{{id}}",
+			vars:     map[string]string{"id": "42"},
 			expected: "/api/items/42",
 		},
 		{
@@ -610,17 +610,17 @@ func TestEvaluateStepAssertion(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "not_empty pass",
-			sa:   StepAssertion{Type: "not_empty"},
-			code: 200,
-			body: []byte(`data`),
+			name:     "not_empty pass",
+			sa:       StepAssertion{Type: "not_empty"},
+			code:     200,
+			body:     []byte(`data`),
 			expected: true,
 		},
 		{
-			name: "not_empty fail",
-			sa:   StepAssertion{Type: "not_empty"},
-			code: 200,
-			body: nil,
+			name:     "not_empty fail",
+			sa:       StepAssertion{Type: "not_empty"},
+			code:     200,
+			body:     nil,
 			expected: false,
 		},
 		{

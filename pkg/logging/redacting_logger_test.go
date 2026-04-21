@@ -179,11 +179,11 @@ func TestRedactHeaders_NilHeaders(t *testing.T) {
 
 func TestRedactHeaders_MixedHeaders(t *testing.T) {
 	headers := map[string]string{
-		"Authorization":  "Bearer abc",
-		"X-Api-Key":      "key123",
-		"Content-Type":   "application/json",
-		"X-Auth-Token":   "tok",
-		"Accept":         "text/html",
+		"Authorization": "Bearer abc",
+		"X-Api-Key":     "key123",
+		"Content-Type":  "application/json",
+		"X-Auth-Token":  "tok",
+		"Accept":        "text/html",
 	}
 
 	result := redactHeaders(headers)

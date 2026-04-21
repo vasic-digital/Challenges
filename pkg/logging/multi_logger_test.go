@@ -51,9 +51,9 @@ func (m *testMockLogger) Close() error {
 // TestNewMultiLogger verifies MultiLogger creation.
 func TestNewMultiLogger(t *testing.T) {
 	tests := []struct {
-		name     string
-		loggers  []Logger
-		wantLen  int
+		name    string
+		loggers []Logger
+		wantLen int
 	}{
 		{
 			name:    "empty loggers",
@@ -368,9 +368,9 @@ func TestMultiLogger_LogAPIResponse(t *testing.T) {
 // TestMultiLogger_Close verifies Close calls all loggers and returns last error.
 func TestMultiLogger_Close(t *testing.T) {
 	tests := []struct {
-		name       string
-		errors     []error
-		wantErr    error
+		name    string
+		errors  []error
+		wantErr error
 	}{
 		{
 			name:    "all succeed",

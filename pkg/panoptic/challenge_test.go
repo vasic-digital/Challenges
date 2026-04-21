@@ -13,11 +13,11 @@ import (
 
 // mockAdapter implements PanopticAdapter for testing.
 type mockAdapter struct {
-	available   bool
-	runResult   *PanopticRunResult
-	runErr      error
-	versionStr  string
-	versionErr  error
+	available  bool
+	runResult  *PanopticRunResult
+	runErr     error
+	versionStr string
+	versionErr error
 }
 
 func (m *mockAdapter) Run(

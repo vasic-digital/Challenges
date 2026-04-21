@@ -79,23 +79,23 @@ type AppResult struct {
 // PanopticConfig mirrors the Panoptic configuration structure
 // for programmatic generation without importing Panoptic.
 type PanopticConfig struct {
-	Name     string            `yaml:"name"`
-	Output   string            `yaml:"output"`
-	Apps     []PanopticApp     `yaml:"apps"`
-	Actions  []PanopticAction  `yaml:"actions,omitempty"`
-	Settings PanopticSettings  `yaml:"settings"`
+	Name     string           `yaml:"name"`
+	Output   string           `yaml:"output"`
+	Apps     []PanopticApp    `yaml:"apps"`
+	Actions  []PanopticAction `yaml:"actions,omitempty"`
+	Settings PanopticSettings `yaml:"settings"`
 }
 
 // PanopticApp defines a single application to test.
 type PanopticApp struct {
-	Name        string                 `yaml:"name"`
-	Type        string                 `yaml:"type"`
-	URL         string                 `yaml:"url,omitempty"`
-	Path        string                 `yaml:"path,omitempty"`
-	Platform    string                 `yaml:"platform,omitempty"`
-	Timeout     int                    `yaml:"timeout"`
-	Environment map[string]string      `yaml:"environment,omitempty"`
-	Actions     []PanopticAction       `yaml:"actions"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	URL         string            `yaml:"url,omitempty"`
+	Path        string            `yaml:"path,omitempty"`
+	Platform    string            `yaml:"platform,omitempty"`
+	Timeout     int               `yaml:"timeout"`
+	Environment map[string]string `yaml:"environment,omitempty"`
+	Actions     []PanopticAction  `yaml:"actions"`
 }
 
 // PanopticAction defines a single test action.

@@ -15,7 +15,7 @@ import (
 
 // Compile-time interface checks.
 var (
-	_ APIAdapter  = (*HTTPAPIAdapter)(nil)
+	_ APIAdapter    = (*HTTPAPIAdapter)(nil)
 	_ WebSocketConn = (*gorillaWSConn)(nil)
 )
 

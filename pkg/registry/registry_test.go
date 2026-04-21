@@ -20,10 +20,10 @@ type stubChallenge struct {
 	deps     []challenge.ID
 }
 
-func (s *stubChallenge) ID() challenge.ID            { return s.id }
-func (s *stubChallenge) Name() string                { return s.name }
-func (s *stubChallenge) Description() string         { return s.desc }
-func (s *stubChallenge) Category() string            { return s.category }
+func (s *stubChallenge) ID() challenge.ID             { return s.id }
+func (s *stubChallenge) Name() string                 { return s.name }
+func (s *stubChallenge) Description() string          { return s.desc }
+func (s *stubChallenge) Category() string             { return s.category }
 func (s *stubChallenge) Dependencies() []challenge.ID { return s.deps }
 
 func (s *stubChallenge) Configure(

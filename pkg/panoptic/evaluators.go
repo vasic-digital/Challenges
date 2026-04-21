@@ -12,14 +12,14 @@ import (
 // evaluators with the given engine.
 func RegisterEvaluators(engine *assertion.DefaultEngine) error {
 	evaluators := map[string]assertion.Evaluator{
-		"screenshot_exists":  evaluateScreenshotExists,
-		"video_exists":       evaluateVideoExists,
-		"no_ui_errors":       evaluateNoUIErrors,
+		"screenshot_exists":   evaluateScreenshotExists,
+		"video_exists":        evaluateVideoExists,
+		"no_ui_errors":        evaluateNoUIErrors,
 		"ai_confidence_above": evaluateAIConfidenceAbove,
-		"all_apps_passed":    evaluateAllAppsPassed,
-		"max_duration":       evaluateMaxDuration,
-		"report_exists":      evaluateReportExists,
-		"app_count":          evaluateAppCount,
+		"all_apps_passed":     evaluateAllAppsPassed,
+		"max_duration":        evaluateMaxDuration,
+		"report_exists":       evaluateReportExists,
+		"app_count":           evaluateAppCount,
 	}
 
 	for name, eval := range evaluators {

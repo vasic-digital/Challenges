@@ -724,7 +724,6 @@ func (r *sseRecorder) Flush() {
 	// No-op for testing
 }
 
-
 // bufferWriter is a simple buffer for writing
 type bufferWriter struct {
 	buf []byte

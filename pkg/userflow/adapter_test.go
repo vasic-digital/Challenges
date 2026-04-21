@@ -254,7 +254,7 @@ func (s *stubAPI) WebSocketConnect(
 ) (WebSocketConn, error) {
 	return nil, nil
 }
-func (s *stubAPI) SetToken(_ string)          {}
+func (s *stubAPI) SetToken(_ string) {}
 func (s *stubAPI) Available(_ context.Context) bool {
 	return false
 }
