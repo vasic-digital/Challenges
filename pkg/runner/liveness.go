@@ -106,9 +106,11 @@ func (m *livenessMonitor) run(
 					m.staleThreshold.Seconds(),
 				)
 			}
-			// Cancel context first, then signal stuck.
-			m.cancel()
+			// Signal stuck first, then cancel context.
+			// This ensures the runner sees stuckCh is closed
+			// before Execute returns from context cancellation.
 			close(stuckCh)
+			m.cancel()
 			return
 		}
 	}
