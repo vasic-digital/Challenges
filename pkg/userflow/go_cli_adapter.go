@@ -254,20 +254,6 @@ func (a *GoCLIAdapter) Available(
 	return a.requireGoMod() == nil
 }
 
-// requireGoMod returns a descriptive error when projectRoot has no
-// go.mod. Shared by Build, RunTests, and Lint so every entry point
-// enforces the same precondition.
-func (a *GoCLIAdapter) requireGoMod() error {
-	modPath := filepath.Join(a.projectRoot, "go.mod")
-	if _, err := os.Stat(modPath); err != nil {
-		return fmt.Errorf(
-			"go_cli_adapter: no go.mod in %q: %w",
-			a.projectRoot, err,
-		)
-	}
-	return nil
-}
-
 // runGo executes a go command in the project root and returns
 // combined output.
 func (a *GoCLIAdapter) runGo(
