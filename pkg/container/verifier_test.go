@@ -129,7 +129,7 @@ func TestPreConditionCheck(t *testing.T) {
 	if err != nil {
 		// Check if it's the "containers module not found" error
 		if err.Error() == "containers module not found" {
-			t.Skip("Skipping test - containers module not found in test environment")
+			t.Skip("Skipping test - containers module not found in test environment")  // SKIP-OK: #legacy-untriaged
 		}
 		t.Logf("PreConditionCheck returned error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestServiceConfig(t *testing.T) {
 // Integration test that requires running containers
 func TestIntegration_VerifyRunningContainers(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping integration test in short mode")  // SKIP-OK: #short-mode
 	}
 
 	logger := &mockLogger{}
