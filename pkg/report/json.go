@@ -45,11 +45,11 @@ func (r *JSONReporter) GenerateReport(
 
 // jsonMasterSummary is the JSON structure for a master summary.
 type jsonMasterSummary struct {
-	GeneratedAt     time.Time          `json:"generated_at"`
-	TotalChallenges int                `json:"total_challenges"`
-	Passed          int                `json:"passed"`
-	Failed          int                `json:"failed"`
-	TotalDuration   time.Duration      `json:"total_duration"`
+	GeneratedAt     time.Time           `json:"generated_at"`
+	TotalChallenges int                 `json:"total_challenges"`
+	Passed          int                 `json:"passed"`
+	Failed          int                 `json:"failed"`
+	TotalDuration   time.Duration       `json:"total_duration"`
 	Results         []*challenge.Result `json:"results"`
 }
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -387,23 +388,30 @@ func run() int {
 	return exitSuccess
 }
 
-// resolveGroups converts the --platform flag value into a list
-// of PlatformGroup structs for the test environment.
+// resolveGroups converts the --platform flag value into a list of
+// PlatformGroup structs. The "all" keyword expands to every group the
+// caller registered via --platform-groups, sorted by name for
+// deterministic ordering. Unknown platforms surface an error whose
+// message lists the configured keys so operators can self-correct
+// without having to read the source. No project-specific names are
+// baked in — keys are whatever the caller supplied.
 func resolveGroups(
 	platform string,
 ) ([]userflow.PlatformGroup, error) {
 	p := strings.ToLower(strings.TrimSpace(platform))
+
+	configuredNames := make([]string, 0, len(platformGroups))
+	for name := range platformGroups {
+		configuredNames = append(configuredNames, name)
+	}
+	sort.Strings(configuredNames)
 
 	if p == "all" {
 		all := make(
 			[]userflow.PlatformGroup,
 			0, len(platformGroups),
 		)
-		// Deterministic order.
-		for _, name := range []string{
-			"api", "web", "desktop",
-			"wizard", "android", "tv",
-		} {
+		for _, name := range configuredNames {
 			all = append(all, platformGroups[name])
 		}
 		return all, nil
@@ -411,11 +419,13 @@ func resolveGroups(
 
 	group, ok := platformGroups[p]
 	if !ok {
+		configured := strings.Join(configuredNames, ", ")
+		if configured == "" {
+			configured = "(none — pass --platform-groups)"
+		}
 		return nil, fmt.Errorf(
-			"unknown platform: %s "+
-				"(valid: all, api, web, desktop, "+
-				"wizard, android, tv)",
-			platform,
+			"unknown platform: %s (valid: all, %s)",
+			platform, configured,
 		)
 	}
 	return []userflow.PlatformGroup{group}, nil

@@ -1,5 +1,23 @@
 # CLAUDE.md - Challenges Module
 
+
+## Definition of Done
+
+This module inherits HelixAgent's universal Definition of Done — see the root
+`CLAUDE.md` and `docs/development/definition-of-done.md`. In one line: **no
+task is done without pasted output from a real run of the real system in the
+same session as the change.** Coverage and green suites are not evidence.
+
+### Acceptance demo for this module
+
+```bash
+# Full challenge execution engine: Configure → Execute → Validate → Cleanup + report
+cd Challenges && GOMAXPROCS=2 nice -n 19 go test -count=1 -race -v \
+  -run 'TestRunner_Execute' ./...
+```
+Expect: PASS; a sample challenge runs to completion, assertion engine evaluates, and JSON/Markdown reports are emitted. The `cmd/userflow-runner` CLI (see `Challenges/README.md`) drives the same pipeline end-to-end.
+
+
 ## MANDATORY: Project-Agnostic / 100% Decoupled
 
 **This module is part of HelixQA's dependency graph and MUST remain 100% decoupled from any consuming project. It is designed for generic use with ANY project, not just ATMOSphere.**
@@ -174,12 +192,21 @@ Conventional Commits: `feat(assertion): add custom evaluator support`
 This is a PERMANENT and NON-NEGOTIABLE security constraint:
 
 - **NEVER** use `sudo` in ANY command
+- **NEVER** use `su` in ANY command
 - **NEVER** execute operations as `root` user
 - **NEVER** elevate privileges for file operations
 - **ALL** infrastructure commands MUST use user-level container runtimes (rootless podman/docker)
 - **ALL** file operations MUST be within user-accessible directories
 - **ALL** service management MUST be done via user systemd or local process management
 - **ALL** builds, tests, and deployments MUST run as the current user
+
+### Container-Based Solutions
+When a build or runtime environment requires system-level dependencies, use containers instead of elevation:
+
+- **Use the `Containers` submodule** (`https://github.com/vasic-digital/Containers`) for containerized build and runtime environments
+- **Add the `Containers` submodule as a Git dependency** and configure it for local use within the project
+- **Build and run inside containers** to avoid any need for privilege escalation
+- **Rootless Podman/Docker** is the preferred container runtime
 
 ### Why This Matters
 - **Security**: Prevents accidental system-wide damage
@@ -188,11 +215,20 @@ This is a PERMANENT and NON-NEGOTIABLE security constraint:
 - **Best Practice**: Modern container workflows are rootless by design
 
 ### When You See SUDO
-If any script or command suggests using `sudo`:
+If any script or command suggests using `sudo` or `su`:
 1. STOP immediately
 2. Find a user-level alternative
 3. Use rootless container runtimes
-4. Modify commands to work within user permissions
+4. Use the `Containers` submodule for containerized builds
+5. Modify commands to work within user permissions
 
 **VIOLATION OF THIS CONSTRAINT IS STRICTLY PROHIBITED.**
 
+## Integration Seams
+
+| Direction | Sibling modules |
+|-----------|-----------------|
+| Upstream (this module imports) | Containers |
+| Downstream (these import this module) | HelixLLM, HelixQA, LLMsVerifier |
+
+*Siblings* means other project-owned modules at the HelixAgent repo root. The root HelixAgent app and external systems are not listed here — the list above is intentionally scoped to module-to-module seams, because drift *between* sibling modules is where the "tests pass, product broken" class of bug most often lives. See root `CLAUDE.md` for the rules that keep these seams contract-tested.

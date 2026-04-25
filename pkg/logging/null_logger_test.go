@@ -124,8 +124,8 @@ func TestNullLogger_Debug(t *testing.T) {
 			fields: nil,
 		},
 		{
-			name:   "with multiple fields",
-			msg:    "detailed debug info",
+			name: "with multiple fields",
+			msg:  "detailed debug info",
 			fields: []Field{
 				StringField("func", "process"),
 				Int64Field("duration_ns", 12345),

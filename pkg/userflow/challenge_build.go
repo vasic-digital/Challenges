@@ -218,9 +218,9 @@ func (c *UnitTestChallenge) Execute(
 				Type:     "all_tests_pass",
 				Target:   target.Name,
 				Expected: "0 failures",
-				Actual: testActualValue(result, err),
-				Passed:  passed,
-				Message: msg,
+				Actual:   testActualValue(result, err),
+				Passed:   passed,
+				Message:  msg,
 			},
 		)
 
@@ -248,9 +248,9 @@ func (c *UnitTestChallenge) Execute(
 	}
 
 	c.ReportProgress("test challenge complete", map[string]any{
-		"status":     status,
-		"total":      totalTests,
-		"failures":   totalFailures,
+		"status":   status,
+		"total":    totalTests,
+		"failures": totalFailures,
 	})
 
 	return c.CreateResult(

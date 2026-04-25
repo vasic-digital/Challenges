@@ -300,14 +300,14 @@ func TestShellChallenge_Execute_GenericError(t *testing.T) {
 // using dependency injection by mocking the command execution.
 func TestShellChallenge_Execute_StatusError(t *testing.T) {
 	tests := []struct {
-		name       string
+		name          string
 		injectedError error
-		wantStatus string
+		wantStatus    string
 	}{
 		{
-			name:       "generic error (not ExitError)",
+			name:          "generic error (not ExitError)",
 			injectedError: assert.AnError, // This is not an *exec.ExitError
-			wantStatus: StatusError,
+			wantStatus:    StatusError,
 		},
 	}
 

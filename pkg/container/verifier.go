@@ -25,38 +25,38 @@ const (
 
 // ServiceConfig defines a service to be verified.
 type ServiceConfig struct {
-	Type     ServiceType
-	Name     string
-	Host     string
-	Port     int
+	Type      ServiceType
+	Name      string
+	Host      string
+	Port      int
 	HealthURL string
-	Timeout  time.Duration
+	Timeout   time.Duration
 }
 
 // DefaultServices returns the default example services.
 func DefaultServices() []ServiceConfig {
 	return []ServiceConfig{
 		{
-			Type:     ServicePostgres,
-			Name:     "postgres",
-			Host:     "localhost",
-			Port:     5432,
-			Timeout:  30 * time.Second,
+			Type:    ServicePostgres,
+			Name:    "postgres",
+			Host:    "localhost",
+			Port:    5432,
+			Timeout: 30 * time.Second,
 		},
 		{
-			Type:     ServiceBackend,
-			Name:     "backend",
-			Host:     "localhost",
-			Port:     8090,
+			Type:      ServiceBackend,
+			Name:      "backend",
+			Host:      "localhost",
+			Port:      8090,
 			HealthURL: "http://localhost:8090/health",
-			Timeout:  30 * time.Second,
+			Timeout:   30 * time.Second,
 		},
 		{
-			Type:     ServiceFreeSWITCH,
-			Name:     "freeswitch",
-			Host:     "localhost",
-			Port:     5060,
-			Timeout:  30 * time.Second,
+			Type:    ServiceFreeSWITCH,
+			Name:    "freeswitch",
+			Host:    "localhost",
+			Port:    5060,
+			Timeout: 30 * time.Second,
 		},
 	}
 }
@@ -128,15 +128,15 @@ func (v *Verifier) checkTCP(ctx context.Context, host string, port int, timeout 
 	// Use a simple TCP dial check
 	// In production, this would use proper connection checking
 	address := fmt.Sprintf("%s:%d", host, port)
-	
+
 	// Create a timeout context
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Simple TCP check using /dev/tcp if available (bash feature)
-	cmd := fmt.Sprintf("timeout %d bash -c 'echo > /dev/tcp/%s/%d' 2>/dev/null", 
+	cmd := fmt.Sprintf("timeout %d bash -c 'echo > /dev/tcp/%s/%d' 2>/dev/null",
 		int(timeout.Seconds()), host, port)
-	
+
 	if err := execCommand(ctx, cmd); err != nil {
 		return fmt.Errorf("cannot connect to %s: %w", address, err)
 	}
@@ -150,7 +150,7 @@ func (v *Verifier) checkHTTP(ctx context.Context, url string, timeout time.Durat
 	defer cancel()
 
 	cmd := fmt.Sprintf("curl -sf %s | grep -q 'status.*ok'", url)
-	
+
 	if err := execCommand(ctx, cmd); err != nil {
 		return fmt.Errorf("health check failed for %s: %w", url, err)
 	}
@@ -162,7 +162,7 @@ func (v *Verifier) checkHTTP(ctx context.Context, url string, timeout time.Durat
 func execCommand(ctx context.Context, cmd string) error {
 	// Use bash to execute the command
 	command := fmt.Sprintf("bash -c '%s'", strings.ReplaceAll(cmd, "'", "'\"'\"'"))
-	
+
 	// In real implementation, use exec.CommandContext
 	// For now, return nil to allow compilation
 	_ = command

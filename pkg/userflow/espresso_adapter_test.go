@@ -41,9 +41,9 @@ func TestNewEspressoAdapter(t *testing.T) {
 			ActivityName: ".TestActivity",
 		}
 		instrumentArgs := map[string]string{
-			"size":          "medium",
-			"annotation":    "com.test.Smoke",
-			"clearPackage":  "true",
+			"size":         "medium",
+			"annotation":   "com.test.Smoke",
+			"clearPackage": "true",
 		}
 		adapter := NewEspressoAdapter(
 			"/home/user/android",

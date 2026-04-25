@@ -85,7 +85,7 @@ func TestDefaultServices(t *testing.T) {
 // TestVerifierWithServices tests custom service configuration.
 func TestVerifierWithServices(t *testing.T) {
 	verifier := NewVerifier(nil)
-	
+
 	customServices := []ServiceConfig{
 		{
 			Type:    ServicePostgres,
@@ -111,7 +111,7 @@ func TestVerifierWithServices(t *testing.T) {
 func TestFindContainersDir(t *testing.T) {
 	// This test may fail in CI environments where the directory doesn't exist
 	dir := findContainersDir()
-	
+
 	// We can't assert the exact path, but we can verify it returns something
 	// or an empty string if not found
 	t.Logf("Found containers directory: %s", dir)
@@ -125,7 +125,7 @@ func TestPreConditionCheck(t *testing.T) {
 	// This test will fail if containers module is not found
 	// In CI/test environments, this is expected
 	err := PreConditionCheck(ctx, logger)
-	
+
 	if err != nil {
 		// Check if it's the "containers module not found" error
 		if err.Error() == "containers module not found" {
@@ -142,9 +142,9 @@ func TestPreConditionCheck(t *testing.T) {
 // TestServiceConfig validates service configuration.
 func TestServiceConfig(t *testing.T) {
 	tests := []struct {
-		name     string
-		config   ServiceConfig
-		wantErr  bool
+		name    string
+		config  ServiceConfig
+		wantErr bool
 	}{
 		{
 			name: "valid postgres config",

@@ -81,7 +81,7 @@ func (c *DesktopLaunchChallenge) Execute(
 			Actual: fmt.Sprintf(
 				"%t", launchErr == nil,
 			),
-			Passed: launchErr == nil,
+			Passed:  launchErr == nil,
 			Message: desktopLaunchMessage(launchErr),
 		},
 	)
@@ -343,9 +343,9 @@ func (c *DesktopFlowChallenge) Execute(
 		} else {
 			assertions = append(
 				assertions, challenge.AssertionResult{
-					Type:    step.Action,
-					Target:  step.Name,
-					Passed:  true,
+					Type:   step.Action,
+					Target: step.Name,
+					Passed: true,
 					Message: fmt.Sprintf(
 						"step %q (%s) succeeded",
 						step.Name, step.Action,

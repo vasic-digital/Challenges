@@ -256,8 +256,8 @@ func (c *VisionFlowChallenge) Execute(
 
 	c.ReportProgress(
 		"vision flow complete", map[string]any{
-			"status":           status,
-			"steps":            len(c.flow.Steps),
+			"status":            status,
+			"steps":             len(c.flow.Steps),
 			"vision_detections": visionDetections,
 		},
 	)

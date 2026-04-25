@@ -96,9 +96,9 @@ type Credentials struct {
 
 // BrowserConfig holds configuration for browser-based testing.
 type BrowserConfig struct {
-	BrowserType string `json:"browser_type"`
-	Headless    bool   `json:"headless"`
-	WindowSize  [2]int `json:"window_size"`
+	BrowserType string   `json:"browser_type"`
+	Headless    bool     `json:"headless"`
+	WindowSize  [2]int   `json:"window_size"`
 	ExtraArgs   []string `json:"extra_args"`
 }
 

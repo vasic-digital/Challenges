@@ -166,8 +166,8 @@ func TestNormaliseYAMLValue_InterfaceKeyedMap(t *testing.T) {
 	// maps with non-string-looking keys; we accept anything yaml
 	// produces and normalise to string-keyed maps.
 	input := map[interface{}]interface{}{
-		"a":     1,
-		"b":     "two",
+		"a":      1,
+		"b":      "two",
 		"nested": map[interface{}]interface{}{"x": true, "y": []interface{}{1, 2}},
 	}
 	out := normaliseYAMLValue(input)

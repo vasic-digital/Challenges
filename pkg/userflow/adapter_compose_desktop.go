@@ -483,4 +483,3 @@ func buildWindowSearchArgs(titlePattern string) []string {
 func buildWindowGeometryArgs(windowID string) []string {
 	return []string{"getwindowgeometry", "--shell", windowID}
 }
-

@@ -169,9 +169,9 @@ func TestGRPCCLIAdapter_BaseArgs(t *testing.T) {
 			absent:   []string{"-insecure", "-cacert"},
 		},
 		{
-			name:     "tls_no_plaintext",
-			opts:     []GRPCOption{WithTLS()},
-			absent:   []string{"-plaintext"},
+			name:   "tls_no_plaintext",
+			opts:   []GRPCOption{WithTLS()},
+			absent: []string{"-plaintext"},
 		},
 		{
 			name: "insecure_flag",
@@ -256,9 +256,9 @@ func TestGRPCCLIAdapter_Close_MultipleCalls(
 
 func TestParseLines(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		want   []string
+		name  string
+		input string
+		want  []string
 	}{
 		{
 			name:  "simple_lines",
