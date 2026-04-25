@@ -144,7 +144,7 @@ func TestComposeDesktopAdapter_Launch_AlreadyRunning(
 
 	// If java is not found, skip the double-launch test.
 	if err != nil {
-		t.Skip("java not available, skipping")
+		t.Skip("java not available, skipping")  // SKIP-OK: #legacy-untriaged
 	}
 	defer func() { _ = adapter.Close(ctx) }()
 
