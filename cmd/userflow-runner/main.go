@@ -5,11 +5,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -28,46 +30,39 @@ const (
 	exitError    = 2
 )
 
-// platformGroups defines the container service groups for each
-// platform. Each group specifies which compose services to
-// start, resource limits, and an optional compose file override.
-var platformGroups = map[string]userflow.PlatformGroup{
-	"api": {
-		Name:     "api",
-		Services: []string{"catalog-api", "postgres", "redis"},
-		CPULimit: 2.0,
-		MemoryMB: 4096,
-	},
-	"web": {
-		Name:     "web",
-		Services: []string{"catalog-api", "catalog-web", "postgres", "redis"},
-		CPULimit: 3.0,
-		MemoryMB: 6144,
-	},
-	"desktop": {
-		Name:     "desktop",
-		Services: []string{"catalog-api", "postgres", "redis"},
-		CPULimit: 2.0,
-		MemoryMB: 4096,
-	},
-	"wizard": {
-		Name:     "wizard",
-		Services: []string{"catalog-api", "postgres", "redis"},
-		CPULimit: 2.0,
-		MemoryMB: 4096,
-	},
-	"android": {
-		Name:     "android",
-		Services: []string{"catalog-api", "postgres", "redis"},
-		CPULimit: 2.0,
-		MemoryMB: 4096,
-	},
-	"tv": {
-		Name:     "tv",
-		Services: []string{"catalog-api", "postgres", "redis"},
-		CPULimit: 2.0,
-		MemoryMB: 4096,
-	},
+// platformGroups holds the caller-supplied container service groups
+// for each platform. The runner loads the groups at startup from the
+// file named by --platform-groups; HelixQA's Challenges library
+// carries no project-specific service list of its own. See
+// loadPlatformGroups for the expected JSON schema.
+var platformGroups map[string]userflow.PlatformGroup
+
+// loadPlatformGroups decodes a JSON file mapping platform name →
+// PlatformGroup so every project can describe its own service
+// topology without modifying this binary. Example contents:
+//
+//	{
+//	  "api":     {"name": "api",     "services": ["api", "postgres"],          "cpuLimit": 2, "memoryMB": 4096},
+//	  "web":     {"name": "web",     "services": ["api", "web", "postgres"],    "cpuLimit": 3, "memoryMB": 6144},
+//	  "android": {"name": "android", "services": ["api", "postgres"],          "cpuLimit": 2, "memoryMB": 4096}
+//	}
+//
+// An empty path means "no groups configured"; the runner then treats
+// every --platform request as unknown and exits with an actionable
+// error instead of silently using Catalogizer-specific defaults.
+func loadPlatformGroups(path string) (map[string]userflow.PlatformGroup, error) {
+	if path == "" {
+		return map[string]userflow.PlatformGroup{}, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read platform groups %q: %w", path, err)
+	}
+	groups := map[string]userflow.PlatformGroup{}
+	if err := json.Unmarshal(data, &groups); err != nil {
+		return nil, fmt.Errorf("parse platform groups %q: %w", path, err)
+	}
+	return groups, nil
 }
 
 // cliLogger adapts fmt.Printf-style logging to the
@@ -154,9 +149,22 @@ func run() int {
 		"verbose", false,
 		"Enable verbose debug logging",
 	)
+	platformGroupsFile := flag.String(
+		"platform-groups", "",
+		"Path to a JSON file mapping platform name → PlatformGroup "+
+			"(services list, cpu/memory limits). Required unless "+
+			"--platform is a group the caller registered at build time.",
+	)
 	flag.Parse()
 
 	logger := &cliLogger{verbose: *verbose}
+
+	loaded, loadErr := loadPlatformGroups(*platformGroupsFile)
+	if loadErr != nil {
+		logger.Error("platform groups", "error", loadErr)
+		return exitError
+	}
+	platformGroups = loaded
 
 	logger.Info("UserFlow Runner starting")
 	logger.Info("Configuration",
@@ -166,6 +174,8 @@ func run() int {
 		"root", *projectRoot,
 		"timeout", *timeout,
 		"output", *outputDir,
+		"platform_groups_file", *platformGroupsFile,
+		"platform_groups_loaded", len(platformGroups),
 	)
 
 	// Validate report format.
@@ -378,23 +388,30 @@ func run() int {
 	return exitSuccess
 }
 
-// resolveGroups converts the --platform flag value into a list
-// of PlatformGroup structs for the test environment.
+// resolveGroups converts the --platform flag value into a list of
+// PlatformGroup structs. The "all" keyword expands to every group the
+// caller registered via --platform-groups, sorted by name for
+// deterministic ordering. Unknown platforms surface an error whose
+// message lists the configured keys so operators can self-correct
+// without having to read the source. No project-specific names are
+// baked in — keys are whatever the caller supplied.
 func resolveGroups(
 	platform string,
 ) ([]userflow.PlatformGroup, error) {
 	p := strings.ToLower(strings.TrimSpace(platform))
+
+	configuredNames := make([]string, 0, len(platformGroups))
+	for name := range platformGroups {
+		configuredNames = append(configuredNames, name)
+	}
+	sort.Strings(configuredNames)
 
 	if p == "all" {
 		all := make(
 			[]userflow.PlatformGroup,
 			0, len(platformGroups),
 		)
-		// Deterministic order.
-		for _, name := range []string{
-			"api", "web", "desktop",
-			"wizard", "android", "tv",
-		} {
+		for _, name := range configuredNames {
 			all = append(all, platformGroups[name])
 		}
 		return all, nil
@@ -402,11 +419,13 @@ func resolveGroups(
 
 	group, ok := platformGroups[p]
 	if !ok {
+		configured := strings.Join(configuredNames, ", ")
+		if configured == "" {
+			configured = "(none — pass --platform-groups)"
+		}
 		return nil, fmt.Errorf(
-			"unknown platform: %s "+
-				"(valid: all, api, web, desktop, "+
-				"wizard, android, tv)",
-			platform,
+			"unknown platform: %s (valid: all, %s)",
+			platform, configured,
 		)
 	}
 	return []userflow.PlatformGroup{group}, nil

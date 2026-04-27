@@ -1,0 +1,8 @@
+Commit: 2db141b0b75c973a5b47a8dade4f90671d2eff74
+Branch: HEAD
+2db141b Merge remote-tracking branch 'gitlab/main'
+cad3ab9 chore: update Containers and Panoptic submodules
+0670440 feat(bank): accept "test_cases" root key for HelixQA YAML banks
+a6185a5 feat(bank): load test banks from YAML in addition to JSON
+95683ae fix(httpclient): LoginWithRetry short-circuits on AuthError (4xx)
+

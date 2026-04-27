@@ -19,10 +19,10 @@ func ParseResultToAssertionValues(
 
 	values := map[string]any{
 		"exit_code":         r.ExitCode,
-		"all_apps_passed":  allAppsPassed(r),
-		"app_count":        len(r.Apps),
-		"passed_count":     countPassed(r),
-		"failed_count":     countFailed(r),
+		"all_apps_passed":   allAppsPassed(r),
+		"app_count":         len(r.Apps),
+		"passed_count":      countPassed(r),
+		"failed_count":      countFailed(r),
 		"total_screenshots": len(r.Screenshots),
 		"total_videos":      len(r.Videos),
 		"total_duration_ms": r.Duration.Milliseconds(),

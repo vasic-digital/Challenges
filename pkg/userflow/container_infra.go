@@ -31,12 +31,12 @@ type TestEnvironment struct {
 // PlatformGroup defines a set of containers that run together
 // within a resource budget.
 type PlatformGroup struct {
-	Name          string   `json:"name"`
-	Services      []string `json:"services"`
-	CPULimit      float64  `json:"cpu_limit"`
-	MemoryMB      int      `json:"memory_mb"`
+	Name          string                           `json:"name"`
+	Services      []string                         `json:"services"`
+	CPULimit      float64                          `json:"cpu_limit"`
+	MemoryMB      int                              `json:"memory_mb"`
 	HealthTargets []containers_health.HealthTarget `json:"-"`
-	ComposeFile   string `json:"compose_file,omitempty"`
+	ComposeFile   string                           `json:"compose_file,omitempty"`
 }
 
 // TestEnvironmentOption configures a TestEnvironment.

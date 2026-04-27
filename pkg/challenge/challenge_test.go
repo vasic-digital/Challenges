@@ -23,11 +23,11 @@ type mockChallenge struct {
 	result       *Result
 }
 
-func (m *mockChallenge) ID() ID               { return m.id }
-func (m *mockChallenge) Name() string          { return m.name }
-func (m *mockChallenge) Description() string   { return m.description }
-func (m *mockChallenge) Category() string      { return m.category }
-func (m *mockChallenge) Dependencies() []ID    { return m.dependencies }
+func (m *mockChallenge) ID() ID              { return m.id }
+func (m *mockChallenge) Name() string        { return m.name }
+func (m *mockChallenge) Description() string { return m.description }
+func (m *mockChallenge) Category() string    { return m.category }
+func (m *mockChallenge) Dependencies() []ID  { return m.dependencies }
 func (m *mockChallenge) Configure(_ *Config) error {
 	return m.configErr
 }
@@ -45,10 +45,10 @@ func (m *mockChallenge) Cleanup(_ context.Context) error {
 
 func TestChallenge_Interface(t *testing.T) {
 	var c Challenge = &mockChallenge{
-		id:          "test-001",
-		name:        "Test Challenge",
-		description: "A test challenge",
-		category:    "unit",
+		id:           "test-001",
+		name:         "Test Challenge",
+		description:  "A test challenge",
+		category:     "unit",
 		dependencies: []ID{"dep-001"},
 	}
 

@@ -16,12 +16,12 @@ import (
 // It combines ADB for device interaction and Gradle for
 // building and executing connectedAndroidTest tasks.
 type EspressoAdapter struct {
-	projectDir        string
-	config            MobileConfig
-	gradleWrapper     string
-	module            string
-	testRunner        string
-	instrumentArgs    map[string]string
+	projectDir     string
+	config         MobileConfig
+	gradleWrapper  string
+	module         string
+	testRunner     string
+	instrumentArgs map[string]string
 }
 
 // Compile-time interface check.

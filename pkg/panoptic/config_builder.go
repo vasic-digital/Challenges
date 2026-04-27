@@ -17,8 +17,8 @@ type ConfigBuilder struct {
 
 // AppBuilder is a sub-builder for a single application config.
 type AppBuilder struct {
-	parent  *ConfigBuilder
-	app     PanopticApp
+	parent *ConfigBuilder
+	app    PanopticApp
 }
 
 // NewConfigBuilder creates a ConfigBuilder with the given name

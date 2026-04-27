@@ -100,10 +100,10 @@ func TestPlatformGroup_Fields(t *testing.T) {
 		{
 			name: "web group",
 			group: PlatformGroup{
-				Name:     "web",
-				Services: []string{"catalog-web"},
-				CPULimit: 1.0,
-				MemoryMB: 2048,
+				Name:        "web",
+				Services:    []string{"catalog-web"},
+				CPULimit:    1.0,
+				MemoryMB:    2048,
 				ComposeFile: "web-compose.yml",
 			},
 			wantSvcs: 1,

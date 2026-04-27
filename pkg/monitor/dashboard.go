@@ -10,11 +10,11 @@ import (
 // DashboardData provides a real-time snapshot of challenge execution state.
 type DashboardData struct {
 	mu         sync.RWMutex
-	RunID      string                         `json:"run_id"`
-	StartTime  time.Time                      `json:"start_time"`
-	Status     string                         `json:"status"` // running, completed, failed
+	RunID      string                          `json:"run_id"`
+	StartTime  time.Time                       `json:"start_time"`
+	Status     string                          `json:"status"` // running, completed, failed
 	Challenges map[challenge.ID]ChallengeState `json:"challenges"`
-	Summary    DashboardSummary               `json:"summary"`
+	Summary    DashboardSummary                `json:"summary"`
 }
 
 // ChallengeState represents the current state of a challenge in the dashboard.

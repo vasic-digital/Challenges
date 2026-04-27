@@ -14,7 +14,7 @@ import (
 // mockVisionForRecording implements VisionAdapter for
 // recorded vision flow tests with per-query result maps.
 type mockVisionForRecording struct {
-	available       bool
+	available         bool
 	findByTextResults map[string][]DetectedElement
 	findByTypeResults map[string][]DetectedElement
 }
@@ -127,8 +127,7 @@ func TestRecordedVisionFlowChallenge_Execute_Success(
 	t *testing.T,
 ) {
 	browser := newMockBrowserForRecording()
-	browser.evaluateResults[
-		"document.elementFromPoint(150,50).click()"] = ""
+	browser.evaluateResults["document.elementFromPoint(150,50).click()"] = ""
 	recorder := newMockRecorderForFlow()
 	vision := newMockVisionForRecording()
 	vision.findByTypeResults["button"] = []DetectedElement{
@@ -216,8 +215,7 @@ func TestRecordedVisionFlowChallenge_Execute_Success(
 	)
 
 	// Verify vision metrics.
-	veMetric, ok := result.Metrics[
-		"vision_elements_detected"]
+	veMetric, ok := result.Metrics["vision_elements_detected"]
 	assert.True(t, ok)
 	assert.Equal(t, 1.0, veMetric.Value)
 
@@ -388,8 +386,7 @@ func TestRecordedVisionFlowChallenge_Execute_VisionStepSuccess(
 	t *testing.T,
 ) {
 	browser := newMockBrowserForRecording()
-	browser.evaluateResults[
-		"document.elementFromPoint(200,100).click()"] = ""
+	browser.evaluateResults["document.elementFromPoint(200,100).click()"] = ""
 	recorder := newMockRecorderForFlow()
 	vision := newMockVisionForRecording()
 	vision.findByTextResults["Learn More"] = []DetectedElement{
@@ -436,14 +433,12 @@ func TestRecordedVisionFlowChallenge_Execute_VisionStepSuccess(
 	assert.Equal(
 		t, "1", result.Outputs["vision_detections"],
 	)
-	veMetric, ok := result.Metrics[
-		"vision_elements_detected"]
+	veMetric, ok := result.Metrics["vision_elements_detected"]
 	assert.True(t, ok)
 	assert.Equal(t, 1.0, veMetric.Value)
 
 	// Confidence metric recorded.
-	confMetric, ok := result.Metrics[
-		"vision_confidence_click learn more"]
+	confMetric, ok := result.Metrics["vision_confidence_click learn more"]
 	assert.True(t, ok)
 	assert.InDelta(t, 0.91, confMetric.Value, 0.001)
 

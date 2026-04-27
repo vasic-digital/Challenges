@@ -10,9 +10,9 @@ import (
 // the actual container lifecycle operations through callback functions
 // to avoid hard-coding the containers module dependency.
 type ContainersAdapter struct {
-	ensureFunc func(ctx context.Context, name string) error
-	releaseFunc func(ctx context.Context, name string) error
-	healthFunc  func(ctx context.Context, name string) error
+	ensureFunc   func(ctx context.Context, name string) error
+	releaseFunc  func(ctx context.Context, name string) error
+	healthFunc   func(ctx context.Context, name string) error
 	shutdownFunc func(ctx context.Context) error
 }
 

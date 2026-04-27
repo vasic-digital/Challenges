@@ -75,8 +75,7 @@ func TestVisionFlowChallenge_Execute_WithVision(
 	t *testing.T,
 ) {
 	browser := newMockBrowserAdapter()
-	browser.evaluateResults[
-		"document.elementFromPoint(150,50).click()"] = ""
+	browser.evaluateResults["document.elementFromPoint(150,50).click()"] = ""
 
 	vision := &mockVisionAdapter{
 		elements: []DetectedElement{
@@ -134,14 +133,12 @@ func TestVisionFlowChallenge_Execute_WithVision(
 	assert.Equal(t, "1", result.Outputs["vision_detections"])
 
 	// Confidence metric recorded.
-	confMetric, ok := result.Metrics[
-		"vision_confidence_click submit via vision"]
+	confMetric, ok := result.Metrics["vision_confidence_click submit via vision"]
 	assert.True(t, ok)
 	assert.InDelta(t, 0.93, confMetric.Value, 0.001)
 
 	// Vision elements detected metric recorded.
-	veMetric, ok := result.Metrics[
-		"vision_elements_detected"]
+	veMetric, ok := result.Metrics["vision_elements_detected"]
 	assert.True(t, ok)
 	assert.Equal(t, 1.0, veMetric.Value)
 
@@ -219,8 +216,7 @@ func TestVisionFlowChallenge_Execute_VisionFindByText(
 	t *testing.T,
 ) {
 	browser := newMockBrowserAdapter()
-	browser.evaluateResults[
-		"document.elementFromPoint(200,100).click()"] = ""
+	browser.evaluateResults["document.elementFromPoint(200,100).click()"] = ""
 
 	vision := &mockVisionAdapter{
 		elements: []DetectedElement{

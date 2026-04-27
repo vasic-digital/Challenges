@@ -133,10 +133,10 @@ func redactHeaders(
 	sensitiveKeys := map[string]bool{
 		"authorization":  true,
 		"x-api-key":      true,
-		"api-key":         true,
-		"x-auth-token":    true,
-		"x-access-token":  true,
-		"bearer":          true,
+		"api-key":        true,
+		"x-auth-token":   true,
+		"x-access-token": true,
+		"bearer":         true,
 	}
 
 	result := make(map[string]string, len(headers))

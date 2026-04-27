@@ -133,9 +133,9 @@ func TestWithRuntimeName_Variants(t *testing.T) {
 
 func TestResolveChallengeConfig_SingleOption(t *testing.T) {
 	tests := []struct {
-		name      string
-		opt       ChallengeOption
-		checkFn   func(t *testing.T, cfg *challengeConfig)
+		name    string
+		opt     ChallengeOption
+		checkFn func(t *testing.T, cfg *challengeConfig)
 	}{
 		{
 			name: "only_containerized",

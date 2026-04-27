@@ -26,10 +26,30 @@ func NewGoCLIAdapter(projectRoot string) *GoCLIAdapter {
 	return &GoCLIAdapter{projectRoot: projectRoot}
 }
 
+// requireGoMod returns an error if go.mod is absent from the project root.
+// go build / go test / go vet all behave differently across Go versions when
+// no module is present (some versions exit 0 with a warning instead of 1),
+// so callers must gate on this check before running any go command.
+func (a *GoCLIAdapter) requireGoMod() error {
+	gomod := filepath.Join(a.projectRoot, "go.mod")
+	if _, err := os.Stat(gomod); err != nil {
+		return fmt.Errorf("no go.mod found in %s: not a Go module", a.projectRoot)
+	}
+	return nil
+}
+
 // Build runs `go build ./...` in the project root.
+// Returns a non-nil error (and Success=false) when projectRoot has no
+// go.mod — modern Go otherwise treats an empty directory as "matched no
+// packages" with exit 0, which silently succeeds and is never what the
+// caller wanted. Fail-fast semantics are part of the adapter contract.
 func (a *GoCLIAdapter) Build(
 	ctx context.Context, target BuildTarget,
 ) (*BuildResult, error) {
+	if err := a.requireGoMod(); err != nil {
+		return &BuildResult{Target: target.Name, Success: false}, err
+	}
+
 	args := []string{"build"}
 	if target.Task != "" {
 		args = append(args, target.Task)
@@ -61,10 +81,15 @@ type goTestEvent struct {
 }
 
 // RunTests runs `go test -json ./...` and parses the JSON
-// output stream into a TestResult.
+// output stream into a TestResult. Requires a go.mod in projectRoot —
+// see Build for the rationale.
 func (a *GoCLIAdapter) RunTests(
 	ctx context.Context, target TestTarget,
 ) (*TestResult, error) {
+	if err := a.requireGoMod(); err != nil {
+		return &TestResult{}, err
+	}
+
 	args := []string{"test", "-json"}
 	if target.Task != "" {
 		args = append(args, target.Task)
@@ -182,10 +207,15 @@ func parseGoTestJSON(
 	return result
 }
 
-// Lint runs `go vet ./...` in the project root.
+// Lint runs `go vet ./...` in the project root. Requires a go.mod in
+// projectRoot — see Build for the rationale.
 func (a *GoCLIAdapter) Lint(
 	ctx context.Context, target LintTarget,
 ) (*LintResult, error) {
+	if err := a.requireGoMod(); err != nil {
+		return &LintResult{Tool: "go vet", Success: false}, err
+	}
+
 	args := []string{"vet"}
 	if target.Task != "" {
 		args = append(args, target.Task)
@@ -221,10 +251,7 @@ func (a *GoCLIAdapter) Lint(
 func (a *GoCLIAdapter) Available(
 	_ context.Context,
 ) bool {
-	_, err := os.Stat(
-		filepath.Join(a.projectRoot, "go.mod"),
-	)
-	return err == nil
+	return a.requireGoMod() == nil
 }
 
 // runGo executes a go command in the project root and returns
