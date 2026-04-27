@@ -1,127 +1,5 @@
 # AGENTS.md - Challenges Module
 
-## MANDATORY HOST-SESSION SAFETY (Constitution §12)
-
-**Forensic incident, 2026-04-27 22:22:14 (MSK):** the developer's
-`user@1000.service` was SIGKILLed under an OOM cascade triggered by
-`pip3 install --user openai-whisper` running on top of chronic
-podman-pod memory pressure. The cascade SIGKILLed gnome-shell, every
-ssh session, claude-code, tmux, btop, npm, node, java, pip3 — full
-session loss. Evidence: `journalctl --since "2026-04-27 22:00"
---until "2026-04-27 22:23"`.
-
-This invariant applies to **every script, test, helper, and AI agent**
-in this submodule. Non-compliance is a release blocker.
-
-### Forbidden — directly OR indirectly
-
-1. **Suspending the host**: `systemctl suspend`, `pm-suspend`,
-   `loginctl suspend`, DBus `org.freedesktop.login1.Suspend`,
-   GNOME idle-suspend, lid-close handler.
-2. **Hibernating / hybrid-sleeping**: any `Hibernate` / `HybridSleep`
-   / `SuspendThenHibernate` method.
-3. **Logging out the user**: `loginctl terminate-session`,
-   `pkill -u <user>`, `systemctl --user --kill`, anything that
-   signals `user@<uid>.service`.
-4. **Unbounded-memory operations** inside `user@<uid>.service`
-   cgroup. Any single command expected to exceed 4 GB RSS MUST be
-   wrapped in `bounded_run` (defined in
-   `scripts/lib/host_session_safety.sh`, parent repo).
-5. **Programmatic rfkill toggles, lid-switch handlers, or
-   power-button handlers** — these cascade into idle-actions.
-6. **Disabling systemd-logind, GDM, or session managers** "to make
-   things faster" — even temporary stops leave the system unable to
-   recover the user session.
-
-### Required safeguards
-
-Every script in this submodule that performs heavy work (build,
-transcription, model inference, large compression, multi-GB git op)
-MUST:
-
-1. Source `scripts/lib/host_session_safety.sh` from the parent repo.
-2. Call `host_check_safety` at the top and **abort if it fails**.
-3. Wrap any subprocess expected to exceed ~4 GB RSS in
-   `bounded_run "<name>" <max-mem> <max-time> -- <cmd...>` so the
-   kernel OOM killer is contained to that scope and cannot escalate
-   to user.slice.
-4. Cap parallelism (`-j`) to fit available RAM (each AOSP job ≈ 5 GB
-   peak RSS).
-
-### Container hygiene
-
-Containers (Docker / Podman) we own or rely on MUST:
-
-1. Declare an explicit memory limit (`mem_limit` / `--memory` /
-   `MemoryMax`).
-2. Set `OOMPolicy=stop` in their systemd unit to avoid retry loops.
-3. Use exponential-backoff restart policies, never immediate retry.
-4. Be clean-slate destroyed (`podman pod stop && rm`, `podman
-   volume prune`) and rebuilt after any host crash or session loss
-   so stale lock files don't keep producing failures.
-
-### When in doubt
-
-Don't run heavy work blind. Check `journalctl -k --since "1 hour ago"
-| grep -c oom-kill`. If it's non-zero, **fix the offending workload
-first**. Do not stack new work on a host already in distress.
-
-**Cross-reference:** parent `docs/guides/ATMOSPHERE_CONSTITUTION.md`
-§12 (full forensic, library API, operator directives) +
-parent `scripts/lib/host_session_safety.sh`.
-
-## MANDATORY ANTI-BLUFF VALIDATION (Constitution §8.1 + §11)
-
-**This submodule inherits the parent ATMOSphere project's anti-bluff covenant.
-A test that PASSes while the feature it claims to validate is unusable to an
-end user is the single most damaging failure mode in this codebase. It has
-shipped working-on-paper / broken-on-device builds before, and that MUST NOT
-happen again.**
-
-The canonical authority is `docs/guides/ATMOSPHERE_CONSTITUTION.md` §8.1
-("NO BLUFF — positive-evidence-only validation") and §11 ("Bleeding-edge
-ultra-perfection") in the parent repo. Every contribution to THIS submodule
-is bound by it. Summarised non-negotiables:
-
-1. **Tests MUST validate user-visible behaviour, not just metadata.** A gate
-   that greps for a string in a config XML, an XML attribute, a manifest
-   entry, or a build-time symbol is METADATA — not evidence the feature
-   works for the end user. Such a gate is allowed ONLY when paired with a
-   runtime / on-device test that exercises the user-visible path and reads
-   POSITIVE EVIDENCE that the behaviour actually occurred (kernel `/proc/*`
-   runtime state, captured audio/video, dumpsys output produced *during*
-   playback, real input-event delivery, real surface composition, etc).
-2. **PASS / FAIL / SKIP must be mechanically distinguishable.** SKIP is for
-   environment limitations (no HDMI sink, no USB mic, geo-restricted endpoint
-   unreachable) and MUST always carry an explicit reason. PASS is reserved
-   for cases where positive evidence was observed. A test that completes
-   without observing evidence MUST NOT report PASS.
-3. **Every gate MUST have a paired mutation test in
-   `scripts/testing/meta_test_false_positive_proof.sh` (parent repo).** The
-   mutation deliberately breaks the feature and the gate MUST then FAIL.
-   A gate without a paired mutation is a BLUFF gate and is a Constitution
-   violation regardless of how many checks it appears to make.
-4. **Challenges (HelixQA) and tests are in the same boat.** A Challenge that
-   reports "completed" by checking the test runner exited 0, without
-   observing the system behaviour the Challenge is supposed to verify, is a
-   bluff. Challenge runners MUST cross-reference real device telemetry
-   (logcat, captured frames, network probes, kernel state) to confirm the
-   user-visible promise was kept.
-5. **The bar for shipping is not "tests pass" but "users can use the feature."**
-   If the on-device experience does not match what the test claims, the test
-   is the bug. Fix the test (positive-evidence harder), do not silence it.
-6. **No false-success results are tolerable.** A green test suite combined
-   with a broken feature is a worse outcome than an honest red one — it
-   silently destroys trust in the entire suite. Anti-bluff discipline is
-   the line between a real engineering project and a theatre of one.
-
-When in doubt: capture runtime evidence, attach it to the test result, and
-let a hostile reviewer (i.e. yourself, in six months) try to disprove that
-the feature really worked. If they can, the test is bluff and must be hardened.
-
-**Cross-references:** parent CLAUDE.md "MANDATORY DEVELOPMENT PRINCIPLES",
-parent AGENTS.md "NO BLUFF" section, parent `scripts/testing/meta_test_false_positive_proof.sh`.
-
 ## MANDATORY: Project-Agnostic / 100% Decoupled
 
 **This module MUST remain 100% decoupled from any consuming project. It is designed for generic use with ANY project, not one specific consumer.**
@@ -548,71 +426,60 @@ Both MUST be wired into the project's CI / `run_all_challenges.sh`.
 <!-- END host-power-management addendum (CONST-033) -->
 
 
-## MANDATORY ANTI-BLUFF COVENANT — END-USER QUALITY GUARANTEE (User mandate, 2026-04-28)
 
-**Forensic anchor — direct user mandate (verbatim):**
+<!-- CONST-035 anti-bluff addendum (cascaded) -->
 
-> "We had been in position that all tests do execute with success and all Challenges as well, but in reality the most of the features does not work and can't be used! This MUST NOT be the case and execution of tests and Challenges MUST guarantee the quality, the completion and full usability by end users of the product!"
+## CONST-035 — Anti-Bluff Tests & Challenges (mandatory; inherits from root)
 
-This is the historical origin of the project's anti-bluff covenant.
-Every test, every Challenge, every gate, every mutation pair exists
-to make the failure mode (PASS on broken-for-end-user feature)
-mechanically impossible.
+Tests and Challenges in this submodule MUST verify the product, not
+the LLM's mental model of the product. A test that passes when the
+feature is broken is worse than a missing test — it gives false
+confidence and lets defects ship to users. Functional probes at the
+protocol layer are mandatory:
 
-**Operative rule:** the bar for shipping is **not** "tests pass"
-but **"users can use the feature."** Every PASS in this codebase
-MUST carry positive evidence captured during execution that the
-feature works for the end user. Metadata-only PASS, configuration-
-only PASS, "absence-of-error" PASS, and grep-based PASS without
-runtime evidence are all critical defects regardless of how green
-the summary line looks.
+- TCP-open is the FLOOR, not the ceiling. Postgres → execute
+  `SELECT 1`. Redis → `PING` returns `PONG`. ChromaDB → `GET
+  /api/v1/heartbeat` returns 200. MCP server → TCP connect + valid
+  JSON-RPC handshake. HTTP gateway → real request, real response,
+  non-empty body.
+- Container `Up` is NOT application healthy. A `docker/podman ps`
+  `Up` status only means PID 1 is running; the application may be
+  crash-looping internally.
+- No mocks/fakes outside unit tests (already CONST-030; CONST-035
+  raises the cost of a mock-driven false pass to the same severity
+  as a regression).
+- Re-verify after every change. Don't assume a previously-passing
+  test still verifies the same scope after a refactor.
+- Verification of CONST-035 itself: deliberately break the feature
+  (e.g. `kill <service>`, swap a password). The test MUST fail. If
+  it still passes, the test is non-conformant and MUST be tightened.
 
-**Tests AND Challenges (HelixQA) are bound equally** — a Challenge
-that scores PASS on a non-functional feature is the same class of
-defect as a unit test that does. Both must produce positive end-
-user evidence; both are subject to the §8.1 five-constraint rule
-and §11 captured-evidence requirement.
+## CONST-033 clarification — distinguishing host events from sluggishness
 
-**Canonical authority:** parent
-[`docs/guides/ATMOSPHERE_CONSTITUTION.md`](../../docs/guides/ATMOSPHERE_CONSTITUTION.md)
-§8.1 (positive-evidence-only validation) + §11 (bleeding-edge
-ultra-perfection quality bar) + §11.3 (the "no bluff" CLAUDE.md /
-AGENTS.md mandate) + **§11.4 (this end-user-quality-guarantee
-forensic anchor — propagation requirement enforced by pre-build
-gate `CM-COVENANT-PROPAGATION`)**.
+Heavy container builds (BuildKit pulling many GB of layers, parallel
+podman/docker compose-up across many services) can make the host
+**appear** unresponsive — high load average, slow SSH, watchers
+timing out. **This is NOT a CONST-033 violation.** Suspend / hibernate
+/ logout are categorically different events. Distinguish via:
 
-Non-compliance is a release blocker regardless of context.
+- `uptime` — recent boot? if so, the host actually rebooted.
+- `loginctl list-sessions` — session(s) still active? if yes, no logout.
+- `journalctl ... | grep -i 'will suspend\|hibernate'` — zero broadcasts
+  since the CONST-033 fix means no suspend ever happened.
+- `dmesg | grep -i 'killed process\|out of memory'` — OOM kills are
+  also NOT host-power events; they're memory-pressure-induced and
+  require their own separate fix (lower per-container memory limits,
+  reduce parallelism).
 
+A sluggish host under build pressure recovers when the build finishes;
+a suspended host requires explicit unsuspend (and CONST-033 should
+make that impossible by hardening `IdleAction=ignore` +
+`HandleSuspendKey=ignore` + masked `sleep.target`,
+`suspend.target`, `hibernate.target`, `hybrid-sleep.target`).
 
-## MANDATORY §12 HOST-SESSION SAFETY — INCIDENT #2 ANCHOR (2026-04-28)
-
-**Second forensic incident:** on 2026-04-28 18:36:35 MSK the user's
-`user@1000.service` was again SIGKILLed (`status=9/KILL`), this time
-WITHOUT a kernel OOM kill (systemd-oomd inactive, `MemoryMax=infinity`)
-— a different vector than Incident #1. Cascade killed `claude`,
-`tmux`, the in-flight ATMOSphere build, and 20+ npm MCP server
-processes. Likely cumulative cgroup pressure + external watchdog.
-
-**Mandatory safeguards effective 2026-04-28** (full text in parent
-[`docs/guides/ATMOSPHERE_CONSTITUTION.md`](../../../../docs/guides/ATMOSPHERE_CONSTITUTION.md)
-§12 Incident #2):
-
-1. `scripts/build.sh` MUST source `lib/host_session_safety.sh` and
-   call `host_check_safety` BEFORE any heavy step.
-2. `host_check_safety` has 7 distress detectors including conmon
-   cgroup-events warnings (#6) and current-boot session-kill events
-   (#7).
-3. Containers MUST be clean-slate destroyed + rebuilt after any
-   suspected §12 incident. `mem_limit` is per-container, not
-   per-user-slice — operator MUST cap Σ `mem_limit` ≤ physical RAM
-   − user-session overhead.
-4. 20+ npm-spawned MCP server processes are a known memory multiplier;
-   stop non-essential MCPs before heavy ATMOSphere work.
-5. **Investigation: Docker/Podman as session-loss vector.** Per-container
-   cgroups don't prevent cumulative user-slice pressure; conmon
-   `Failed to open cgroups file: /sys/fs/cgroup/memory.events`
-   warnings preceded the 18:36:35 SIGKILL by 6 min — likely correlated.
-
-This directive applies to every owned ATMOSphere repo and every
-HelixQA dependency. Non-compliance is a Constitution §12 violation.
-
+If you observe what looks like a suspend during heavy builds, the
+correct first action is **not** "edit CONST-033" but `bash
+challenges/scripts/host_no_auto_suspend_challenge.sh` to confirm the
+hardening is intact. If hardening is intact AND no suspend
+broadcast appears in journal, the perceived event was build-pressure
+sluggishness, not a power transition.
