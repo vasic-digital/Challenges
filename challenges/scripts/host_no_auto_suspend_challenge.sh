@@ -26,12 +26,20 @@
 
 set -uo pipefail
 
+# Phase 23.0 — anti-bluff compliance promotion (Constitution §11.2.5 + §11.4).
+SCRIPT_DIR_AB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_AB="$SCRIPT_DIR_AB/../../lib/anti_bluff.sh"
+[ -f "$LIB_AB" ] || LIB_AB="$SCRIPT_DIR_AB/../../../Challenges/lib/anti_bluff.sh"
+. "$LIB_AB"
+ab_init "host_no_auto_suspend_challenge" "/tmp/host_no_auto_suspend_challenge.results"
+ab_send_action "Host no-auto-suspend assertions (CONST-033 reproduction guard)"
+
 PASS_COUNT=0
 FAIL_COUNT=0
 FAIL_DETAILS=()
 
-assert_pass() { echo "PASS: $*"; PASS_COUNT=$((PASS_COUNT + 1)); }
-assert_fail() { echo "FAIL: $*"; FAIL_COUNT=$((FAIL_COUNT + 1)); FAIL_DETAILS+=("$*"); }
+assert_pass() { ab_pass "$*"; echo "PASS: $*"; PASS_COUNT=$((PASS_COUNT + 1)); }
+assert_fail() { ab_fail "$*"; echo "FAIL: $*"; FAIL_COUNT=$((FAIL_COUNT + 1)); FAIL_DETAILS+=("$*"); }
 
 echo "=== host_no_auto_suspend_challenge ==="
 echo
