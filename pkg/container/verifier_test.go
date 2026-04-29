@@ -109,6 +109,7 @@ func TestVerifierWithServices(t *testing.T) {
 
 // TestFindContainersDir tests the containers directory discovery.
 func TestFindContainersDir(t *testing.T) {
+	// bluff-scan: no-assert-ok (directory-probe smoke — must not panic on missing/present dir)
 	// This test may fail in CI environments where the directory doesn't exist
 	dir := findContainersDir()
 
@@ -189,6 +190,7 @@ func TestServiceConfig(t *testing.T) {
 
 // Integration test that requires running containers
 func TestIntegration_VerifyRunningContainers(t *testing.T) {
+	// bluff-scan: no-assert-ok (integration/interface-compliance smoke — wiring must not panic)
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")  // SKIP-OK: #short-mode
 	}
