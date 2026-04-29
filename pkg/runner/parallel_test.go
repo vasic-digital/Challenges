@@ -192,6 +192,7 @@ func TestRunParallel_NegativeConcurrency(t *testing.T) {
 }
 
 func TestRunParallel_ContextCancelled(t *testing.T) {
+	// bluff-scan: no-assert-ok (context-cancel smoke — cancel path must not panic/leak)
 	s := newStub("a")
 	s.execDelay = 5 * time.Second
 	reg := setupRegistry(t, s)
