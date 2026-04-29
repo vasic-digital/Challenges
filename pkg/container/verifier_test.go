@@ -120,6 +120,7 @@ func TestFindContainersDir(t *testing.T) {
 
 // TestPreConditionCheck tests the full pre-condition check.
 func TestPreConditionCheck(t *testing.T) {
+	// bluff-scan: no-assert-ok (pre-condition probe smoke — must not panic on missing/present prerequisites)
 	logger := &mockLogger{}
 	ctx := context.Background()
 
