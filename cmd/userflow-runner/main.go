@@ -155,7 +155,32 @@ func run() int {
 			"(services list, cpu/memory limits). Required unless "+
 			"--platform is a group the caller registered at build time.",
 	)
+	// Phase 23.6 — Constitution §11.4 default-on for production runs.
+	// The runner package honors the CHALLENGE_ANTIBLUFF_STRICT env var
+	// for cross-process gating; this CLI flag is the operator-facing
+	// switch that defaults the env var to "1" (strict) for every CLI
+	// invocation. Library code paths (unit tests, embedded callers)
+	// bypass this CLI so they stay legacy default-OFF for backward
+	// compat — see runner.Run + antibluff_runner_test.go.
+	strictAntiBluff := flag.Bool(
+		"strict-anti-bluff", true,
+		"Downgrade Status=Passed challenge results to StatusFailed "+
+			"when no RecordedActions / no passing Assertions are "+
+			"present (Constitution §11.4 captured-evidence rule). "+
+			"Sets CHALLENGE_ANTIBLUFF_STRICT=1 in process env.",
+	)
 	flag.Parse()
+
+	// Phase 23.6 — propagate the flag to the env var the runner reads.
+	// Honor an explicit env override only if it's already a non-empty
+	// non-default value: a caller who exported CHALLENGE_ANTIBLUFF_STRICT=0
+	// before invoking this CLI is asking to opt out (e.g. for a one-off
+	// soak test against legacy fixtures).
+	if envCur, ok := os.LookupEnv("CHALLENGE_ANTIBLUFF_STRICT"); !ok || envCur == "" {
+		if *strictAntiBluff {
+			_ = os.Setenv("CHALLENGE_ANTIBLUFF_STRICT", "1")
+		}
+	}
 
 	logger := &cliLogger{verbose: *verbose}
 
