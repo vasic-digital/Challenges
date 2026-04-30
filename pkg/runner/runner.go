@@ -145,18 +145,25 @@ func (r *DefaultRunner) RunAll(
 	return results, nil
 }
 
-// RunSequence executes challenges in the given order, verifying
-// that each challenge's dependencies have already been executed
-// and passed within this sequence.
+// RunSequence executes challenges in dependency order (Kahn topological
+// sort), verifying that each challenge's dependencies have already been
+// executed and passed within this sequence.
 func (r *DefaultRunner) RunSequence(
 	ctx context.Context,
 	ids []challenge.ID,
 	config *challenge.Config,
 ) ([]*challenge.Result, error) {
+	// Topological sort (Kahn's algorithm) so callers are not required
+	// to pre-sort challenge IDs manually.
+	sorted, err := r.topoSort(ids)
+	if err != nil {
+		return nil, fmt.Errorf("run sequence: %w", err)
+	}
+
 	var results []*challenge.Result
 	depResults := make(map[challenge.ID]string)
 
-	for _, id := range ids {
+	for _, id := range sorted {
 		c, err := r.registry.Get(id)
 		if err != nil {
 			return results, fmt.Errorf(
@@ -192,6 +199,62 @@ func (r *DefaultRunner) RunSequence(
 	}
 
 	return results, nil
+}
+
+// topoSort performs Kahn's topological sort on the given challenge IDs
+// using their declared dependencies. All IDs and their transitive deps
+// must be present in the registry. Returns an error on cyclic deps.
+func (r *DefaultRunner) topoSort(
+	ids []challenge.ID,
+) ([]challenge.ID, error) {
+	idSet := make(map[challenge.ID]struct{}, len(ids))
+	for _, id := range ids {
+		idSet[id] = struct{}{}
+	}
+
+	inDegree := make(map[challenge.ID]int, len(ids))
+	adj := make(map[challenge.ID][]challenge.ID, len(ids))
+
+	for _, id := range ids {
+		c, err := r.registry.Get(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get challenge %s: %w", id, err)
+		}
+		inDegree[id] = 0
+		for _, dep := range c.Dependencies() {
+			if _, ok := idSet[dep]; !ok {
+				continue // dependency outside the sequence is ignored
+			}
+			inDegree[id]++
+			adj[dep] = append(adj[dep], id)
+		}
+	}
+
+	queue := make([]challenge.ID, 0, len(ids))
+	for id, deg := range inDegree {
+		if deg == 0 {
+			queue = append(queue, id)
+		}
+	}
+
+	var sorted []challenge.ID
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		sorted = append(sorted, id)
+		for _, next := range adj[id] {
+			inDegree[next]--
+			if inDegree[next] == 0 {
+				queue = append(queue, next)
+			}
+		}
+	}
+
+	if len(sorted) != len(ids) {
+		return nil, fmt.Errorf("cyclic dependency detected in challenge sequence")
+	}
+
+	return sorted, nil
 }
 
 // RunParallel executes the given challenges concurrently using
@@ -465,6 +528,31 @@ func (r *DefaultRunner) executeChallenge(
 		if !a.Passed {
 			result.Status = challenge.StatusFailed
 			break
+		}
+	}
+
+	// Phase 22.7 — anti-bluff validator runtime gate (Constitution §11.4).
+	// Mirrors lib/anti_bluff.sh ab_summary's no-action / no-positive-
+	// evidence guard. Gated by env var CHALLENGE_ANTIBLUFF_STRICT to
+	// preserve backward compatibility with existing test fixtures
+	// (many synthetic-always-PASS unit tests don't record actions —
+	// they're test-of-the-runner, not test-of-a-real-feature). Once
+	// the existing fixtures are updated to use RecordAction (planned
+	// follow-up cycle, equivalent to the Bash side's Phase 22.0-22.3
+	// bulk conversion), the default flips to ON.
+	//
+	// To enable: set CHALLENGE_ANTIBLUFF_STRICT=1 in the environment
+	// where production runs happen (HelixQA CI, the orchestrator,
+	// post-flash test harness). The fixture-updating ratchet drives
+	// the default-flip date.
+	if os.Getenv("CHALLENGE_ANTIBLUFF_STRICT") == "1" && result.Status == challenge.StatusPassed {
+		if abErr := challenge.ValidateAntiBluff(result); abErr != nil {
+			result.Status = challenge.StatusFailed
+			if result.Error == "" {
+				result.Error = abErr.Error()
+			} else {
+				result.Error = result.Error + "; " + abErr.Error()
+			}
 		}
 	}
 

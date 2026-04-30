@@ -52,6 +52,15 @@ type Result struct {
 	// Error contains the error message if the challenge failed
 	// with an unexpected error.
 	Error string `json:"error,omitempty"`
+
+	// RecordedActions is the running action trace populated by
+	// (*Result).RecordAction during challenge execution. The
+	// anti-bluff validator (ValidateAntiBluff) requires this to
+	// be non-empty before allowing Status=Passed. Mirrors the
+	// on-device tests/lib/anti_bluff.sh AB_ACTIONS counter; same
+	// "you must record what the runtime actually did before
+	// claiming PASS" guarantee. Constitution §11.4.
+	RecordedActions []string `json:"recorded_actions,omitempty"`
 }
 
 // AssertionResult captures the outcome of a single assertion

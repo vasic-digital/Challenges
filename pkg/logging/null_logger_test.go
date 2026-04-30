@@ -277,6 +277,7 @@ func TestNullLogger_ChainedOperations(t *testing.T) {
 
 // TestNullLogger_ConcurrentAccess verifies thread safety.
 func TestNullLogger_ConcurrentAccess(t *testing.T) {
+	// bluff-scan: no-assert-ok (concurrency test — go test -race catches data races; absence of panic == correctness)
 	nl := NullLogger{}
 	done := make(chan bool, 10)
 

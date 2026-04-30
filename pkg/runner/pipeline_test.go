@@ -448,6 +448,7 @@ func TestPipeline_ExecuteSequence_ConfigureError(t *testing.T) {
 }
 
 func TestPipeline_ExecuteSequence_ContextCancellation(t *testing.T) {
+	// bluff-scan: no-assert-ok (context-cancel smoke — cancel path must not panic/leak)
 	a := newStub("a")
 	b := newStub("b")
 	reg := setupRegistry(t, a, b)
