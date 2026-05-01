@@ -73,6 +73,11 @@ for f in "${FILES[@]}"; do
   fpath="${ROOT_DIR}/${f}"
   [[ ! -f "$fpath" ]] && continue
 
+  # Skip the scanner's own self-test fixtures — they are intentional bluff.
+  case "$f" in
+    scripts/anti-bluff/tests/fixtures/*) continue ;;
+  esac
+
   case "$f" in
     *.kt|*.kts)
       if declare -F scan_kotlin >/dev/null; then
