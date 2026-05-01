@@ -36,7 +36,21 @@ greps for `func <TestFuncName>\b` in the file.
 | CAP-008 | submodule:Challenges | Construct API HTTP client with default config | pkg/httpclient/client_test.go::TestNewAPIClient_Defaults | NewAPIClient() returns a usable client with sensible defaults | active |
 | CAP-009 | submodule:Challenges | Validate challenge result requires positive evidence (anti-bluff metatest) | pkg/challenge/antibluff_test.go::TestValidate_PassWithEvidence | Validate() accepts pass results with non-empty evidence; rejects metadata-only passes | active |
 | CAP-010 | submodule:Challenges | userflow-runner CLI resolves "all" platform target to every registered platform key | cmd/userflow-runner/main_test.go::TestResolveGroups_AllPlatformExpandsEveryKey | CLI flag parsing produces the full platform set when --platform=all | active |
+| CAP-011 | submodule:Challenges | Run challenges in parallel via DefaultRunner | pkg/runner/parallel_test.go::TestRunParallel_Success | Runner.RunParallel() executes multiple challenges concurrently and returns aggregated results | active |
+| CAP-012 | submodule:Challenges | Execute challenge pipeline with stages | pkg/runner/pipeline_test.go::TestPipeline_Execute_Success | Pipeline.Execute() runs ordered stages and produces a successful end-to-end result | active |
+| CAP-013 | submodule:Challenges | Anti-bluff runner downgrades a bluff PASS to FAIL in strict mode | pkg/runner/antibluff_runner_test.go::TestStrictMode_BluffPassDowngraded | Bluff results in strict mode are downgraded — the meta-test that proves the meta-test works | active |
+| CAP-014 | submodule:Challenges | Resolve dependency-free challenge ordering | pkg/registry/dependency_test.go::TestGetDependencyOrder_NoDeps | Topological-sort returns the input order when no challenges declare dependencies | active |
+| CAP-015 | submodule:Challenges | Register a challenge plugin | pkg/plugin/plugin_test.go::TestRegistry_Register | Plugin.Registry.Register() accepts a fresh plugin and exposes it for lookup | active |
+| CAP-016 | submodule:Challenges | Update monitor dashboard data from a lifecycle event | pkg/monitor/dashboard_test.go::TestDashboardData_UpdateFromEvent | DashboardData.UpdateFromEvent() reflects challenge state transitions | active |
+| CAP-017 | submodule:Challenges | InfraProvider interface contract is satisfied by adapters | pkg/infra/provider_test.go::TestInfraProvider_Interface | InfraProvider interface methods compile against ContainersAdapter | active |
+| CAP-018 | submodule:Challenges | ADB CLI adapter constructor accepts ADB binary path | pkg/userflow/adb_cli_adapter_test.go::TestADBCLIAdapter_Constructor | NewADBCLIAdapter returns a configured adapter with the supplied adb path | active |
+| CAP-019 | submodule:Challenges | ProgressReporter constructor exposes a buffered channel | pkg/challenge/progress_test.go::TestProgressReporter_New | NewProgressReporter() returns a ProgressReporter with non-nil progress channel | active |
+| CAP-020 | submodule:Challenges | Environment-variable redaction masks API-key values in log output | pkg/env/redact_test.go::TestRedactAPIKey | RedactAPIKey() replaces API key tokens with the redaction sentinel | active |
+| CAP-021 | submodule:Challenges | JSON logger constructor binds to stdout | pkg/logging/json_logger_test.go::TestJSONLogger_NewJSONLogger_Stdout | NewJSONLogger(stdout) returns a logger that writes JSON to stdout | active |
+| CAP-022 | submodule:Challenges | Prometheus metrics record challenge execution timing | pkg/metrics/metrics_test.go::TestPrometheusMetrics_RecordExecution | RecordExecution() increments the per-challenge counter and observes duration | active |
+| CAP-023 | submodule:Challenges | Browser flow challenge constructor binds adapter and steps | pkg/userflow/challenge_browser_test.go::TestNewBrowserFlowChallenge | NewBrowserFlowChallenge() returns a Challenge configured with the supplied adapter | active |
+| CAP-024 | submodule:Challenges | Mobile launch challenge constructor accepts mobile adapter and package | pkg/userflow/challenge_mobile_test.go::TestNewMobileLaunchChallenge | NewMobileLaunchChallenge() returns a Challenge bound to mobile adapter and target package | active |
 
-(More capabilities — runner-parallel, runner-pipeline, plugin loading,
-infra/containers bridge, websocket monitor — populated in subsequent
-iterations of sub-project 3.)
+(Manifest now covers core runner+registry+plugin+monitor+infra+userflow
+capabilities — 24 active rows. Long-tail: per-protocol httpclient,
+adapter-by-adapter userflow tests, recorder integrity checks.)
