@@ -2,7 +2,14 @@
 # Pre-commit hook — runs scanner + manifest check on staged files.
 # Mutation gate is excluded (too slow for pre-commit).
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlink chain so SCRIPT_DIR points at the actual install location,
+# not at the symlink path under .git/hooks/ or .git/modules/<name>/hooks/.
+src="${BASH_SOURCE[0]}"
+while [[ -L "$src" ]]; do
+  target="$(readlink "$src")"
+  if [[ "$target" == /* ]]; then src="$target"; else src="$(cd "$(dirname "$src")" && pwd)/$target"; fi
+done
+SCRIPT_DIR="$(cd "$(dirname "$src")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Run scanner in changed-mode against staged files only.
