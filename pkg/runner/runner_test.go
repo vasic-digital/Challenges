@@ -96,7 +96,8 @@ func newStub(id string, deps ...string) *stubChallenge {
 		name: id,
 		deps: depIDs,
 		execResult: &challenge.Result{
-			Status: challenge.StatusPassed,
+			Status:          challenge.StatusPassed,
+			RecordedActions: []string{"stub-action"},
 			Assertions: []challenge.AssertionResult{
 				{Passed: true, Message: "ok"},
 			},
@@ -294,6 +295,7 @@ func TestDefaultRunner_Run_TimeoutFromConfig(t *testing.T) {
 func TestDefaultRunner_Run_FailedAssertion(t *testing.T) {
 	s := newStub("a")
 	s.execResult = &challenge.Result{
+		RecordedActions: []string{"stub-action"},
 		Assertions: []challenge.AssertionResult{
 			{Passed: true, Message: "ok"},
 			{Passed: false, Message: "not ok"},
@@ -320,6 +322,7 @@ func TestDefaultRunner_Run_FailedAssertion(t *testing.T) {
 func TestDefaultRunner_Run_AllAssertionsPass(t *testing.T) {
 	s := newStub("a")
 	s.execResult = &challenge.Result{
+		RecordedActions: []string{"stub-action"},
 		Assertions: []challenge.AssertionResult{
 			{Passed: true, Message: "first"},
 			{Passed: true, Message: "second"},
@@ -366,8 +369,10 @@ func TestDefaultRunner_Run_NilExecResult(t *testing.T) {
 		challenge.NewConfig("a"),
 	)
 	require.NoError(t, err)
-	// No assertions means passed.
-	assert.Equal(t, challenge.StatusPassed, result.Status)
+	// Nil execResult produces no assertions and no recorded actions;
+	// the unconditional anti-bluff validator downgrades this to Failed.
+	assert.Equal(t, challenge.StatusFailed, result.Status)
+	assert.Contains(t, result.Error, "bluff")
 	assert.Empty(t, result.Assertions)
 }
 
@@ -953,6 +958,7 @@ func TestDefaultRunner_Run_TableDriven(t *testing.T) {
 		{
 			name: "success with all assertions passing",
 			execResult: &challenge.Result{
+				RecordedActions: []string{"stub-action"},
 				Assertions: []challenge.AssertionResult{
 					{Passed: true},
 				},
@@ -981,6 +987,7 @@ func TestDefaultRunner_Run_TableDriven(t *testing.T) {
 		{
 			name: "failed assertion",
 			execResult: &challenge.Result{
+				RecordedActions: []string{"stub-action"},
 				Assertions: []challenge.AssertionResult{
 					{Passed: false, Message: "nope"},
 				},
@@ -1110,7 +1117,8 @@ func TestDefaultRunner_Run_ProgressPreventsStuck(t *testing.T) {
 			}
 		}
 		return &challenge.Result{
-			Status: challenge.StatusPassed,
+			Status:          challenge.StatusPassed,
+			RecordedActions: []string{"stub-action"},
 			Assertions: []challenge.AssertionResult{
 				{Passed: true, Message: "ok"},
 			},
@@ -1327,7 +1335,8 @@ func TestDefaultRunner_RunParallel_WithErrors(t *testing.T) {
 func TestDefaultRunner_Run_ExecResultWithStatusSet(t *testing.T) {
 	s := newStub("a")
 	s.execResult = &challenge.Result{
-		Status: challenge.StatusFailed, // Explicitly set status
+		Status:          challenge.StatusFailed, // Explicitly set status
+		RecordedActions: []string{"stub-action"},
 		Assertions: []challenge.AssertionResult{
 			{Passed: true},
 		},
