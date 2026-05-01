@@ -190,3 +190,13 @@ without resolving the underlying defect is itself a §11 violation.
 **Full text:** umbrella `CONSTITUTION.md` Article XI §11.9.
 
 <!-- END user-mandate forensic anchor (Article XI §11.9) -->
+
+
+<!-- Cascaded governance requirement -->
+**bar for shipping is not**
+
+
+
+<!-- Cascaded governance requirement -->
+**Reproduction-Before-Fix**
+
