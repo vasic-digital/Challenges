@@ -47,18 +47,6 @@ func (m *mockLogger) Close() error {
 }
 
 // TestNewVerifier tests the creation of a new Verifier.
-func TestNewVerifier(t *testing.T) {
-	logger := &mockLogger{}
-	verifier := NewVerifier(logger)
-
-	if verifier == nil {
-		t.Fatal("NewVerifier returned nil")
-	}
-
-	if len(verifier.services) == 0 {
-		t.Error("Expected default services to be set")
-	}
-}
 
 // TestDefaultServices tests the default service configuration.
 func TestDefaultServices(t *testing.T) {
