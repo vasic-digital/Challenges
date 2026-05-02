@@ -131,7 +131,7 @@ func TestPreConditionCheck(t *testing.T) {
 	if err != nil {
 		// Check if it's the "containers module not found" error
 		if err.Error() == "containers module not found" {
-			t.Skip("Skipping test - containers module not found in test environment")  // SKIP-OK: #legacy-untriaged
+			t.Skip("Skipping test - containers module not found in test environment")
 		}
 		t.Logf("PreConditionCheck returned error: %v", err)
 	}
@@ -202,6 +202,6 @@ func TestIntegration_VerifyRunningContainers(t *testing.T) {
 
 	err := verifier.Verify(ctx)
 	if err != nil {
-		t.Skipf("Integration test skipped (containers not running): %v", err)  // SKIP-OK: #legacy-skip-untriaged-2026-04-29
+		t.Skipf("Integration test skipped (containers not running): %v", err)
 	}
 }

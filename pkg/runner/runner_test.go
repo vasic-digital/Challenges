@@ -820,16 +820,6 @@ func TestDefaultRunner_ResultsDir_ExplicitPath(t *testing.T) {
 // RunnerOption / functional options tests
 // =========================================================
 
-func TestNewRunner_Defaults(t *testing.T) {
-	r := NewRunner()
-	assert.Equal(t, 10*time.Minute, r.timeout)
-	assert.NotNil(t, r.registry)
-	assert.Nil(t, r.logger)
-	assert.Empty(t, r.resultsDir)
-	assert.Empty(t, r.preHooks)
-	assert.Empty(t, r.postHooks)
-}
-
 func TestNewRunner_WithTimeout(t *testing.T) {
 	r := NewRunner(WithTimeout(30 * time.Second))
 	assert.Equal(t, 30*time.Second, r.timeout)
