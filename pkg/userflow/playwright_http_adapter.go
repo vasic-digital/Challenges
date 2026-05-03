@@ -258,7 +258,7 @@ func (a *PlaywrightHTTPServerAdapter) Available(
 
 // SetRecorder is not used in this adapter (HTTP server handles recording).
 func (a *PlaywrightHTTPServerAdapter) SetRecorder(_ RecorderAdapter) {
-	// no-op: HTTP adapter does not support recording
+	_ = a // no-op: HTTP adapter does not support recording
 }
 
 // BrowserAdapter returns itself for chaining.
