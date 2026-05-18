@@ -115,3 +115,39 @@ challenges_userflow_desktop_ipc_failed:
 
 challenges_userflow_desktop_ipc_mismatch:
   other: "IPC command {{.name}} response mismatch"
+
+# Round 103 — challenge_ai_testgen.go (10 user-facing
+# AssertionResult.Message strings migrated to CONST-046 message IDs).
+# Namespace prefix: challenges_userflow_ai_testgen_
+# Remaining ~10 hits (RecordAction debug-trace strings, ReportProgress
+# diagnostic strings) are developer-facing and queued for later rounds.
+
+challenges_userflow_ai_testgen_browser_unavailable:
+  other: "Browser not available - skipped (requires infrastructure)"
+
+challenges_userflow_ai_testgen_testgen_unavailable:
+  other: "TestGen not available - skipped (requires infrastructure)"
+
+challenges_userflow_ai_testgen_browser_init_failed:
+  other: "browser init failed: {{.err}}"
+
+challenges_userflow_ai_testgen_navigate_failed:
+  other: "navigate to {{.url}} failed: {{.err}}"
+
+challenges_userflow_ai_testgen_screenshot_failed:
+  other: "screenshot failed: {{.err}}"
+
+challenges_userflow_ai_testgen_testgen_failed:
+  other: "test generation failed: {{.err}}"
+
+challenges_userflow_ai_testgen_create_dir_failed:
+  other: "create output dir failed: {{.err}}"
+
+challenges_userflow_ai_testgen_marshal_json_failed:
+  other: "JSON marshal failed: {{.err}}"
+
+challenges_userflow_ai_testgen_write_file_failed:
+  other: "write file failed: {{.err}}"
+
+challenges_userflow_ai_testgen_generated_summary:
+  other: "generated {{.count}} test(s)"
